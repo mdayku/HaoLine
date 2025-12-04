@@ -5,16 +5,32 @@
 JSON Schema definition and validation for HaoLine reports.
 
 Provides:
-- INSPECTION_REPORT_SCHEMA: JSON Schema for InspectionReport
-- validate_report(): Validate a report dict against the schema
+- INSPECTION_REPORT_SCHEMA: JSON Schema for InspectionReport (auto-generated from Pydantic)
+- validate_report(): Validate a report dict against the schema using Pydantic
 - ValidationError: Exception raised on validation failure
+
+The Pydantic models in pydantic_models.py were auto-generated from the original
+JSON Schema using datamodel-code-generator. Validation is now done via Pydantic
+for better error messages and type safety.
 """
 from __future__ import annotations
 
 import warnings
 from typing import Any
 
-# Try to import jsonschema, fall back gracefully if not available
+# Try to import Pydantic models (preferred)
+try:
+    from pydantic import ValidationError as PydanticValidationError
+
+    from .pydantic_models import HaolineInspectionReport
+
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
+    PydanticValidationError = None  # type: ignore
+    HaolineInspectionReport = None  # type: ignore
+
+# Fallback to jsonschema if Pydantic not available
 try:
     from jsonschema import Draft7Validator
     from jsonschema import ValidationError as JsonSchemaError
@@ -394,36 +410,52 @@ INSPECTION_REPORT_SCHEMA: dict[str, Any] = {
 
 def validate_report(report_dict: dict[str, Any]) -> tuple[bool, list[str]]:
     """
-    Validate a report dictionary against the JSON schema.
+    Validate a report dictionary against the schema.
+
+    Uses Pydantic for validation (preferred) or falls back to jsonschema.
 
     Args:
         report_dict: The report as a dictionary (from to_dict()).
 
     Returns:
         Tuple of (is_valid, list of error messages).
-        If jsonschema is not installed, returns (True, []) with a warning.
+        If neither pydantic nor jsonschema is installed, returns (True, []) with a warning.
     """
-    if not JSONSCHEMA_AVAILABLE:
-        warnings.warn(
-            "jsonschema not installed. Install with 'pip install jsonschema' "
-            "for JSON schema validation.",
-            UserWarning,
-            stacklevel=2,
-        )
-        return True, []
+    # Prefer Pydantic validation
+    if PYDANTIC_AVAILABLE:
+        try:
+            HaolineInspectionReport.model_validate(report_dict)
+            return True, []
+        except PydanticValidationError as e:
+            error_messages = []
+            for error in e.errors():
+                loc = " -> ".join(str(x) for x in error["loc"])
+                error_messages.append(f"{loc}: {error['msg']}")
+            return False, error_messages
 
-    validator = Draft7Validator(INSPECTION_REPORT_SCHEMA)
-    errors = list(validator.iter_errors(report_dict))
+    # Fallback to jsonschema
+    if JSONSCHEMA_AVAILABLE:
+        validator = Draft7Validator(INSPECTION_REPORT_SCHEMA)
+        errors = list(validator.iter_errors(report_dict))
 
-    if not errors:
-        return True, []
+        if not errors:
+            return True, []
 
-    error_messages = []
-    for error in errors:
-        path = " -> ".join(str(p) for p in error.absolute_path) or "root"
-        error_messages.append(f"{path}: {error.message}")
+        error_messages = []
+        for error in errors:
+            path = " -> ".join(str(p) for p in error.absolute_path) or "root"
+            error_messages.append(f"{path}: {error.message}")
 
-    return False, error_messages
+        return False, error_messages
+
+    # No validation library available
+    warnings.warn(
+        "Neither pydantic nor jsonschema installed. "
+        "Install with 'pip install pydantic' for validation.",
+        UserWarning,
+        stacklevel=2,
+    )
+    return True, []
 
 
 def validate_report_strict(report_dict: dict[str, Any]) -> None:
@@ -444,5 +476,45 @@ def validate_report_strict(report_dict: dict[str, Any]) -> None:
 
 
 def get_schema() -> dict[str, Any]:
-    """Return the JSON schema for InspectionReport."""
+    """
+    Return the JSON schema for InspectionReport.
+
+    If Pydantic is available, returns the auto-generated schema from the model.
+    Otherwise, returns the manually-defined schema.
+    """
+    if PYDANTIC_AVAILABLE:
+        return HaolineInspectionReport.model_json_schema()
     return INSPECTION_REPORT_SCHEMA.copy()
+
+
+def validate_with_pydantic(report_dict: dict[str, Any]) -> HaolineInspectionReport | None:
+    """
+    Validate and parse a report dict into a Pydantic model.
+
+    Args:
+        report_dict: The report as a dictionary.
+
+    Returns:
+        HaolineInspectionReport instance if valid, None if Pydantic not available.
+
+    Raises:
+        ValidationError: If validation fails.
+    """
+    if not PYDANTIC_AVAILABLE:
+        warnings.warn(
+            "Pydantic not installed. Install with 'pip install pydantic'.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return None
+
+    try:
+        return HaolineInspectionReport.model_validate(report_dict)
+    except PydanticValidationError as e:
+        error_messages = [
+            f"{' -> '.join(str(x) for x in err['loc'])}: {err['msg']}" for err in e.errors()
+        ]
+        raise ValidationError(
+            f"Report validation failed with {len(error_messages)} error(s)",
+            errors=error_messages,
+        ) from e

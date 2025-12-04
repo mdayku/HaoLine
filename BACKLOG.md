@@ -48,7 +48,7 @@
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
 | Epic 33: QAT Linters | Not Started | 4 | 0/22 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
-| Epic 39: Pydantic Schema Migration | Not Started | 3 | 0/15 | P1 |
+| Epic 39: Pydantic Schema Migration | In Progress | 2 | 6/10 | P1 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | P3 |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
@@ -1244,21 +1244,21 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 **Why:** Current `schema.py` has 450 lines of manually-maintained JSON Schema that duplicates the dataclass definitions in `report.py`. Pydantic provides auto-generated schemas, runtime validation, and better IDE support.
 
+**Approach:** Used `datamodel-code-generator` to auto-generate Pydantic models from the existing JSON Schema, then integrated them into the validation flow. The original dataclasses remain for backwards compatibility; Pydantic models are used for validation.
+
 ### Story 39.1: Core Model Migration
-- [ ] **Task 39.1.1**: Add `pydantic>=2.0` to core dependencies
-- [ ] **Task 39.1.2**: Convert `ParamCounts` dataclass to Pydantic model
-- [ ] **Task 39.1.3**: Convert `FLOPCounts` dataclass to Pydantic model
-- [ ] **Task 39.1.4**: Convert `MemoryEstimates` dataclass to Pydantic model
-- [ ] **Task 39.1.5**: Convert `GraphSummary` dataclass to Pydantic model
-- [ ] **Task 39.1.6**: Convert `HardwareEstimates` dataclass to Pydantic model
-- [ ] **Task 39.1.7**: Convert `InspectionReport` dataclass to Pydantic model
-- [ ] **Task 39.1.8**: Update `to_dict()` / `to_json()` to use Pydantic methods
+- [x] **Task 39.1.1**: Add `pydantic>=2.0` to core dependencies
+- [x] **Task 39.1.2**: Auto-generate Pydantic models from JSON Schema using `datamodel-code-generator`
+- [x] **Task 39.1.3**: Fix Pydantic v2 compatibility (`regex=` → `pattern=`)
+- [ ] **Task 39.1.4**: (Future) Replace dataclasses with Pydantic models directly
+- [ ] **Task 39.1.5**: (Future) Update `to_dict()` / `to_json()` to use Pydantic methods
 
 ### Story 39.2: Schema Cleanup
-- [ ] **Task 39.2.1**: Replace manual `INSPECTION_REPORT_SCHEMA` with `InspectionReport.model_json_schema()`
-- [ ] **Task 39.2.2**: Remove redundant validation functions (Pydantic handles this)
-- [ ] **Task 39.2.3**: Export schema for external consumers (e.g., `haoline --schema`)
-- [ ] **Task 39.2.4**: Update tests to use Pydantic validation
+- [x] **Task 39.2.1**: Update `validate_report()` to use Pydantic validation (with jsonschema fallback)
+- [x] **Task 39.2.2**: Update `get_schema()` to return Pydantic-generated schema
+- [x] **Task 39.2.3**: Add `validate_with_pydantic()` for direct model access
+- [ ] **Task 39.2.4**: Export schema for external consumers (e.g., `haoline --schema`)
+- [ ] **Task 39.2.5**: Update tests to use Pydantic validation
 
 ### Story 39.3: Eval Schema Migration
 - [ ] **Task 39.3.1**: Convert `EvalMetric` to Pydantic model
