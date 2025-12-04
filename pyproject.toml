@@ -73,7 +73,7 @@ dev = [
 ]
 
 [project.scripts]
-haoline = "haoline.cli:main"
+haoline = "haoline.cli:run_inspect"
 
 [project.urls]
 Homepage = "https://github.com/mdayku/HaoLine"
