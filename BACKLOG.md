@@ -480,6 +480,11 @@
   - [ ] **11.3.1d**: Update `HF_SPACE_NAME` in `.github/workflows/deploy-hf-spaces.yml`
   - [ ] **11.3.1e**: Trigger workflow and verify deployment works
 - [ ] **Task 11.3.2**: Add Streamlit Cloud deployment option
+  - [ ] **11.3.2a**: Create account at share.streamlit.io (if needed)
+  - [ ] **11.3.2b**: Connect GitHub repo to Streamlit Cloud
+  - [ ] **11.3.2c**: Set main file path: `src/haoline/streamlit_app.py`
+  - [ ] **11.3.2d**: Add `OPENAI_API_KEY` secret (optional)
+  - [ ] **11.3.2e**: Deploy and verify it works
 - [x] **Task 11.3.3**: Create deployment documentation - see [DEPLOYMENT.md](DEPLOYMENT.md)
 - [x] **Task 11.3.4**: Set up CI/CD for auto-deploy on push - `.github/workflows/deploy-hf-spaces.yml`
 
