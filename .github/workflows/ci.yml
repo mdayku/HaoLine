@@ -215,13 +215,13 @@ jobs:
               git \
               && rm -rf /var/lib/apt/lists/*
 
-          RUN pip install --no-cache-dir haoline[web]>=0.2.4
+          RUN pip install --no-cache-dir "haoline[web]>=0.2.4"
 
           COPY app.py .
 
           EXPOSE 7860
 
-          CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0", "--server.headless=true"]
+          CMD ["python", "-m", "streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0", "--server.headless=true"]
           EOF
 
           # Create app.py
