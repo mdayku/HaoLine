@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import importlib.util
 import logging
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -344,9 +343,7 @@ class TestKerasConversion:
         assert onnx_path.exists()
 
 
-@pytest.mark.skipif(
-    not _JAX_AVAILABLE or not _TF_AVAILABLE, reason="JAX or TF not installed"
-)
+@pytest.mark.skipif(not _JAX_AVAILABLE or not _TF_AVAILABLE, reason="JAX or TF not installed")
 class TestJAXConversion:
     """Tests for JAX to ONNX conversion (requires JAX and TensorFlow)."""
 

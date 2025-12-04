@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
-Pattern detection for ONNX Autodoc.
+Pattern detection for HaoLine.
 
 Detects common architectural patterns in ONNX graphs:
 - Conv-BatchNorm-ReLU blocks
@@ -90,7 +90,7 @@ class PatternAnalyzer:
     MOE_OPS: ClassVar[set[str]] = {"TopK", "Scatter", "ScatterND", "GatherND"}
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.patterns")
+        self.logger = logger or logging.getLogger("haoline.patterns")
 
     def group_into_blocks(self, graph_info: GraphInfo) -> list[Block]:
         """
@@ -154,9 +154,7 @@ class PatternAnalyzer:
                     if next_node and next_node.op_type in self.NORM_OPS:
                         block_nodes.append(next_node.name)
                         block_type_parts.append("BN")
-                        current_output = (
-                            next_node.outputs[0] if next_node.outputs else None
-                        )
+                        current_output = next_node.outputs[0] if next_node.outputs else None
 
                         # Look for activation after BN
                         if current_output:
@@ -386,9 +384,7 @@ class PatternAnalyzer:
                 )
 
         # Also look for LayerNorm which often brackets transformer blocks
-        layernorm_count = sum(
-            1 for n in graph_info.nodes if n.op_type == "LayerNormalization"
-        )
+        layernorm_count = sum(1 for n in graph_info.nodes if n.op_type == "LayerNormalization")
         if layernorm_count >= 2 and blocks:
             # Likely a transformer architecture
             self.logger.debug(
@@ -547,9 +543,7 @@ class PatternAnalyzer:
                         result["num_q_heads"] = q_proj.get("num_heads", 0)
 
                     # Find K projection (may go through Transpose)
-                    k_proj = self._find_linear_proj(
-                        k_input, graph_info, through_transpose=True
-                    )
+                    k_proj = self._find_linear_proj(k_input, graph_info, through_transpose=True)
                     if k_proj:
                         result["k_proj"] = k_proj["name"]
                         result["nodes"].append(k_proj["name"])
@@ -867,9 +861,7 @@ class PatternAnalyzer:
 
                 # Check TopK k attribute
                 for attr in (
-                    getattr(topk, "attributes", {}).items()
-                    if hasattr(topk, "attributes")
-                    else []
+                    getattr(topk, "attributes", {}).items() if hasattr(topk, "attributes") else []
                 ):
                     if attr[0] == "k":
                         k_value = attr[1]
@@ -953,9 +945,7 @@ class PatternAnalyzer:
         # Count normalization ops
         ln_count = graph_info.op_type_counts.get("LayerNormalization", 0)
         rms_count = sum(
-            1
-            for n in graph_info.nodes
-            if "rms" in n.name.lower() or "rmsnorm" in n.name.lower()
+            1 for n in graph_info.nodes if "rms" in n.name.lower() or "rmsnorm" in n.name.lower()
         )
         result["num_layernorms"] = ln_count
         result["has_rmsnorm"] = rms_count > 0 or any(
@@ -1020,8 +1010,7 @@ class PatternAnalyzer:
         has_embedding = any("Embedding" in bt for bt in block_types)
         has_moe = any("MoE" in bt for bt in block_types)
         has_rope = any(
-            b.block_type == "PositionEncoding"
-            and b.attributes.get("encoding_type") == "RoPE"
+            b.block_type == "PositionEncoding" and b.attributes.get("encoding_type") == "RoPE"
             for b in blocks
         )
 
@@ -1053,9 +1042,7 @@ class PatternAnalyzer:
         else:
             return "unknown"
 
-    def get_architecture_summary(
-        self, graph_info: GraphInfo, blocks: list[Block]
-    ) -> dict:
+    def get_architecture_summary(self, graph_info: GraphInfo, blocks: list[Block]) -> dict:
         """
         Get a detailed architecture summary for LLMs.
 
@@ -1120,9 +1107,7 @@ class PatternAnalyzer:
             "total_blocks": len(blocks),
         }
 
-    def _find_consumer(
-        self, output_name: str, graph_info: GraphInfo
-    ) -> NodeInfo | None:
+    def _find_consumer(self, output_name: str, graph_info: GraphInfo) -> NodeInfo | None:
         """Find the first node that consumes a given output."""
         for node in graph_info.nodes:
             if output_name in node.inputs:

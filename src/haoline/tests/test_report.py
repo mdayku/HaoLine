@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Unit tests for the report module (ModelInspector, InspectionReport).
@@ -192,7 +192,7 @@ class TestInspectionReport:
             assert "<!DOCTYPE html>" in html
             assert "<html" in html
             assert "</html>" in html
-            assert "ONNX Autodoc" in html
+            assert "HaoLine" in html
         finally:
             model_path.unlink()
 

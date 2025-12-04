@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
-Per-Layer Summary Table for ONNX Autodoc.
+Per-Layer Summary Table for HaoLine.
 
 Story 5.8: Creates sortable, filterable tables showing per-layer metrics
 (params, FLOPs, latency estimate, memory).
@@ -216,7 +216,7 @@ class LayerSummaryBuilder:
     """
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.layer_summary")
+        self.logger = logger or logging.getLogger("haoline.layer_summary")
 
     def build(
         self,
@@ -290,9 +290,7 @@ class LayerSummaryBuilder:
                 op_weights = memory_estimates.breakdown.weights_by_op_type
                 if op_weights and node.op_type in op_weights:
                     # Distribute among nodes of same type
-                    nodes_of_type = sum(
-                        1 for n in graph_info.nodes if n.op_type == node.op_type
-                    )
+                    nodes_of_type = sum(1 for n in graph_info.nodes if n.op_type == node.op_type)
                     if nodes_of_type > 0:
                         node_memory = op_weights[node.op_type] // nodes_of_type
 
@@ -626,12 +624,7 @@ def generate_html_table(summary: LayerSummary, include_js: bool = True) -> str:
     # JavaScript for sorting and filtering
     if include_js:
         # Build CSV data for export
-        csv_data = (
-            summary.to_csv()
-            .replace("\\", "\\\\")
-            .replace("`", "\\`")
-            .replace("$", "\\$")
-        )
+        csv_data = summary.to_csv().replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$")
 
         html_parts.append(
             f"""
@@ -770,8 +763,6 @@ def generate_markdown_table(summary: LayerSummary, max_rows: int = 50) -> str:
         )
 
     if len(summary.layers) > max_rows:
-        lines.append(
-            f"| ... | ({len(summary.layers) - max_rows} more layers) | ... | ... | ... |"
-        )
+        lines.append(f"| ... | ({len(summary.layers) - max_rows} more layers) | ... | ... | ... |")
 
     return "\n".join(lines)

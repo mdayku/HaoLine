@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Compare Mode Visualizations for Quantization Impact Reports.
@@ -30,7 +30,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-LOGGER = logging.getLogger("autodoc.compare_viz")
+LOGGER = logging.getLogger("haoline.compare_viz")
 
 # Try to import matplotlib
 try:
@@ -162,9 +162,7 @@ def generate_layer_precision_chart(
     first_breakdown = breakdowns[precisions[0]]
     # Sort by FLOPs descending and take top N
     sorted_layers = sorted(first_breakdown, key=lambda x: x.flops, reverse=True)[:top_n]
-    layer_names = [
-        layer.layer_name[:30] for layer in sorted_layers
-    ]  # Truncate long names
+    layer_names = [layer.layer_name[:30] for layer in sorted_layers]  # Truncate long names
 
     # Colors for different precisions
     precision_colors = {
@@ -185,9 +183,7 @@ def generate_layer_precision_chart(
         flops_values = []
         for layer in sorted_layers:
             if layer.layer_name in layer_map:
-                flops_values.append(
-                    layer_map[layer.layer_name].flops / 1e9
-                )  # Convert to GFLOPs
+                flops_values.append(layer_map[layer.layer_name].flops / 1e9)  # Convert to GFLOPs
             else:
                 flops_values.append(0)
 
@@ -262,13 +258,9 @@ def compute_tradeoff_points(
     # Extract baseline metrics
     baseline_metrics = baseline.get("metrics", {})
     baseline_latency = (
-        baseline_metrics.get("latency_ms_p50")
-        or baseline_metrics.get("latency_ms")
-        or 1.0
+        baseline_metrics.get("latency_ms_p50") or baseline_metrics.get("latency_ms") or 1.0
     )
-    baseline_accuracy = (
-        baseline_metrics.get("f1_macro") or baseline_metrics.get("accuracy") or 1.0
-    )
+    baseline_accuracy = baseline_metrics.get("f1_macro") or baseline_metrics.get("accuracy") or 1.0
     baseline_size = baseline.get("size_bytes", 1)
     baseline_memory = baseline.get("memory_bytes") or baseline_size
 
@@ -277,14 +269,8 @@ def compute_tradeoff_points(
         precision = v.get("precision", "unknown")
         metrics = v.get("metrics", {})
 
-        latency = (
-            metrics.get("latency_ms_p50")
-            or metrics.get("latency_ms")
-            or baseline_latency
-        )
-        accuracy = (
-            metrics.get("f1_macro") or metrics.get("accuracy") or baseline_accuracy
-        )
+        latency = metrics.get("latency_ms_p50") or metrics.get("latency_ms") or baseline_latency
+        accuracy = metrics.get("f1_macro") or metrics.get("accuracy") or baseline_accuracy
         size = v.get("size_bytes", baseline_size)
         memory = v.get("memory_bytes") or size
 
@@ -377,12 +363,8 @@ def generate_tradeoff_chart(
         )
 
     # Reference lines
-    ax.axhline(
-        y=0, color="#636366", linestyle="--", alpha=0.5, label="Baseline accuracy"
-    )
-    ax.axvline(
-        x=1.0, color="#636366", linestyle="--", alpha=0.5, label="Baseline speed"
-    )
+    ax.axhline(y=0, color="#636366", linestyle="--", alpha=0.5, label="Baseline accuracy")
+    ax.axvline(x=1.0, color="#636366", linestyle="--", alpha=0.5, label="Baseline speed")
 
     # Styling
     ax.set_xlabel("Speedup (×)", fontsize=12, color="white")  # noqa: RUF001
@@ -733,9 +715,7 @@ def compute_normalized_metrics(
 
         # Composite efficiency score (higher = more efficient)
         # Favors: higher FLOPs/param (more compute per weight), lower memory/param
-        efficiency_score = min(
-            100, max(0, (flops_per_param / 100) - (memory_per_param / 1000))
-        )
+        efficiency_score = min(100, max(0, (flops_per_param / 100) - (memory_per_param / 1000)))
 
         metrics_list.append(
             NormalizedMetrics(
@@ -793,9 +773,7 @@ def generate_radar_chart(
     )
     baseline_metrics = baseline.get("metrics", {})
     baseline_latency = (
-        baseline_metrics.get("latency_ms_p50")
-        or baseline_metrics.get("latency_ms")
-        or 1
+        baseline_metrics.get("latency_ms_p50") or baseline_metrics.get("latency_ms") or 1
     )
 
     # Define radar categories (lower is better for all)
@@ -818,25 +796,14 @@ def generate_radar_chart(
         precision = v.get("precision", "unknown")
         size = v.get("size_bytes", baseline_size)
         report = v.get("report", {})
-        params = (
-            report.get("param_counts", {}).get("total", baseline_params)
-            or baseline_params
-        )
-        flops = (
-            report.get("flop_counts", {}).get("total", baseline_flops) or baseline_flops
-        )
+        params = report.get("param_counts", {}).get("total", baseline_params) or baseline_params
+        flops = report.get("flop_counts", {}).get("total", baseline_flops) or baseline_flops
         memory = (
-            report.get("memory_estimates", {}).get(
-                "peak_activation_bytes", baseline_memory
-            )
+            report.get("memory_estimates", {}).get("peak_activation_bytes", baseline_memory)
             or baseline_memory
         )
         metrics = v.get("metrics", {})
-        latency = (
-            metrics.get("latency_ms_p50")
-            or metrics.get("latency_ms")
-            or baseline_latency
-        )
+        latency = metrics.get("latency_ms_p50") or metrics.get("latency_ms") or baseline_latency
 
         # Normalize (0-1 scale, relative to baseline, capped at 2x)
         values = [
@@ -1138,15 +1105,13 @@ def build_enhanced_markdown(
         lines.append("## Calibration Recommendations")
         lines.append("")
         for rec in calib_recs:
-            icon = {"info": "i", "warning": "!", "critical": "!!!"}.get(
-                rec.severity, "*"
-            )
+            icon = {"info": "i", "warning": "!", "critical": "!!!"}.get(rec.severity, "*")
             lines.append(f"- {icon} **{rec.recommendation}**")
             lines.append(f"  - {rec.reason}")
         lines.append("")
 
     lines.append("---")
-    lines.append("*Generated by ONNX Autodoc Compare Mode*")
+    lines.append("*Generated by HaoLine Compare Mode*")
     lines.append("")
 
     return "\n".join(lines)
@@ -1457,9 +1422,7 @@ def generate_compare_html(
             d = deltas["size_bytes"]
             pct = (d / size_bytes) * 100 if size_bytes else 0
             delta_class = "positive" if d < 0 else "negative"
-            size_delta_str = (
-                f'<span class="stat-delta {delta_class}">{pct:+.0f}%</span>'
-            )
+            size_delta_str = f'<span class="stat-delta {delta_class}">{pct:+.0f}%</span>'
 
         html_parts.append(
             f"""
@@ -1541,9 +1504,7 @@ def generate_compare_html(
         html_parts.append('<div class="recommendations">')
 
         for rec in calib_recs:
-            icon = {"info": "i", "warning": "!", "critical": "!!!"}.get(
-                rec.severity, "*"
-            )
+            icon = {"info": "i", "warning": "!", "critical": "!!!"}.get(rec.severity, "*")
             html_parts.append(
                 f"""
                 <div class="rec-item">
@@ -1562,7 +1523,7 @@ def generate_compare_html(
     html_parts.append(
         """
         <p style="margin-top: 3rem; color: var(--text-secondary); font-size: 0.85rem; text-align: center;">
-            Generated by ONNX Autodoc Compare Mode
+            Generated by HaoLine Compare Mode
         </p>
     </div>
 </body>

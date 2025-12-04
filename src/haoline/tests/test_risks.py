@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Unit tests for the risks module (risk signal detection).
@@ -40,9 +40,7 @@ def create_deep_no_skip_model(num_layers: int = 60) -> onnx.ModelProto:
         initializers.append(W)
 
         out_name = f"layer_{i}" if i < num_layers - 1 else "Y"
-        matmul = helper.make_node(
-            "MatMul", [prev_output, f"W_{i}"], [out_name], name=f"matmul_{i}"
-        )
+        matmul = helper.make_node("MatMul", [prev_output, f"W_{i}"], [out_name], name=f"matmul_{i}")
         nodes.append(matmul)
         prev_output = out_name
 
@@ -107,9 +105,7 @@ def create_no_activation_model() -> onnx.ModelProto:
         initializers.append(W)
 
         out_name = f"layer_{i}" if i < 24 else "Y"
-        matmul = helper.make_node(
-            "MatMul", [prev_output, f"W_{i}"], [out_name], name=f"matmul_{i}"
-        )
+        matmul = helper.make_node("MatMul", [prev_output, f"W_{i}"], [out_name], name=f"matmul_{i}")
         nodes.append(matmul)
         prev_output = out_name
 
@@ -309,9 +305,7 @@ class TestNonstandardResidualRisk:
             assert "nonstandard_residuals" in signal_ids
 
             # Check signal details
-            nonstandard_signal = next(
-                s for s in signals if s.id == "nonstandard_residuals"
-            )
+            nonstandard_signal = next(s for s in signals if s.id == "nonstandard_residuals")
             assert nonstandard_signal.severity == "info"
             assert "gated" in nonstandard_signal.description.lower()
             assert nonstandard_signal.recommendation  # Should have a recommendation

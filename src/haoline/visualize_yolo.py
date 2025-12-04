@@ -5,11 +5,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(__file__).replace("\\", "/").rsplit("/", 4)[0])
 
-from util.autodoc.analyzer import ONNXGraphLoader
-from util.autodoc.edge_analysis import EdgeAnalyzer
-from util.autodoc.hierarchical_graph import HierarchicalGraphBuilder
-from util.autodoc.html_export import HTMLExporter
-from util.autodoc.patterns import PatternAnalyzer
+from util.haoline.analyzer import ONNXGraphLoader
+from util.haoline.edge_analysis import EdgeAnalyzer
+from util.haoline.hierarchical_graph import HierarchicalGraphBuilder
+from util.haoline.html_export import HTMLExporter
+from util.haoline.patterns import PatternAnalyzer
 
 model_path = Path(
     r"C:\Users\marcu\Roomer\room_detection_training\local_training_output\yolo-v8l-200epoch\weights\best.onnx"

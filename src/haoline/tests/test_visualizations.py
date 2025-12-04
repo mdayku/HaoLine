@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Unit tests for the visualization module.
@@ -176,9 +176,7 @@ class TestChartGeneration:
             assert result is None
 
             # All zeros
-            result = gen.param_distribution(
-                {"Conv": 0, "Relu": 0}, Path(tmpdir) / "zeros.png"
-            )
+            result = gen.param_distribution({"Conv": 0, "Relu": 0}, Path(tmpdir) / "zeros.png")
             assert result is None
 
     def test_generate_all_creates_multiple_charts(self):
@@ -271,13 +269,9 @@ class TestConvenienceFunction:
             op_type_counts={"Conv": 5, "Relu": 5},
         )
 
-        param_counts = ParamCounts(
-            total=1000, trainable=1000, by_op_type={"Conv": 1000}
-        )
+        param_counts = ParamCounts(total=1000, trainable=1000, by_op_type={"Conv": 1000})
         flop_counts = FlopCounts(total=10000, by_op_type={"Conv": 10000})
-        memory_estimates = MemoryEstimates(
-            model_size_bytes=4000, peak_activation_bytes=2000
-        )
+        memory_estimates = MemoryEstimates(model_size_bytes=4000, peak_activation_bytes=2000)
 
         report = InspectionReport(
             metadata=metadata,

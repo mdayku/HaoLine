@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Hierarchical Graph View for visualization.
@@ -174,9 +174,7 @@ class HierarchicalGraph:
         self._collect_visible(self.root, visible)
         return visible
 
-    def _collect_visible(
-        self, node: HierarchicalNode, visible: list[HierarchicalNode]
-    ) -> None:
+    def _collect_visible(self, node: HierarchicalNode, visible: list[HierarchicalNode]) -> None:
         """Recursively collect visible nodes."""
         visible.append(node)
         if not node.is_collapsed:
@@ -204,7 +202,7 @@ class HierarchicalGraphBuilder:
     """
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.hierarchy")
+        self.logger = logger or logging.getLogger("haoline.hierarchy")
 
     def build(
         self,
@@ -349,10 +347,7 @@ class HierarchicalGraphBuilder:
                 block_type = child.attributes.get("block_type", "")
 
                 # Check if this starts a new layer
-                if (
-                    block_type in ("AttentionHead", "Attention")
-                    and current_layer_blocks
-                ):
+                if block_type in ("AttentionHead", "Attention") and current_layer_blocks:
                     # Previous blocks become a layer
                     if len(current_layer_blocks) > 1:
                         layer = self._create_layer_node(current_layer_blocks, layer_idx)

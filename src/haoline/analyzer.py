@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
-Core analysis engine for ONNX Autodoc.
+Core analysis engine for HaoLine.
 
 This module provides:
 - ONNXGraphLoader: Load ONNX models and extract graph structure
@@ -102,13 +102,9 @@ class ParamCounts:
     num_shared_weights: int = 0  # Count of weights used by 2+ nodes
 
     # Quantization info
-    precision_breakdown: dict[str, int] = field(
-        default_factory=dict
-    )  # dtype -> param count
+    precision_breakdown: dict[str, int] = field(default_factory=dict)  # dtype -> param count
     is_quantized: bool = False  # True if model has quantized weights or ops
-    quantized_ops: list[str] = field(
-        default_factory=list
-    )  # Quantized op types detected
+    quantized_ops: list[str] = field(default_factory=list)  # Quantized op types detected
 
     def to_dict(self) -> dict:
         return {
@@ -148,9 +144,7 @@ class MemoryBreakdown:
     # Weights by operation type
     weights_by_op_type: dict[str, int] = field(default_factory=dict)  # op -> bytes
     # Top weight tensors
-    largest_weights: list[tuple[str, int]] = field(
-        default_factory=list
-    )  # (name, bytes)
+    largest_weights: list[tuple[str, int]] = field(default_factory=list)  # (name, bytes)
     # Activation breakdown
     activations_by_op_type: dict[str, int] = field(default_factory=dict)  # op -> bytes
     largest_activations: list[tuple[str, int]] = field(default_factory=list)
@@ -159,13 +153,11 @@ class MemoryBreakdown:
         return {
             "weights_by_op_type": self.weights_by_op_type,
             "largest_weights": [
-                {"name": name, "bytes": size}
-                for name, size in self.largest_weights[:10]
+                {"name": name, "bytes": size} for name, size in self.largest_weights[:10]
             ],
             "activations_by_op_type": self.activations_by_op_type,
             "largest_activations": [
-                {"name": name, "bytes": size}
-                for name, size in self.largest_activations[:10]
+                {"name": name, "bytes": size} for name, size in self.largest_activations[:10]
             ],
         }
 
@@ -180,9 +172,7 @@ class MemoryEstimates:
     # KV cache estimates for transformer models
     kv_cache_bytes_per_token: int = 0  # KV cache per token (for streaming inference)
     kv_cache_bytes_full_context: int = 0  # Total KV cache at max seq length
-    kv_cache_config: dict[str, int] = field(
-        default_factory=dict
-    )  # num_layers, hidden_dim, etc.
+    kv_cache_config: dict[str, int] = field(default_factory=dict)  # num_layers, hidden_dim, etc.
     # Detailed breakdown
     breakdown: MemoryBreakdown | None = None
 
@@ -209,7 +199,7 @@ class ONNXGraphLoader:
     """
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.loader")
+        self.logger = logger or logging.getLogger("haoline.loader")
 
     def load(self, model_path: str | pathlib.Path) -> tuple[onnx.ModelProto, GraphInfo]:
         """
@@ -234,18 +224,14 @@ class ONNXGraphLoader:
             try:
                 model = onnx.shape_inference.infer_shapes(model, strict_mode=True)
             except Exception as e:
-                self.logger.warning(
-                    f"Shape inference failed: {e}. Proceeding without shape info."
-                )
+                self.logger.warning(f"Shape inference failed: {e}. Proceeding without shape info.")
 
         graph_info = self._extract_graph_info(model.graph, model)
 
         self.logger.debug(f"Loaded graph with {graph_info.num_nodes} nodes")
         return model, graph_info
 
-    def _extract_graph_info(
-        self, graph: onnx.GraphProto, model: onnx.ModelProto
-    ) -> GraphInfo:
+    def _extract_graph_info(self, graph: onnx.GraphProto, model: onnx.ModelProto) -> GraphInfo:
         """Extract GraphInfo from an ONNX GraphProto."""
 
         # Extract initializers (weights/biases)
@@ -417,7 +403,7 @@ class MetricsEngine:
     QUANTIZED_DTYPES: ClassVar[set[type]] = {np.int8, np.uint8, np.int16, np.uint16}
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.metrics")
+        self.logger = logger or logging.getLogger("haoline.metrics")
 
     def count_parameters(self, graph_info: GraphInfo) -> ParamCounts:
         """
@@ -533,9 +519,7 @@ class MetricsEngine:
             node.flops = flops
             counts.total += flops
             counts.by_node[node.name] = flops
-            counts.by_op_type[node.op_type] = (
-                counts.by_op_type.get(node.op_type, 0) + flops
-            )
+            counts.by_op_type[node.op_type] = counts.by_op_type.get(node.op_type, 0) + flops
 
         return counts
 
@@ -586,9 +570,7 @@ class MetricsEngine:
         # Get output shape
         if node.outputs and node.outputs[0] in graph_info.value_shapes:
             output_shape = graph_info.value_shapes[node.outputs[0]]
-            if len(output_shape) >= 4 and all(
-                isinstance(d, int) for d in output_shape[-2:]
-            ):
+            if len(output_shape) >= 4 and all(isinstance(d, int) for d in output_shape[-2:]):
                 h_out, w_out = output_shape[-2], output_shape[-1]
             else:
                 h_out, w_out = 1, 1
@@ -638,9 +620,7 @@ class MetricsEngine:
         k2, n = shape_b[-2], shape_b[-1]
 
         if k != k2:
-            self.logger.warning(
-                f"MatMul shape mismatch in node {node.name}: K={k} vs K={k2}"
-            )
+            self.logger.warning(f"MatMul shape mismatch in node {node.name}: K={k} vs K={k2}")
             return 0
 
         # Handle batch dimensions
@@ -656,11 +636,7 @@ class MetricsEngine:
         flops = self._estimate_matmul_flops(node, graph_info)
 
         # Add bias computation if present
-        if (
-            len(node.inputs) > 2
-            and node.outputs
-            and node.outputs[0] in graph_info.value_shapes
-        ):
+        if len(node.inputs) > 2 and node.outputs and node.outputs[0] in graph_info.value_shapes:
             output_shape = graph_info.value_shapes[node.outputs[0]]
             if output_shape and all(isinstance(d, int) for d in output_shape):
                 int_shape: list[int] = [d for d in output_shape if isinstance(d, int)]
@@ -791,9 +767,7 @@ class MetricsEngine:
                     bytes_per_elem = 2
 
             tensor_bytes = (
-                int(np.prod(tensor.shape)) * bytes_per_elem
-                if tensor.shape
-                else bytes_per_elem
+                int(np.prod(tensor.shape)) * bytes_per_elem if tensor.shape else bytes_per_elem
             )
             estimates.model_size_bytes += tensor_bytes
             weight_sizes.append((name, tensor_bytes))
@@ -841,9 +815,7 @@ class MetricsEngine:
         sorted_activations = sorted(activation_sizes, key=lambda x: -x[1])
         # Rough heuristic: top 3 largest activations might coexist
         top_n = min(3, len(sorted_activations))
-        estimates.peak_activation_bytes = sum(
-            size for _, size in sorted_activations[:top_n]
-        )
+        estimates.peak_activation_bytes = sum(size for _, size in sorted_activations[:top_n])
 
         # Store top 10 largest activations
         breakdown.largest_activations = sorted_activations[:10]
@@ -855,9 +827,7 @@ class MetricsEngine:
         kv_config = self._estimate_kv_cache_config(graph_info)
         if kv_config:
             estimates.kv_cache_config = kv_config
-            estimates.kv_cache_bytes_per_token = self._compute_kv_cache_per_token(
-                kv_config
-            )
+            estimates.kv_cache_bytes_per_token = self._compute_kv_cache_per_token(kv_config)
             estimates.kv_cache_bytes_full_context = (
                 estimates.kv_cache_bytes_per_token * kv_config["seq_len"]
             )
@@ -873,9 +843,7 @@ class MetricsEngine:
         """
         # Check for attention ops
         attention_ops = {"Attention", "MultiHeadAttention", "Softmax"}
-        attention_count = sum(
-            graph_info.op_type_counts.get(op, 0) for op in attention_ops
-        )
+        attention_count = sum(graph_info.op_type_counts.get(op, 0) for op in attention_ops)
 
         if attention_count == 0:
             return {}
@@ -889,9 +857,9 @@ class MetricsEngine:
 
         # Count attention ops to estimate number of layers
         # Each transformer layer typically has one attention block
-        mha_count = graph_info.op_type_counts.get(
-            "Attention", 0
-        ) + graph_info.op_type_counts.get("MultiHeadAttention", 0)
+        mha_count = graph_info.op_type_counts.get("Attention", 0) + graph_info.op_type_counts.get(
+            "MultiHeadAttention", 0
+        )
         softmax_count = graph_info.op_type_counts.get("Softmax", 0)
 
         # Use MHA count if available, otherwise estimate from Softmax

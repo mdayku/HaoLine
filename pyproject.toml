@@ -106,6 +106,10 @@ ignore = [
     "E501",   # line too long (handled by black)
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# CLI has availability check imports that look unused
+"src/haoline/cli.py" = ["F401", "F841"]
+
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
@@ -116,4 +120,3 @@ ignore_missing_imports = true
 testpaths = ["src/haoline/tests"]
 python_files = ["test_*.py"]
 addopts = "-v --tb=short"
-

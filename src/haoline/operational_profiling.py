@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Operational profiling and system requirements analysis.
@@ -101,9 +101,7 @@ class ProfilingResult:
         """Aggregate execution time by operator type."""
         time_by_op: dict[str, float] = {}
         for layer in self.layer_profiles:
-            time_by_op[layer.op_type] = (
-                time_by_op.get(layer.op_type, 0) + layer.duration_ms
-            )
+            time_by_op[layer.op_type] = time_by_op.get(layer.op_type, 0) + layer.duration_ms
         return dict(sorted(time_by_op.items(), key=lambda x: -x[1]))
 
     def to_dict(self) -> dict[str, Any]:
@@ -111,9 +109,7 @@ class ProfilingResult:
             "total_time_ms": round(self.total_time_ms, 3),
             "layer_count": len(self.layer_profiles),
             "slowest_layers": [lp.to_dict() for lp in self.get_slowest_layers()],
-            "time_by_op_type": {
-                k: round(v, 3) for k, v in self.get_time_by_op_type().items()
-            },
+            "time_by_op_type": {k: round(v, 3) for k, v in self.get_time_by_op_type().items()},
             "gpu_metrics": self.gpu_metrics.to_dict() if self.gpu_metrics else None,
         }
 
@@ -267,7 +263,7 @@ class OperationalProfiler:
     """
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.profiler")
+        self.logger = logger or logging.getLogger("haoline.profiler")
         self.hw_estimator = HardwareEstimator(logger=self.logger)
 
     def _create_input_feed(
@@ -440,7 +436,6 @@ class OperationalProfiler:
         """
         try:
             import numpy as np
-
             import onnxruntime as ort
         except ImportError:
             self.logger.warning("onnxruntime not available, falling back to estimates")
@@ -583,8 +578,7 @@ class OperationalProfiler:
                 optimal_bs = bs
 
             self.logger.info(
-                f"  Batch {bs}: latency={p50_latency:.2f}ms, "
-                f"throughput={throughput:.1f} inf/s"
+                f"  Batch {bs}: latency={p50_latency:.2f}ms, " f"throughput={throughput:.1f} inf/s"
             )
 
         return BatchSizeSweep(
@@ -790,9 +784,7 @@ class OperationalProfiler:
         # Find resolution that meets target FPS
         recommended = None
         recommended_idx = -1
-        for i, (res, lat) in enumerate(
-            zip(sweep.resolutions, sweep.latencies, strict=False)
-        ):
+        for i, (res, lat) in enumerate(zip(sweep.resolutions, sweep.latencies, strict=False)):
             if lat != float("inf") and lat <= target_latency_ms:
                 recommended = res
                 recommended_idx = i
@@ -807,9 +799,7 @@ class OperationalProfiler:
             )
         else:
             # Find closest resolution that fits
-            for i, (res, lat) in enumerate(
-                zip(sweep.resolutions, sweep.latencies, strict=False)
-            ):
+            for i, (res, lat) in enumerate(zip(sweep.resolutions, sweep.latencies, strict=False)):
                 if lat != float("inf"):
                     recommended = res
                     recommended_idx = i
@@ -927,9 +917,7 @@ class OperationalProfiler:
         if recommended is None and valid_candidates:
             # Pick median performer? Or just fallback to Minimum if nothing is fast enough?
             # Let's pick the one that is ~4x faster than minimum if possible, or just minimum
-            minimum_latency = (
-                minimum.theoretical_latency_ms if minimum else float("inf")
-            )
+            minimum_latency = minimum.theoretical_latency_ms if minimum else float("inf")
             for _, est in valid_candidates:
                 if est.theoretical_latency_ms <= minimum_latency / 4.0:
                     recommended = est
@@ -938,9 +926,7 @@ class OperationalProfiler:
         if recommended is None:
             recommended = minimum  # Fallback
 
-        return SystemRequirements(
-            minimum=minimum, recommended=recommended, optimal=optimal
-        )
+        return SystemRequirements(minimum=minimum, recommended=recommended, optimal=optimal)
 
     # =========================================================================
     # Story 9.2: GPU Memory Profiling
@@ -1017,7 +1003,6 @@ class OperationalProfiler:
         """
         try:
             import numpy as np
-
             import onnxruntime as ort
         except ImportError:
             return {"error": "onnxruntime not available"}
@@ -1254,9 +1239,7 @@ class OperationalProfiler:
         # Estimate memory transfer time
         # Rough estimate: assume model params + activations need to be read
         # Memory bandwidth in bytes/s -> convert to bytes/ms
-        mem_bandwidth_bytes_per_ms = (
-            hardware.memory_bandwidth_bytes_per_s / 1000
-        )  # B/s -> B/ms
+        mem_bandwidth_bytes_per_ms = hardware.memory_bandwidth_bytes_per_s / 1000  # B/s -> B/ms
 
         # Estimate memory footprint accessed per inference
         # This is a rough estimate - actual depends on caching, batch size, etc.
@@ -1367,7 +1350,6 @@ class OperationalProfiler:
             import time
 
             import numpy as np
-
             import onnxruntime as ort
         except ImportError:
             self.logger.warning("onnxruntime not available for benchmarking")

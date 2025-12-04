@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Unit tests for the analyzer module (parameter counting, FLOP estimation, memory estimates).
@@ -178,9 +178,7 @@ def create_conv_bn_relu_model() -> onnx.ModelProto:
     mean = helper.make_tensor(
         "mean", TensorProto.FLOAT, [16], np.zeros(16, dtype=np.float32).tolist()
     )
-    var = helper.make_tensor(
-        "var", TensorProto.FLOAT, [16], np.ones(16, dtype=np.float32).tolist()
-    )
+    var = helper.make_tensor("var", TensorProto.FLOAT, [16], np.ones(16, dtype=np.float32).tolist())
 
     Y = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [1, 16, 6, 6])
 
@@ -524,10 +522,7 @@ class TestKVCacheEstimation:
             if config:
                 # Verify formula: 2 * layers * hidden * bytes_per_elem
                 expected_per_token = (
-                    2
-                    * config["num_layers"]
-                    * config["hidden_dim"]
-                    * config["bytes_per_elem"]
+                    2 * config["num_layers"] * config["hidden_dim"] * config["bytes_per_elem"]
                 )
                 assert memory.kv_cache_bytes_per_token == expected_per_token
 
@@ -656,9 +651,7 @@ def create_mixed_precision_model() -> onnx.ModelProto:
 
     # Two MatMul nodes with different precision weights
     matmul1 = helper.make_node("MatMul", ["X", "W_fp32"], ["hidden"])
-    cast_node = helper.make_node(
-        "Cast", ["W_fp16"], ["W_fp16_casted"], to=TensorProto.FLOAT
-    )
+    cast_node = helper.make_node("Cast", ["W_fp16"], ["W_fp16_casted"], to=TensorProto.FLOAT)
     matmul2 = helper.make_node("MatMul", ["hidden", "W_fp16_casted"], ["Y"])
 
     graph = helper.make_graph(

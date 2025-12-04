@@ -77,7 +77,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         epilog="""\
 Examples:
   # Basic quantization impact comparison
-  python -m onnxruntime.tools.model_inspect_compare \\
+  python -m haoline_compare \\
     --models resnet_fp32.onnx resnet_fp16.onnx resnet_int8.onnx \\
     --eval-metrics eval_fp32.json eval_fp16.json eval_int8.json \\
     --baseline-precision fp32 \\
@@ -211,11 +211,7 @@ def _load_eval_metrics(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
 
-    if (
-        isinstance(data, dict)
-        and "metrics" in data
-        and isinstance(data["metrics"], dict)
-    ):
+    if isinstance(data, dict) and "metrics" in data and isinstance(data["metrics"], dict):
         return data["metrics"]
 
     if isinstance(data, dict):
@@ -435,12 +431,8 @@ def _compute_deltas(baseline: VariantReport, other: VariantReport) -> dict[str, 
         deltas["memory_bytes"] = int(other_mem - base_mem)
 
     # Peak activation memory
-    base_peak = _get_numeric_metric(
-        baseline.report, "memory_estimates", "peak_activation_bytes"
-    )
-    other_peak = _get_numeric_metric(
-        other.report, "memory_estimates", "peak_activation_bytes"
-    )
+    base_peak = _get_numeric_metric(baseline.report, "memory_estimates", "peak_activation_bytes")
+    other_peak = _get_numeric_metric(other.report, "memory_estimates", "peak_activation_bytes")
     if base_peak is not None and other_peak is not None:
         deltas["peak_activation_bytes"] = int(other_peak - base_peak)
 
@@ -522,14 +514,10 @@ def _build_compare_json(
             "size_bytes": int(v.size_bytes),
             # Structural metrics from inspection
             "total_params": (
-                param_counts.total
-                if param_counts and hasattr(param_counts, "total")
-                else None
+                param_counts.total if param_counts and hasattr(param_counts, "total") else None
             ),
             "total_flops": (
-                flop_counts.total
-                if flop_counts and hasattr(flop_counts, "total")
-                else None
+                flop_counts.total if flop_counts and hasattr(flop_counts, "total") else None
             ),
             "memory_bytes": (
                 memory_estimates.total_bytes
@@ -541,9 +529,7 @@ def _build_compare_json(
             "hardware_estimates": (
                 hw_estimates.to_dict() if hasattr(hw_estimates, "to_dict") else None
             ),
-            "hardware_profile": (
-                hw_profile.to_dict() if hasattr(hw_profile, "to_dict") else None
-            ),
+            "hardware_profile": (hw_profile.to_dict() if hasattr(hw_profile, "to_dict") else None),
             "deltas_vs_baseline": deltas_vs_baseline,
         }
         out["variants"].append(out_variant)
@@ -596,8 +582,7 @@ def _build_markdown_summary(
     lines.append(f"# Quantization Impact: {model_family_id}")
     lines.append("")
     lines.append(
-        f"Baseline precision: **{baseline_precision}**  "
-        "(deltas are relative to this variant)."
+        f"Baseline precision: **{baseline_precision}**  " "(deltas are relative to this variant)."
     )
     lines.append("")
 
@@ -653,10 +638,7 @@ def _build_markdown_summary(
     has_perf_metrics = False
     for v in compare_json.get("variants", []):
         metrics = v.get("metrics", {})
-        if any(
-            k in metrics
-            for k in ["latency_ms_p50", "throughput_qps", "f1_macro", "accuracy"]
-        ):
+        if any(k in metrics for k in ["latency_ms_p50", "throughput_qps", "f1_macro", "accuracy"]):
             has_perf_metrics = True
             break
 
@@ -680,9 +662,7 @@ def _build_markdown_summary(
             accuracy = metrics.get("f1_macro") or metrics.get("accuracy")
 
             lat_str = f"{latency:.2f}" if latency is not None else "-"
-            tput_str = (
-                _format_number(throughput, " qps") if throughput is not None else "-"
-            )
+            tput_str = _format_number(throughput, " qps") if throughput is not None else "-"
             acc_str = f"{accuracy:.4f}" if accuracy is not None else "-"
 
             if deltas is None:
@@ -815,16 +795,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             if pdf_path:
                 logger.info("Comparison PDF written to %s", pdf_path)
             else:
-                logger.warning(
-                    "PDF generation failed (Playwright may not be installed)"
-                )
+                logger.warning("PDF generation failed (Playwright may not be installed)")
 
-        if (
-            not args.out_json
-            and not args.out_md
-            and not args.out_html
-            and not args.out_pdf
-        ):
+        if not args.out_json and not args.out_md and not args.out_html and not args.out_pdf:
             # Default to printing JSON to stdout if no outputs specified
             print(json.dumps(compare_json, indent=2))
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Example: Hardware Performance Estimation
@@ -59,9 +59,7 @@ def main():
             flops=report.flop_counts.total if report.flop_counts else 0,
             params=report.param_counts.total if report.param_counts else 0,
             activation_bytes=(
-                report.memory_estimates.peak_activation_bytes
-                if report.memory_estimates
-                else 0
+                report.memory_estimates.peak_activation_bytes if report.memory_estimates else 0
             ),
             hardware=profile,
             precision="fp16",

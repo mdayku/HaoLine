@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Tests for LLM-scale pattern detection with real models.
@@ -34,7 +34,7 @@ MODEL_URLS = {
 }
 
 # Cache directory for downloaded models
-CACHE_DIR = Path(tempfile.gettempdir()) / "onnx_autodoc_test_models"
+CACHE_DIR = Path(tempfile.gettempdir()) / "haoline_test_models"
 
 
 def download_model(name: str) -> Path | None:
@@ -76,12 +76,8 @@ def create_mini_bert_model() -> onnx.ModelProto:
     ff_dim = 3072
 
     # Inputs
-    X = helper.make_tensor_value_info(
-        "input", TensorProto.FLOAT, [batch, seq_len, hidden]
-    )
-    Y = helper.make_tensor_value_info(
-        "output", TensorProto.FLOAT, [batch, seq_len, hidden]
-    )
+    X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [batch, seq_len, hidden])
+    Y = helper.make_tensor_value_info("output", TensorProto.FLOAT, [batch, seq_len, hidden])
 
     # Layer norm weights
     ln1_gamma = helper.make_tensor(
@@ -168,23 +164,15 @@ def create_mini_bert_model() -> onnx.ModelProto:
         helper.make_node("MatMul", ["ln1_out", "wk"], ["k"], name="k_proj"),
         helper.make_node("MatMul", ["ln1_out", "wv"], ["v"], name="v_proj"),
         # Transpose K for attention
-        helper.make_node(
-            "Transpose", ["k"], ["k_t"], name="k_transpose", perm=[0, 2, 1]
-        ),
+        helper.make_node("Transpose", ["k"], ["k_t"], name="k_transpose", perm=[0, 2, 1]),
         # Attention scores: Q @ K^T
         helper.make_node("MatMul", ["q", "k_t"], ["attn_scores"], name="attn_matmul"),
         # Scale attention scores
-        helper.make_node(
-            "Mul", ["attn_scores", "scale"], ["attn_scaled"], name="attn_scale"
-        ),
+        helper.make_node("Mul", ["attn_scores", "scale"], ["attn_scaled"], name="attn_scale"),
         # Softmax
-        helper.make_node(
-            "Softmax", ["attn_scaled"], ["attn_weights"], name="softmax", axis=-1
-        ),
+        helper.make_node("Softmax", ["attn_scaled"], ["attn_weights"], name="softmax", axis=-1),
         # Attention output: softmax(QK^T/sqrt(d)) @ V
-        helper.make_node(
-            "MatMul", ["attn_weights", "v"], ["attn_out"], name="attn_v_matmul"
-        ),
+        helper.make_node("MatMul", ["attn_weights", "v"], ["attn_out"], name="attn_v_matmul"),
         # Output projection
         helper.make_node("MatMul", ["attn_out", "wo"], ["attn_proj"], name="o_proj"),
         # Residual connection 1
@@ -233,12 +221,8 @@ def create_mini_gpt_model() -> onnx.ModelProto:
     hidden = 512
     ff_dim = 2048
 
-    X = helper.make_tensor_value_info(
-        "input", TensorProto.FLOAT, [batch, seq_len, hidden]
-    )
-    Y = helper.make_tensor_value_info(
-        "output", TensorProto.FLOAT, [batch, seq_len, hidden]
-    )
+    X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [batch, seq_len, hidden])
+    Y = helper.make_tensor_value_info("output", TensorProto.FLOAT, [batch, seq_len, hidden])
 
     # Weights (smaller than BERT for testing)
     ln_gamma = helper.make_tensor(
@@ -297,14 +281,10 @@ def create_mini_gpt_model() -> onnx.ModelProto:
             "Split", ["qkv"], ["q", "k", "v"], name="qkv_split", axis=-1, num_outputs=3
         ),
         # Transpose K
-        helper.make_node(
-            "Transpose", ["k"], ["k_t"], name="k_transpose", perm=[0, 2, 1]
-        ),
+        helper.make_node("Transpose", ["k"], ["k_t"], name="k_transpose", perm=[0, 2, 1]),
         # Attention
         helper.make_node("MatMul", ["q", "k_t"], ["attn_scores"], name="attn_qk"),
-        helper.make_node(
-            "Softmax", ["attn_scores"], ["attn_weights"], name="softmax", axis=-1
-        ),
+        helper.make_node("Softmax", ["attn_scores"], ["attn_weights"], name="softmax", axis=-1),
         helper.make_node("MatMul", ["attn_weights", "v"], ["attn_out"], name="attn_v"),
         # Output projection
         helper.make_node("MatMul", ["attn_out", "wo"], ["attn_proj"], name="out_proj"),
@@ -318,9 +298,7 @@ def create_mini_gpt_model() -> onnx.ModelProto:
         helper.make_node("Add", ["res1", "ff_down"], ["output"], name="residual2"),
     ]
 
-    graph = helper.make_graph(
-        nodes, "mini_gpt", [X], [Y], [ln_gamma, ln_beta, wqkv, wo, w1, w2]
-    )
+    graph = helper.make_graph(nodes, "mini_gpt", [X], [Y], [ln_gamma, ln_beta, wqkv, wo, w1, w2])
     model = helper.make_model(graph, opset_imports=[helper.make_opsetid("", 20)])
     return model
 

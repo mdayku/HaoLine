@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Unit tests for PyTorch to ONNX conversion functionality.
@@ -20,7 +20,6 @@ from ..cli import (
     _convert_pytorch_to_onnx,
     _extract_ultralytics_metadata,
 )
-
 from ..report import DatasetInfo, infer_num_classes_from_output
 
 # Check if torch is available

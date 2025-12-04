@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
-Visualization module for ONNX Autodoc.
+Visualization module for HaoLine.
 
 Generates matplotlib-based charts for model architecture analysis:
 - Operator type histogram
@@ -104,9 +104,7 @@ def _apply_theme(fig: Figure, ax, title: str) -> None:
 
     # Axes styling
     ax.set_facecolor(THEME.background)
-    ax.set_title(
-        title, color=THEME.text, fontsize=THEME.title_size, fontweight="bold", pad=15
-    )
+    ax.set_title(title, color=THEME.text, fontsize=THEME.title_size, fontweight="bold", pad=15)
 
     # Spines
     for spine in ax.spines.values():
@@ -146,7 +144,7 @@ class VisualizationGenerator:
     """
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.viz")
+        self.logger = logger or logging.getLogger("haoline.viz")
 
     def generate_all(
         self,
@@ -277,9 +275,7 @@ class VisualizationGenerator:
         ax1.bar(x, latencies, color=THEME.palette[0], alpha=0.8)
         ax1.set_xlabel("Resolution", color=THEME.text, fontsize=10)
         ax1.set_ylabel("Latency (ms)", color=THEME.text, fontsize=10)
-        ax1.set_title(
-            "Latency vs Resolution", color=THEME.text, fontsize=12, fontweight="bold"
-        )
+        ax1.set_title("Latency vs Resolution", color=THEME.text, fontsize=12, fontweight="bold")
         ax1.set_xticks(list(x))
         ax1.set_xticklabels(resolutions, rotation=45, ha="right", fontsize=8)
         ax1.tick_params(colors=THEME.text)
@@ -305,9 +301,7 @@ class VisualizationGenerator:
         ax2.bar(x, sweep.throughputs, color=THEME.palette[1], alpha=0.8)
         ax2.set_xlabel("Resolution", color=THEME.text, fontsize=10)
         ax2.set_ylabel("Throughput (inf/s)", color=THEME.text, fontsize=10)
-        ax2.set_title(
-            "Throughput vs Resolution", color=THEME.text, fontsize=12, fontweight="bold"
-        )
+        ax2.set_title("Throughput vs Resolution", color=THEME.text, fontsize=12, fontweight="bold")
         ax2.set_xticks(list(x))
         ax2.set_xticklabels(resolutions, rotation=45, ha="right", fontsize=8)
         ax2.tick_params(colors=THEME.text)
@@ -321,9 +315,7 @@ class VisualizationGenerator:
         ax3.bar(x, sweep.vram_usage_gb, color=THEME.palette[2], alpha=0.8)
         ax3.set_xlabel("Resolution", color=THEME.text, fontsize=10)
         ax3.set_ylabel("VRAM (GB)", color=THEME.text, fontsize=10)
-        ax3.set_title(
-            "VRAM vs Resolution", color=THEME.text, fontsize=12, fontweight="bold"
-        )
+        ax3.set_title("VRAM vs Resolution", color=THEME.text, fontsize=12, fontweight="bold")
         ax3.set_xticks(list(x))
         ax3.set_xticklabels(resolutions, rotation=45, ha="right", fontsize=8)
         ax3.tick_params(colors=THEME.text)
@@ -376,9 +368,7 @@ class VisualizationGenerator:
         )
         ax1.set_xlabel("Batch Size", color=THEME.text, fontsize=12)
         ax1.set_ylabel("Latency (ms)", color=THEME.text, fontsize=12)
-        ax1.set_title(
-            "Latency vs Batch Size", color=THEME.text, fontsize=14, fontweight="bold"
-        )
+        ax1.set_title("Latency vs Batch Size", color=THEME.text, fontsize=14, fontweight="bold")
         ax1.tick_params(colors=THEME.text, labelsize=10)
         for spine in ax1.spines.values():
             spine.set_color(THEME.grid)
@@ -405,9 +395,7 @@ class VisualizationGenerator:
         )
         ax2.set_xlabel("Batch Size", color=THEME.text, fontsize=12)
         ax2.set_ylabel("Throughput (inf/s)", color=THEME.text, fontsize=12)
-        ax2.set_title(
-            "Throughput vs Batch Size", color=THEME.text, fontsize=14, fontweight="bold"
-        )
+        ax2.set_title("Throughput vs Batch Size", color=THEME.text, fontsize=14, fontweight="bold")
         ax2.tick_params(colors=THEME.text, labelsize=10)
         ax2.legend(
             facecolor=THEME.plot_background,
@@ -432,9 +420,7 @@ class VisualizationGenerator:
         )
         ax3.set_xlabel("Batch Size", color=THEME.text, fontsize=12)
         ax3.set_ylabel("VRAM (GB)", color=THEME.text, fontsize=12)
-        ax3.set_title(
-            "VRAM vs Batch Size", color=THEME.text, fontsize=14, fontweight="bold"
-        )
+        ax3.set_title("VRAM vs Batch Size", color=THEME.text, fontsize=14, fontweight="bold")
         ax3.tick_params(colors=THEME.text, labelsize=10)
         for spine in ax3.spines.values():
             spine.set_color(THEME.grid)
@@ -702,16 +688,10 @@ class VisualizationGenerator:
         """
         if not _MATPLOTLIB_AVAILABLE:
             return None
-        if (
-            not report.param_counts
-            or not report.flop_counts
-            or not report.memory_estimates
-        ):
+        if not report.param_counts or not report.flop_counts or not report.memory_estimates:
             return None
 
-        fig, axes = plt.subplots(
-            1, 3, figsize=(THEME.figure_width, 4), dpi=THEME.figure_dpi
-        )
+        fig, axes = plt.subplots(1, 3, figsize=(THEME.figure_width, 4), dpi=THEME.figure_dpi)
         fig.patch.set_facecolor(THEME.background)
 
         metrics = [
@@ -825,9 +805,7 @@ class VisualizationGenerator:
 
         # Plot cumulative params
         ax1.fill_between(x, cum_params, alpha=0.3, color=THEME.accent_primary)
-        ax1.plot(
-            x, cum_params, color=THEME.accent_primary, linewidth=2, label="Parameters"
-        )
+        ax1.plot(x, cum_params, color=THEME.accent_primary, linewidth=2, label="Parameters")
         ax1.set_ylabel("Cumulative Parameters", color=THEME.accent_primary)
         ax1.tick_params(axis="y", labelcolor=THEME.accent_primary)
 
@@ -923,20 +901,14 @@ class VisualizationGenerator:
         op_types = [lp.op_type for lp in reversed(slowest)]
 
         # Create figure
-        fig, ax = plt.subplots(
-            figsize=(12, max(6, len(slowest) * 0.4)), dpi=THEME.figure_dpi
-        )
+        fig, ax = plt.subplots(figsize=(12, max(6, len(slowest) * 0.4)), dpi=THEME.figure_dpi)
 
         # Color by op type
         unique_ops = list(set(op_types))
-        colors = [
-            THEME.palette[unique_ops.index(op) % len(THEME.palette)] for op in op_types
-        ]
+        colors = [THEME.palette[unique_ops.index(op) % len(THEME.palette)] for op in op_types]
 
         y_pos = range(len(layers))
-        bars = ax.barh(
-            y_pos, times, color=colors, edgecolor=THEME.background, height=0.7
-        )
+        bars = ax.barh(y_pos, times, color=colors, edgecolor=THEME.background, height=0.7)
 
         ax.set_yticks(list(y_pos))
         ax.set_yticklabels(layers, fontsize=9)
@@ -1054,8 +1026,7 @@ class VisualizationGenerator:
 
         # Legend
         legend_labels = [
-            f"{op} ({time_val:.2f}ms)"
-            for op, time_val in zip(labels, values, strict=False)
+            f"{op} ({time_val:.2f}ms)" for op, time_val in zip(labels, values, strict=False)
         ]
         ax.legend(
             wedges,

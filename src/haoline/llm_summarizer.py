@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
-LLM Summarizer module for ONNX Autodoc.
+LLM Summarizer module for HaoLine.
 
 Generates human-readable model summaries using LLM APIs (OpenAI, etc.).
 Takes the structured JSON report and produces:
@@ -126,23 +126,19 @@ class LLMSummarizer:
             model: Model to use. If None, uses gpt-4o-mini.
             logger: Logger for diagnostic output.
         """
-        self.logger = logger or logging.getLogger("autodoc.llm")
+        self.logger = logger or logging.getLogger("haoline.llm")
         self.model = model or self.DEFAULT_MODEL
 
         if not _OPENAI_AVAILABLE:
             self.client = None
-            self.logger.warning(
-                "openai package not installed. LLM summarization disabled."
-            )
+            self.logger.warning("openai package not installed. LLM summarization disabled.")
             return
 
         # Get API key from parameter or environment
         resolved_key = api_key or os.environ.get("OPENAI_API_KEY")
         if not resolved_key:
             self.client = None
-            self.logger.warning(
-                "No OpenAI API key found. Set OPENAI_API_KEY environment variable."
-            )
+            self.logger.warning("No OpenAI API key found. Set OPENAI_API_KEY environment variable.")
             return
 
         self.client = OpenAI(api_key=resolved_key)
@@ -315,9 +311,7 @@ class LLMSummarizer:
                 "input_shapes": report.graph_summary.input_shapes,
                 "output_shapes": report.graph_summary.output_shapes,
                 "top_operators": dict(
-                    sorted(
-                        report.graph_summary.op_type_counts.items(), key=lambda x: -x[1]
-                    )[:10]
+                    sorted(report.graph_summary.op_type_counts.items(), key=lambda x: -x[1])[:10]
                 ),
             }
 
@@ -325,9 +319,7 @@ class LLMSummarizer:
             summary["parameters"] = {
                 "total": report.param_counts.total,
                 "by_op_type": dict(
-                    sorted(report.param_counts.by_op_type.items(), key=lambda x: -x[1])[
-                        :5
-                    ]
+                    sorted(report.param_counts.by_op_type.items(), key=lambda x: -x[1])[:5]
                 ),
             }
 
@@ -335,9 +327,7 @@ class LLMSummarizer:
             summary["flops"] = {
                 "total": report.flop_counts.total,
                 "by_op_type": dict(
-                    sorted(report.flop_counts.by_op_type.items(), key=lambda x: -x[1])[
-                        :5
-                    ]
+                    sorted(report.flop_counts.by_op_type.items(), key=lambda x: -x[1])[:5]
                 ),
             }
 

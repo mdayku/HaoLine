@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Edge-Centric Analysis for graph visualization.
@@ -113,7 +113,7 @@ class EdgeAnalyzer:
     """
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.edges")
+        self.logger = logger or logging.getLogger("haoline.edges")
 
     def analyze(self, graph_info: GraphInfo) -> EdgeAnalysisResult:
         """
@@ -317,9 +317,7 @@ class EdgeAnalyzer:
             if edge.size_bytes >= max_size * 0.8:
                 edge.is_bottleneck = True
 
-    def _detect_skip_connections(
-        self, edges: list[EdgeInfo], graph_info: GraphInfo
-    ) -> None:
+    def _detect_skip_connections(self, edges: list[EdgeInfo], graph_info: GraphInfo) -> None:
         """Detect skip connection edges."""
         # Skip connections typically:
         # 1. Go from earlier node to later Add node
@@ -352,9 +350,7 @@ class EdgeAnalyzer:
                         edge.is_skip_connection = True
                         break
 
-    def _detect_attention_edges(
-        self, edges: list[EdgeInfo], graph_info: GraphInfo
-    ) -> None:
+    def _detect_attention_edges(self, edges: list[EdgeInfo], graph_info: GraphInfo) -> None:
         """Detect O(seq^2) attention edges (Q @ K^T output)."""
         # Look for Softmax nodes and mark their input edges
         for node in graph_info.nodes:
@@ -409,9 +405,7 @@ class EdgeAnalyzer:
             profile.append((node.name, current_mem))
 
             # Free tensors whose last use is this node
-            to_free = [
-                t for t, last_node in tensor_last_use.items() if last_node == node.name
-            ]
+            to_free = [t for t, last_node in tensor_last_use.items() if last_node == node.name]
             for tensor in to_free:
                 live_tensors.pop(tensor, None)
 
@@ -421,9 +415,7 @@ class EdgeAnalyzer:
 # Edge visualization helpers
 
 
-def compute_edge_thickness(
-    size_bytes: int, min_width: float = 1, max_width: float = 10
-) -> float:
+def compute_edge_thickness(size_bytes: int, min_width: float = 1, max_width: float = 10) -> float:
     """
     Compute edge thickness based on tensor size.
 

@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """Tests for per-layer summary table (Story 5.8)."""
 from __future__ import annotations
@@ -105,15 +105,9 @@ class TestLayerSummary:
     def test_creation(self):
         """Test creating layer summary."""
         layers = [
-            LayerMetrics(
-                name="conv1", op_type="Conv", params=9408, flops=1000000, pct_flops=50.0
-            ),
-            LayerMetrics(
-                name="relu1", op_type="Relu", params=0, flops=500000, pct_flops=25.0
-            ),
-            LayerMetrics(
-                name="fc1", op_type="Gemm", params=512000, flops=500000, pct_flops=25.0
-            ),
+            LayerMetrics(name="conv1", op_type="Conv", params=9408, flops=1000000, pct_flops=50.0),
+            LayerMetrics(name="relu1", op_type="Relu", params=0, flops=500000, pct_flops=25.0),
+            LayerMetrics(name="fc1", op_type="Gemm", params=512000, flops=500000, pct_flops=25.0),
         ]
         summary = LayerSummary(
             layers=layers,
@@ -204,15 +198,9 @@ class TestLayerSummary:
     def test_filter_by_threshold(self):
         """Test filtering by parameter/FLOP thresholds."""
         layers = [
-            LayerMetrics(
-                name="big", op_type="Conv", params=10000, flops=1000000, pct_flops=80.0
-            ),
-            LayerMetrics(
-                name="small", op_type="Relu", params=0, flops=100000, pct_flops=8.0
-            ),
-            LayerMetrics(
-                name="medium", op_type="Conv", params=1000, flops=150000, pct_flops=12.0
-            ),
+            LayerMetrics(name="big", op_type="Conv", params=10000, flops=1000000, pct_flops=80.0),
+            LayerMetrics(name="small", op_type="Relu", params=0, flops=100000, pct_flops=8.0),
+            LayerMetrics(name="medium", op_type="Conv", params=1000, flops=150000, pct_flops=12.0),
         ]
         summary = LayerSummary(layers=layers, total_params=11000, total_flops=1250000)
 
@@ -314,12 +302,8 @@ class TestLayerSummaryBuilder:
 
             # Percentages should be valid (0-100 range)
             for layer in summary.layers:
-                assert (
-                    0.0 <= layer.pct_params <= 100.0
-                ), f"Invalid pct_params: {layer.pct_params}"
-                assert (
-                    0.0 <= layer.pct_flops <= 100.0
-                ), f"Invalid pct_flops: {layer.pct_flops}"
+                assert 0.0 <= layer.pct_params <= 100.0, f"Invalid pct_params: {layer.pct_params}"
+                assert 0.0 <= layer.pct_flops <= 100.0, f"Invalid pct_flops: {layer.pct_flops}"
 
             # At least some layers should have FLOPs
             total_pct_flops = sum(layer.pct_flops for layer in summary.layers)
@@ -343,9 +327,7 @@ class TestHTMLTable:
                 flops=118013952,
                 pct_flops=80.0,
             ),
-            LayerMetrics(
-                name="relu1", op_type="Relu", params=0, flops=1000000, pct_flops=0.7
-            ),
+            LayerMetrics(name="relu1", op_type="Relu", params=0, flops=1000000, pct_flops=0.7),
             LayerMetrics(
                 name="fc1",
                 op_type="Gemm",
@@ -354,9 +336,7 @@ class TestHTMLTable:
                 pct_flops=19.3,
             ),
         ]
-        summary = LayerSummary(
-            layers=layers, total_params=521408, total_flops=148013952
-        )
+        summary = LayerSummary(layers=layers, total_params=521408, total_flops=148013952)
 
         html = generate_html_table(summary)
 
@@ -413,9 +393,7 @@ class TestMarkdownTable:
                 flops=118000000,
                 pct_flops=80.0,
             ),
-            LayerMetrics(
-                name="relu1", op_type="Relu", params=0, flops=1000000, pct_flops=0.7
-            ),
+            LayerMetrics(name="relu1", op_type="Relu", params=0, flops=1000000, pct_flops=0.7),
         ]
         summary = LayerSummary(layers=layers, total_params=9408, total_flops=119000000)
 

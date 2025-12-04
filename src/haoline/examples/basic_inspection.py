@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Example: Basic Model Inspection
 
-This script demonstrates how to use ONNX Autodoc to inspect a model
+This script demonstrates how to use HaoLine to inspect a model
 and generate reports programmatically (without CLI).
 
 Usage:

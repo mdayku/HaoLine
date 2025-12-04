@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
-ONNX Autodoc Example Scripts
+HaoLine Example Scripts
 
 This package contains example scripts demonstrating common use cases:
 
@@ -11,5 +11,5 @@ This package contains example scripts demonstrating common use cases:
 - hardware_estimation.py: Estimate performance on different GPUs
 
 Run from the tools/python directory:
-    python -m util.autodoc.examples.basic_inspection model.onnx
+    python -m util.haoline.examples.basic_inspection model.onnx
 """

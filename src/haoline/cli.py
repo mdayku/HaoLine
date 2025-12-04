@@ -73,14 +73,8 @@ class ProgressIndicator:
         """Mark completion of a step."""
         self._current_step += 1
         if self.enabled:
-            pct = (
-                (self._current_step / self._total_steps * 100)
-                if self._total_steps
-                else 0
-            )
-            print(
-                f"  [{self._current_step}/{self._total_steps}] {message} ({pct:.0f}%)"
-            )
+            pct = (self._current_step / self._total_steps * 100) if self._total_steps else 0
+            print(f"  [{self._current_step}/{self._total_steps}] {message} ({pct:.0f}%)")
 
     def finish(self, message: str = "Done"):
         """Mark completion of all steps."""
@@ -97,46 +91,46 @@ def parse_args():
         epilog="""
 Examples:
   # Basic inspection with console output (auto-detects local hardware)
-  python -m onnxruntime.tools.model_inspect model.onnx
+  python -m haoline model.onnx
 
   # Use specific NVIDIA GPU profile for estimates
-  python -m onnxruntime.tools.model_inspect model.onnx --hardware a100
+  python -m haoline model.onnx --hardware a100
 
   # List available hardware profiles
-  python -m onnxruntime.tools.model_inspect --list-hardware
+  python -m haoline --list-hardware
 
   # Generate JSON report with hardware estimates
-  python -m onnxruntime.tools.model_inspect model.onnx --hardware rtx4090 --out-json report.json
+  python -m haoline model.onnx --hardware rtx4090 --out-json report.json
 
   # Specify precision and batch size for hardware estimates
-  python -m onnxruntime.tools.model_inspect model.onnx --hardware t4 --precision fp16 --batch-size 8
+  python -m haoline model.onnx --hardware t4 --precision fp16 --batch-size 8
 
   # Convert PyTorch model to ONNX and analyze
-  python -m onnxruntime.tools.model_inspect --from-pytorch model.pt --input-shape 1,3,224,224
+  python -m haoline --from-pytorch model.pt --input-shape 1,3,224,224
 
   # Convert TensorFlow SavedModel to ONNX and analyze
-  python -m onnxruntime.tools.model_inspect --from-tensorflow ./saved_model_dir --out-html report.html
+  python -m haoline --from-tensorflow ./saved_model_dir --out-html report.html
 
   # Convert Keras .h5 model to ONNX and analyze
-  python -m onnxruntime.tools.model_inspect --from-keras model.h5 --keep-onnx converted.onnx
+  python -m haoline --from-keras model.h5 --keep-onnx converted.onnx
 
   # Convert TensorFlow frozen graph to ONNX (requires input/output names)
-  python -m onnxruntime.tools.model_inspect --from-frozen-graph model.pb --tf-inputs input:0 --tf-outputs output:0
+  python -m haoline --from-frozen-graph model.pb --tf-inputs input:0 --tf-outputs output:0
 
   # Convert JAX model to ONNX (requires apply function and input shape)
-  python -m onnxruntime.tools.model_inspect --from-jax params.pkl --jax-apply-fn my_model:apply --input-shape 1,3,224,224
+  python -m haoline --from-jax params.pkl --jax-apply-fn my_model:apply --input-shape 1,3,224,224
 
   # Generate Steam-style system requirements
-  python -m onnxruntime.tools.model_inspect model.onnx --system-requirements
+  python -m haoline model.onnx --system-requirements
 
   # Run batch size sweep
-  python -m onnxruntime.tools.model_inspect model.onnx --hardware a100 --sweep-batch-sizes
+  python -m haoline model.onnx --hardware a100 --sweep-batch-sizes
 
   # Run resolution sweep for vision models
-  python -m onnxruntime.tools.model_inspect model.onnx --hardware rtx4090 --sweep-resolutions auto
+  python -m haoline model.onnx --hardware rtx4090 --sweep-resolutions auto
 
   # Custom resolutions for object detection
-  python -m onnxruntime.tools.model_inspect yolo.onnx --hardware rtx4090 --sweep-resolutions "320x320,640x640,1280x1280"
+  python -m haoline yolo.onnx --hardware rtx4090 --sweep-resolutions "320x320,640x640,1280x1280"
 """,
     )
 
@@ -515,7 +509,7 @@ def setup_logging(log_level: str) -> logging.Logger:
         format="%(levelname)s - %(message)s",
     )
 
-    return logging.getLogger("autodoc")
+    return logging.getLogger("haoline")
 
 
 def _generate_markdown_with_extras(
@@ -558,7 +552,7 @@ def _generate_markdown_with_extras(
                     if viz_paths["complexity_summary"].is_relative_to(report_dir)
                     else viz_paths["complexity_summary"]
                 )
-                lines.append(f"### Complexity Overview\n")
+                lines.append("### Complexity Overview\n")
                 lines.append(f"![Complexity Summary]({rel_path})\n")
 
             if "op_histogram" in viz_paths:
@@ -567,7 +561,7 @@ def _generate_markdown_with_extras(
                     if viz_paths["op_histogram"].is_relative_to(report_dir)
                     else viz_paths["op_histogram"]
                 )
-                lines.append(f"### Operator Distribution\n")
+                lines.append("### Operator Distribution\n")
                 lines.append(f"![Operator Histogram]({rel_path})\n")
 
             if "param_distribution" in viz_paths:
@@ -576,7 +570,7 @@ def _generate_markdown_with_extras(
                     if viz_paths["param_distribution"].is_relative_to(report_dir)
                     else viz_paths["param_distribution"]
                 )
-                lines.append(f"### Parameter Distribution\n")
+                lines.append("### Parameter Distribution\n")
                 lines.append(f"![Parameter Distribution]({rel_path})\n")
 
             if "flops_distribution" in viz_paths:
@@ -585,7 +579,7 @@ def _generate_markdown_with_extras(
                     if viz_paths["flops_distribution"].is_relative_to(report_dir)
                     else viz_paths["flops_distribution"]
                 )
-                lines.append(f"### FLOPs Distribution\n")
+                lines.append("### FLOPs Distribution\n")
                 lines.append(f"![FLOPs Distribution]({rel_path})\n")
 
             lines.append("")
@@ -707,13 +701,13 @@ def _convert_pytorch_to_onnx(
             error_msg = str(e)
             if "Can't get attribute" in error_msg:
                 logger.error(
-                    f"Failed to load model - class definition not found.\n"
-                    f"The model was saved with torch.save(model, ...) which requires "
-                    f"the original class to be importable.\n\n"
-                    f"Solutions:\n"
-                    f"  1. Save as TorchScript: torch.jit.save(torch.jit.script(model), 'model.pt')\n"
-                    f"  2. Export to ONNX in your code: torch.onnx.export(model, dummy_input, 'model.onnx')\n"
-                    f"  3. Run this tool from the directory containing your model definition"
+                    "Failed to load model - class definition not found.\n"
+                    "The model was saved with torch.save(model, ...) which requires "
+                    "the original class to be importable.\n\n"
+                    "Solutions:\n"
+                    "  1. Save as TorchScript: torch.jit.save(torch.jit.script(model), 'model.pt')\n"
+                    "  2. Export to ONNX in your code: torch.onnx.export(model, dummy_input, 'model.onnx')\n"
+                    "  3. Run this tool from the directory containing your model definition"
                 )
             else:
                 logger.error(f"Failed to load PyTorch model: {e}")
@@ -805,9 +799,7 @@ def _convert_tensorflow_to_onnx(
         import tf2onnx
         from tf2onnx import tf_loader
     except ImportError:
-        logger.error(
-            "tf2onnx not installed. Install with: pip install tf2onnx tensorflow"
-        )
+        logger.error("tf2onnx not installed. Install with: pip install tf2onnx tensorflow")
         return None, None
 
     tf_path = tf_path.resolve()
@@ -827,7 +819,7 @@ def _convert_tensorflow_to_onnx(
         onnx_path = pathlib.Path(temp_file.name)
         temp_file.close()
 
-    logger.info(f"Converting TensorFlow SavedModel to ONNX...")
+    logger.info("Converting TensorFlow SavedModel to ONNX...")
     logger.info(f"  Source: {tf_path}")
     logger.info(f"  Target: {onnx_path}")
 
@@ -916,9 +908,7 @@ def _convert_keras_to_onnx(
     try:
         import tf2onnx
     except ImportError:
-        logger.error(
-            "tf2onnx not installed. Install with: pip install tf2onnx tensorflow"
-        )
+        logger.error("tf2onnx not installed. Install with: pip install tf2onnx tensorflow")
         return None, None
 
     keras_path = keras_path.resolve()
@@ -942,7 +932,7 @@ def _convert_keras_to_onnx(
         onnx_path = pathlib.Path(temp_file.name)
         temp_file.close()
 
-    logger.info(f"Converting Keras model to ONNX...")
+    logger.info("Converting Keras model to ONNX...")
     logger.info(f"  Source: {keras_path}")
     logger.info(f"  Target: {onnx_path}")
 
@@ -1035,9 +1025,7 @@ def _convert_frozen_graph_to_onnx(
     try:
         import tf2onnx
     except ImportError:
-        logger.error(
-            "tf2onnx not installed. Install with: pip install tf2onnx tensorflow"
-        )
+        logger.error("tf2onnx not installed. Install with: pip install tf2onnx tensorflow")
         return None, None
 
     pb_path = pb_path.resolve()
@@ -1064,7 +1052,7 @@ def _convert_frozen_graph_to_onnx(
         onnx_path = pathlib.Path(temp_file.name)
         temp_file.close()
 
-    logger.info(f"Converting TensorFlow frozen graph to ONNX...")
+    logger.info("Converting TensorFlow frozen graph to ONNX...")
     logger.info(f"  Source: {pb_path}")
     logger.info(f"  Inputs: {inputs}")
     logger.info(f"  Outputs: {outputs}")
@@ -1176,9 +1164,7 @@ def _convert_jax_to_onnx(
     try:
         import tf2onnx
     except ImportError:
-        logger.error(
-            "tf2onnx not installed. Install with: pip install tf2onnx tensorflow"
-        )
+        logger.error("tf2onnx not installed. Install with: pip install tf2onnx tensorflow")
         return None, None
 
     jax_path = jax_path.resolve()
@@ -1232,7 +1218,7 @@ def _convert_jax_to_onnx(
         onnx_path = pathlib.Path(temp_file.name)
         temp_file.close()
 
-    logger.info(f"Converting JAX model to ONNX...")
+    logger.info("Converting JAX model to ONNX...")
     logger.info(f"  Params: {jax_path}")
     logger.info(f"  Apply fn: {apply_fn_path}")
     logger.info(f"  Input shape: {input_shape}")
@@ -1266,9 +1252,7 @@ def _convert_jax_to_onnx(
             params = np.load(jax_path, allow_pickle=True).item()
             logger.info("Loaded numpy params")
         else:
-            logger.error(
-                f"Unsupported params format: {suffix}. Use .msgpack, .pkl, or .npy"
-            )
+            logger.error(f"Unsupported params format: {suffix}. Use .msgpack, .pkl, or .npy")
             return None, None
 
         # Import apply function
@@ -1289,13 +1273,12 @@ def _convert_jax_to_onnx(
             from jax.experimental import jax2tf
         except ImportError:
             logger.error(
-                "jax2tf or TensorFlow not available. Install with: "
-                "pip install tensorflow"
+                "jax2tf or TensorFlow not available. Install with: " "pip install tensorflow"
             )
             return None, None
 
         # Create a concrete function
-        dummy_input = jnp.zeros(input_shape, dtype=jnp.float32)
+        jnp.zeros(input_shape, dtype=jnp.float32)
 
         # Convert JAX function to TF
         tf_fn = jax2tf.convert(
@@ -1577,9 +1560,7 @@ def run_inspect():
 
     if len(active_conversions) > 1:
         names = [name for name, _ in active_conversions]
-        logger.error(
-            f"Cannot use multiple conversion flags together: {', '.join(names)}"
-        )
+        logger.error(f"Cannot use multiple conversion flags together: {', '.join(names)}")
         sys.exit(1)
 
     if args.from_pytorch:
@@ -1648,9 +1629,7 @@ def run_inspect():
             sys.exit(1)
 
         if model_path.suffix.lower() not in (".onnx", ".pb", ".ort"):
-            logger.warning(
-                f"Unexpected file extension: {model_path.suffix}. Proceeding anyway."
-            )
+            logger.warning(f"Unexpected file extension: {model_path.suffix}. Proceeding anyway.")
 
     # Determine hardware profile
     hardware_profile = None
@@ -1799,12 +1778,7 @@ def run_inspect():
                         if len(shape) >= 3:
                             # Assume NCHW or NHWC format
                             h, w = shape[-2], shape[-1]
-                            if (
-                                isinstance(h, int)
-                                and isinstance(w, int)
-                                and h > 1
-                                and w > 1
-                            ):
+                            if isinstance(h, int) and isinstance(w, int) and h > 1 and w > 1:
                                 base_resolution = (h, w)
                                 break
 
@@ -1924,9 +1898,7 @@ def run_inspect():
                 if slowest:
                     logger.info("Top 5 slowest layers:")
                     for lp in slowest:
-                        logger.info(
-                            f"  {lp.name}: {lp.duration_ms:.3f}ms ({lp.op_type})"
-                        )
+                        logger.info(f"  {lp.name}: {lp.duration_ms:.3f}ms ({lp.op_type})")
 
                 # Store in report
                 report.extra_data = report.extra_data or {}
@@ -1985,7 +1957,7 @@ def run_inspect():
             logger.info(f"Extracting metadata from: {weights_path}")
             metadata = _extract_ultralytics_metadata(weights_path, logger)
             if metadata:
-                from .autodoc.report import DatasetInfo
+                from .haoline.report import DatasetInfo
 
                 report.dataset_info = DatasetInfo(
                     task=metadata.get("task"),
@@ -2015,13 +1987,9 @@ def run_inspect():
                 summarizer = LLMSummarizer(model=args.llm_model, logger=logger)
                 llm_summary = summarizer.summarize(report)
                 if llm_summary.success:
-                    logger.info(
-                        f"LLM summaries generated ({llm_summary.tokens_used} tokens used)"
-                    )
+                    logger.info(f"LLM summaries generated ({llm_summary.tokens_used} tokens used)")
                 else:
-                    logger.warning(
-                        f"LLM summarization failed: {llm_summary.error_message}"
-                    )
+                    logger.warning(f"LLM summarization failed: {llm_summary.error_message}")
             except Exception as e:
                 logger.warning(f"Failed to generate LLM summaries: {e}")
 
@@ -2076,9 +2044,7 @@ def run_inspect():
             try:
                 viz_gen = VisualizationGenerator(logger=logger)
                 viz_paths = viz_gen.generate_all(report, assets_dir)
-                logger.info(
-                    f"Generated {len(viz_paths)} visualization assets in {assets_dir}"
-                )
+                logger.info(f"Generated {len(viz_paths)} visualization assets in {assets_dir}")
             except Exception as e:
                 logger.warning(f"Failed to generate some visualizations: {e}")
                 if args.log_level == "debug":
@@ -2119,7 +2085,7 @@ def run_inspect():
                 if hasattr(inspector, "_graph_info") and inspector._graph_info:
                     graph_info = inspector._graph_info
                 else:
-                    from .autodoc.analyzer import ONNXGraphLoader
+                    from .haoline.analyzer import ONNXGraphLoader
 
                     loader = ONNXGraphLoader(logger=logger)
                     _, graph_info = loader.load(model_path)
@@ -2152,7 +2118,7 @@ def run_inspect():
                 if hasattr(inspector, "_graph_info") and inspector._graph_info:
                     graph_info = inspector._graph_info
                 else:
-                    from .autodoc.analyzer import ONNXGraphLoader
+                    from .haoline.analyzer import ONNXGraphLoader
 
                     loader = ONNXGraphLoader(logger=logger)
                     _, graph_info = loader.load(model_path)
@@ -2238,7 +2204,7 @@ def run_inspect():
                 graph_info = inspector._graph_info
             else:
                 # Re-load the model to get graph_info
-                from .autodoc.analyzer import ONNXGraphLoader
+                from .haoline.analyzer import ONNXGraphLoader
 
                 loader = ONNXGraphLoader(logger=logger)
                 _, graph_info = loader.load(model_path)
@@ -2280,9 +2246,7 @@ def run_inspect():
                 layer_timing=layer_timing,
             )
 
-            logger.info(
-                f"Interactive graph visualization written to: {args.html_graph}"
-            )
+            logger.info(f"Interactive graph visualization written to: {args.html_graph}")
         except Exception as e:
             logger.error(f"Failed to generate graph visualization: {e}")
             if not args.quiet:
@@ -2318,9 +2282,7 @@ def run_inspect():
             print(f"FLOPs: {report._format_number(report.flop_counts.total)}")
 
         if report.memory_estimates:
-            print(
-                f"Model Size: {report._format_bytes(report.memory_estimates.model_size_bytes)}"
-            )
+            print(f"Model Size: {report._format_bytes(report.memory_estimates.model_size_bytes)}")
 
         print(f"\nArchitecture: {report.architecture_type}")
         print(f"Detected Blocks: {len(report.detected_blocks)}")
@@ -2340,12 +2302,8 @@ def run_inspect():
         if hasattr(report, "system_requirements") and report.system_requirements:
             reqs = report.system_requirements
             print("\n--- System Requirements ---")
-            print(
-                f"Minimum:     {reqs.minimum_gpu.name} ({reqs.minimum_vram_gb} GB VRAM)"
-            )
-            print(
-                f"Recommended: {reqs.recommended_gpu.name} ({reqs.recommended_vram_gb} GB VRAM)"
-            )
+            print(f"Minimum:     {reqs.minimum_gpu.name} ({reqs.minimum_vram_gb} GB VRAM)")
+            print(f"Recommended: {reqs.recommended_gpu.name} ({reqs.recommended_vram_gb} GB VRAM)")
             print(f"Optimal:     {reqs.optimal_gpu.name}")
 
         # Batch Scaling (Console)

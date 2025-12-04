@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """Tests for edge-centric analysis."""
 from __future__ import annotations
@@ -72,13 +72,9 @@ def create_residual_model() -> onnx.ModelProto:
 
     # Conv -> BN -> ReLU -> Conv -> BN -> Add(skip) -> ReLU
     nodes = [
-        helper.make_node(
-            "Conv", ["X", "w1"], ["c1"], kernel_shape=[3, 3], pads=[1, 1, 1, 1]
-        ),
+        helper.make_node("Conv", ["X", "w1"], ["c1"], kernel_shape=[3, 3], pads=[1, 1, 1, 1]),
         helper.make_node("Relu", ["c1"], ["r1"]),
-        helper.make_node(
-            "Conv", ["r1", "w2"], ["c2"], kernel_shape=[3, 3], pads=[1, 1, 1, 1]
-        ),
+        helper.make_node("Conv", ["r1", "w2"], ["c2"], kernel_shape=[3, 3], pads=[1, 1, 1, 1]),
         helper.make_node("Add", ["X", "c2"], ["add_out"]),  # Skip connection
         helper.make_node("Relu", ["add_out"], ["Y"]),
     ]

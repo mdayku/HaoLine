@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
-Hardware detection and profile management for ONNX Autodoc.
+Hardware detection and profile management for HaoLine.
 
 This module provides:
 - Automatic detection of local GPU/CPU hardware
@@ -62,9 +62,7 @@ class HardwareProfile:
             "vendor": self.vendor,
             "device_type": self.device_type,
             "vram_gb": round(self.vram_bytes / (1024**3), 1),
-            "memory_bandwidth_gb_s": round(
-                self.memory_bandwidth_bytes_per_s / (1024**3), 1
-            ),
+            "memory_bandwidth_gb_s": round(self.memory_bandwidth_bytes_per_s / (1024**3), 1),
             "peak_fp32_tflops": self.peak_fp32_tflops,
             "peak_fp16_tflops": self.peak_fp16_tflops,
             "peak_int8_tops": self.peak_int8_tops,
@@ -991,9 +989,7 @@ class CloudInstanceProfile:
             "provider": self.provider,
             "instance_type": self.instance_type,
             "gpu_count": self.gpu_count,
-            "total_vram_gb": round(
-                self.hardware.vram_bytes * self.gpu_count / (1024**3), 1
-            ),
+            "total_vram_gb": round(self.hardware.vram_bytes * self.gpu_count / (1024**3), 1),
             "hourly_cost_usd": self.hourly_cost_usd,
             "hardware": self.hardware.to_dict(),
         }
@@ -1410,7 +1406,7 @@ class HardwareDetector:
     """
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.hardware")
+        self.logger = logger or logging.getLogger("haoline.hardware")
 
     def detect(self) -> HardwareProfile:
         """
@@ -1546,29 +1542,19 @@ class HardwareDetector:
 
         return None
 
-    def _match_jetson_profile(
-        self, gpu_name_lower: str, vram_mb: int
-    ) -> HardwareProfile | None:
+    def _match_jetson_profile(self, gpu_name_lower: str, vram_mb: int) -> HardwareProfile | None:
         """Match Jetson device to appropriate profile."""
         # Orin series
         if "orin" in gpu_name_lower:
             if "agx" in gpu_name_lower:
                 return (
-                    NVIDIA_JETSON_AGX_ORIN_64GB
-                    if vram_mb > 40000
-                    else NVIDIA_JETSON_AGX_ORIN_32GB
+                    NVIDIA_JETSON_AGX_ORIN_64GB if vram_mb > 40000 else NVIDIA_JETSON_AGX_ORIN_32GB
                 )
             elif "nx" in gpu_name_lower:
-                return (
-                    NVIDIA_JETSON_ORIN_NX_16GB
-                    if vram_mb > 10000
-                    else NVIDIA_JETSON_ORIN_NX_8GB
-                )
+                return NVIDIA_JETSON_ORIN_NX_16GB if vram_mb > 10000 else NVIDIA_JETSON_ORIN_NX_8GB
             elif "nano" in gpu_name_lower:
                 return (
-                    NVIDIA_JETSON_ORIN_NANO_8GB
-                    if vram_mb > 5000
-                    else NVIDIA_JETSON_ORIN_NANO_4GB
+                    NVIDIA_JETSON_ORIN_NANO_8GB if vram_mb > 5000 else NVIDIA_JETSON_ORIN_NANO_4GB
                 )
             # Default Orin
             return NVIDIA_JETSON_ORIN_NX_8GB
@@ -1583,9 +1569,7 @@ class HardwareDetector:
                 )
             elif "nx" in gpu_name_lower:
                 return (
-                    NVIDIA_JETSON_XAVIER_NX_16GB
-                    if vram_mb > 10000
-                    else NVIDIA_JETSON_XAVIER_NX_8GB
+                    NVIDIA_JETSON_XAVIER_NX_16GB if vram_mb > 10000 else NVIDIA_JETSON_XAVIER_NX_8GB
                 )
             return NVIDIA_JETSON_XAVIER_NX_8GB
 
@@ -1661,9 +1645,7 @@ class HardwareEstimates:
 
     # Performance
     theoretical_latency_ms: float
-    compute_utilization_estimate: (
-        float  # 0.0 - 1.0, roofline (compute_time/memory_time)
-    )
+    compute_utilization_estimate: float  # 0.0 - 1.0, roofline (compute_time/memory_time)
     gpu_saturation: float  # 0.0 - 1.0, model_flops / gpu_capacity per inference
     bottleneck: str  # "compute", "memory_bandwidth", "vram"
 
@@ -1694,7 +1676,7 @@ class HardwareEstimator:
     """
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.hardware")
+        self.logger = logger or logging.getLogger("haoline.hardware")
 
     def estimate(
         self,
@@ -1747,9 +1729,7 @@ class HardwareEstimator:
         # This captures real GPU behavior: small batches underutilize the GPU
         total_flops = model_flops * batch_size
         base_compute_ms = (
-            (total_flops / (peak_tflops * 1e12)) * 1000
-            if peak_tflops > 0
-            else float("inf")
+            (total_flops / (peak_tflops * 1e12)) * 1000 if peak_tflops > 0 else float("inf")
         )
         # Add fixed per-batch overhead (kernel launch, memory setup)
         # ~0.1ms overhead amortized over batch → better throughput at larger batches
@@ -1760,9 +1740,7 @@ class HardwareEstimator:
         total_memory_access = (
             weights_bytes + activation_bytes * 2
         ) * batch_size  # Read + write activations
-        memory_time_ms = (
-            total_memory_access / hardware.memory_bandwidth_bytes_per_s
-        ) * 1000
+        memory_time_ms = (total_memory_access / hardware.memory_bandwidth_bytes_per_s) * 1000
 
         # Bottleneck analysis
         if not fits_in_vram:
@@ -1859,9 +1837,7 @@ class MultiGPUProfile:
             name=f"{self.gpu_count}x {self.base_profile.name} ({self.interconnect})",
             vendor=self.base_profile.vendor,
             device_type="multi-gpu",
-            vram_bytes=int(
-                self.base_profile.vram_bytes * self.gpu_count * self.memory_efficiency
-            ),
+            vram_bytes=int(self.base_profile.vram_bytes * self.gpu_count * self.memory_efficiency),
             memory_bandwidth_bytes_per_s=int(
                 self.base_profile.memory_bandwidth_bytes_per_s * self.gpu_count
             ),
@@ -1974,21 +1950,15 @@ def estimate_parallelism_overhead(
 
     return {
         "tensor_parallelism": {
-            "communication_overhead_ms_per_layer": round(
-                tensor_parallel_overhead_per_layer, 3
-            ),
-            "estimated_efficiency": round(
-                1 - (0.02 * gpu_count), 2
-            ),  # ~2% loss per GPU
+            "communication_overhead_ms_per_layer": round(tensor_parallel_overhead_per_layer, 3),
+            "estimated_efficiency": round(1 - (0.02 * gpu_count), 2),  # ~2% loss per GPU
         },
         "pipeline_parallelism": {
             "bubble_fraction": round(bubble_fraction, 3),
             "recommended_microbatches": micro_batches,
             "estimated_efficiency": round(1 - bubble_fraction, 2),
         },
-        "recommendation": (
-            "tensor_parallelism" if gpu_count <= 8 else "hybrid_parallelism"
-        ),
+        "recommendation": ("tensor_parallelism" if gpu_count <= 8 else "hybrid_parallelism"),
     }
 
 
@@ -2043,12 +2013,8 @@ def estimate_model_fit(
         "available_vram_gb": round(total_vram / (1024**3), 2),
         "fits_for_inference": inference_memory <= total_vram,
         "fits_for_training": training_memory <= total_vram,
-        "gpus_needed_for_inference": max(
-            1, int(inference_memory / hardware.vram_bytes) + 1
-        ),
-        "gpus_needed_for_training": max(
-            1, int(training_memory / hardware.vram_bytes) + 1
-        ),
+        "gpus_needed_for_inference": max(1, int(inference_memory / hardware.vram_bytes) + 1),
+        "gpus_needed_for_training": max(1, int(training_memory / hardware.vram_bytes) + 1),
     }
 
 
@@ -2057,9 +2023,7 @@ def list_cloud_instances(provider: str | None = None) -> list[str]:
     instances = []
     for name, instance in CLOUD_INSTANCES.items():
         if provider is None or instance.provider == provider:
-            instances.append(
-                f"{name}: {instance.name} (${instance.hourly_cost_usd:.2f}/hr)"
-            )
+            instances.append(f"{name}: {instance.name} (${instance.hourly_cost_usd:.2f}/hr)")
     return sorted(instances)
 
 

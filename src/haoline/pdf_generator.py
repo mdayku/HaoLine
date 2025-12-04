@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
-PDF generation for ONNX Autodoc using Playwright.
+PDF generation for HaoLine using Playwright.
 
 This module provides PDF generation from HTML reports using Playwright,
 which renders the HTML with a real browser engine for high-quality output.
@@ -64,7 +64,7 @@ class PDFGenerator:
             margin_left: Left margin (CSS units)
             margin_right: Right margin (CSS units)
         """
-        self.logger = logger or logging.getLogger("autodoc.pdf")
+        self.logger = logger or logging.getLogger("haoline.pdf")
         self.page_format = page_format
         self.landscape = landscape
         self.print_background = print_background
@@ -141,7 +141,7 @@ class PDFGenerator:
                     print_background=self.print_background,
                     margin=self.margin,
                     display_header_footer=True,
-                    header_template='<div style="font-size: 9px; color: #666; width: 100%; text-align: center; padding: 5px 0;">ONNX Autodoc Report</div>',
+                    header_template='<div style="font-size: 9px; color: #666; width: 100%; text-align: center; padding: 5px 0;">HaoLine Report</div>',
                     footer_template='<div style="font-size: 9px; color: #666; width: 100%; text-align: center; padding: 5px 0;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>',
                 )
 
@@ -179,9 +179,7 @@ class PDFGenerator:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-        return loop.run_until_complete(
-            self._generate_pdf_async(html_content, output_path)
-        )
+        return loop.run_until_complete(self._generate_pdf_async(html_content, output_path))
 
     def generate_from_html_file(
         self,

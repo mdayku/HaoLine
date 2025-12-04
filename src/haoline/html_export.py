@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Interactive HTML Export for graph visualization.
@@ -1504,7 +1504,7 @@ class HTMLExporter:
     """
 
     def __init__(self, logger: logging.Logger | None = None):
-        self.logger = logger or logging.getLogger("autodoc.html")
+        self.logger = logger or logging.getLogger("haoline.html")
 
     def export(
         self,

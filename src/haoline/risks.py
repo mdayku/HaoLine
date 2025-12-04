@@ -1,8 +1,8 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
-Risk analysis for ONNX Autodoc.
+Risk analysis for HaoLine.
 
 Applies heuristics to detect potentially problematic patterns:
 - Deep networks without skip connections
@@ -57,9 +57,7 @@ class RiskThresholds:
 
     # Minimum thresholds - don't bother analyzing tiny models
     min_params_for_analysis: int = 100_000  # 100K params minimum
-    min_flops_for_bottleneck: int = (
-        1_000_000_000  # 1B FLOPs before flagging bottlenecks
-    )
+    min_flops_for_bottleneck: int = 1_000_000_000  # 1B FLOPs before flagging bottlenecks
     min_nodes_for_depth_check: int = 20  # At least 20 nodes before checking depth
 
     # Thresholds for risk detection
@@ -100,7 +98,7 @@ class RiskAnalyzer:
         logger: logging.Logger | None = None,
         thresholds: RiskThresholds | None = None,
     ):
-        self.logger = logger or logging.getLogger("autodoc.risks")
+        self.logger = logger or logging.getLogger("haoline.risks")
         self.thresholds = thresholds or RiskThresholds()
 
         # Also update class-level constants for backward compatibility
@@ -336,9 +334,7 @@ class RiskAnalyzer:
                     bottlenecks.append((node.name, node.op_type, ratio))
 
         if bottlenecks:
-            desc_parts = [
-                f"{name} ({op}: {ratio:.1%})" for name, op, ratio in bottlenecks
-            ]
+            desc_parts = [f"{name} ({op}: {ratio:.1%})" for name, op, ratio in bottlenecks]
             total_gflops = total_flops / 1e9
             return RiskSignal(
                 id="compute_bottleneck",
@@ -370,14 +366,11 @@ class RiskAnalyzer:
             param_count = vocab_size * embed_dim
 
             if param_count > self.LARGE_EMBEDDING_THRESHOLD:
-                large_embeddings.append(
-                    (block.name, vocab_size, embed_dim, param_count)
-                )
+                large_embeddings.append((block.name, vocab_size, embed_dim, param_count))
 
         if large_embeddings:
             details = [
-                f"{name}: vocab={v}, dim={d}, params={p:,}"
-                for name, v, d, p in large_embeddings
+                f"{name}: vocab={v}, dim={d}, params={p:,}" for name, v, d, p in large_embeddings
             ]
             return RiskSignal(
                 id="large_embedding",
@@ -424,9 +417,7 @@ class RiskAnalyzer:
             "Tanh",
             "Softmax",
         }
-        has_standard = any(
-            op in graph_info.op_type_counts for op in standard_activations
-        )
+        has_standard = any(op in graph_info.op_type_counts for op in standard_activations)
 
         trainable_count = (
             graph_info.op_type_counts.get("Conv", 0)
@@ -509,9 +500,7 @@ class RiskAnalyzer:
         standard_count = sum(1 for b in blocks if b.block_type == "ResidualAdd")
         mixed_msg = ""
         if standard_count > 0:
-            mixed_msg = (
-                f" Model also has {standard_count} standard Add-based residuals."
-            )
+            mixed_msg = f" Model also has {standard_count} standard Add-based residuals."
 
         return RiskSignal(
             id="nonstandard_residuals",

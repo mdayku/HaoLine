@@ -1,5 +1,5 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
 
 """
 Unit tests for the patterns module (block detection, architecture classification).
@@ -39,9 +39,7 @@ def create_conv_bn_relu_model() -> onnx.ModelProto:
     mean = helper.make_tensor(
         "mean", TensorProto.FLOAT, [16], np.zeros(16, dtype=np.float32).tolist()
     )
-    var = helper.make_tensor(
-        "var", TensorProto.FLOAT, [16], np.ones(16, dtype=np.float32).tolist()
-    )
+    var = helper.make_tensor("var", TensorProto.FLOAT, [16], np.ones(16, dtype=np.float32).tolist())
 
     Y = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [1, 16, 6, 6])
 
@@ -110,9 +108,7 @@ def create_residual_model() -> onnx.ModelProto:
 def create_attention_model() -> onnx.ModelProto:
     """Create a simplified attention pattern (MatMul -> Softmax -> MatMul)."""
     # Simplified attention: Q @ K^T -> Softmax -> @ V
-    Q = helper.make_tensor_value_info(
-        "Q", TensorProto.FLOAT, [1, 8, 64]
-    )  # [B, seq, dim]
+    Q = helper.make_tensor_value_info("Q", TensorProto.FLOAT, [1, 8, 64])  # [B, seq, dim]
     K = helper.make_tensor_value_info("K", TensorProto.FLOAT, [1, 8, 64])
     V = helper.make_tensor_value_info("V", TensorProto.FLOAT, [1, 8, 64])
 
@@ -124,14 +120,10 @@ def create_attention_model() -> onnx.ModelProto:
     )
 
     # Q @ K^T: [1, 8, 64] @ [1, 64, 8] -> [1, 8, 8]
-    matmul1 = helper.make_node(
-        "MatMul", ["Q", "K_T"], ["attn_scores"], name="matmul_qk"
-    )
+    matmul1 = helper.make_node("MatMul", ["Q", "K_T"], ["attn_scores"], name="matmul_qk")
 
     # Softmax
-    softmax = helper.make_node(
-        "Softmax", ["attn_scores"], ["attn_probs"], axis=-1, name="softmax"
-    )
+    softmax = helper.make_node("Softmax", ["attn_scores"], ["attn_probs"], axis=-1, name="softmax")
 
     # @ V: [1, 8, 8] @ [1, 8, 64] -> [1, 8, 64]
     matmul2 = helper.make_node("MatMul", ["attn_probs", "V"], ["Y"], name="matmul_v")
@@ -311,9 +303,7 @@ def create_concat_skip_model() -> onnx.ModelProto:
     relu2 = helper.make_node("Relu", ["conv2_out"], ["relu2_out"], name="relu2")
 
     # DenseNet-style concat: concatenate input with processed features
-    concat_node = helper.make_node(
-        "Concat", ["X", "relu2_out"], ["Y"], axis=1, name="dense_concat"
-    )
+    concat_node = helper.make_node("Concat", ["X", "relu2_out"], ["Y"], axis=1, name="dense_concat")
 
     graph = helper.make_graph(
         [conv1, relu1, conv2, relu2, concat_node],
@@ -403,9 +393,7 @@ def create_sub_residual_model() -> onnx.ModelProto:
     relu2 = helper.make_node("Relu", ["conv2_out"], ["relu2_out"], name="relu2")
 
     # Subtraction residual (learn the difference between two paths)
-    sub_node = helper.make_node(
-        "Sub", ["relu1_out", "relu2_out"], ["Y"], name="sub_residual"
-    )
+    sub_node = helper.make_node("Sub", ["relu1_out", "relu2_out"], ["Y"], name="sub_residual")
 
     graph = helper.make_graph(
         [conv1, relu1, conv2, relu2, sub_node],
@@ -599,9 +587,7 @@ def create_transformer_block_model() -> onnx.ModelProto:
     # Nodes
     nodes = [
         # Pre-norm
-        helper.make_node(
-            "LayerNormalization", ["X", "ln_scale", "ln_bias"], ["ln_out"], axis=-1
-        ),
+        helper.make_node("LayerNormalization", ["X", "ln_scale", "ln_bias"], ["ln_out"], axis=-1),
         # Q, K, V projections
         helper.make_node("MatMul", ["ln_out", "Wq"], ["Q"]),
         helper.make_node("MatMul", ["ln_out", "Wk"], ["K"]),
