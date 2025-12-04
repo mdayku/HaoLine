@@ -100,6 +100,87 @@ For enterprise deployments with strict compliance requirements:
 
 ---
 
+## Data Handling by Output Format
+
+| Format | Contains | Reveals |
+|--------|----------|---------|
+| **JSON** | Full analysis | Architecture, layer names, shapes, metrics |
+| **Markdown** | Summary | Model type, total params/FLOPs, risks |
+| **HTML** | Full report | Everything in JSON + visualizations |
+| **PDF** | Full report | Same as HTML |
+| **Graph HTML** | Interactive viz | Full graph structure, op types, connections |
+
+### Redacting Sensitive Information
+
+For sharing reports without revealing proprietary details:
+
+```bash
+# Coming soon
+haoline model.onnx --redact-names --out-html report.html
+```
+
+This will replace layer/tensor names with generic identifiers (e.g., `layer_001`, `tensor_042`).
+
+---
+
+## Open Source Audit
+
+HaoLine is fully open source under the MIT license.
+
+### Audit Checklist
+
+1. **Clone the repo:**
+   ```bash
+   git clone https://github.com/mdayku/HaoLine.git
+   ```
+
+2. **Search for network calls:**
+   ```bash
+   grep -r "requests\|urllib\|httpx\|socket" src/haoline/
+   ```
+   
+   Expected results:
+   - `llm_summarizer.py` — OpenAI/Anthropic API (optional, user-initiated)
+   - `tests/` — downloading test models (test code only)
+
+3. **Check dependencies:**
+   ```bash
+   cat pyproject.toml | grep -A 50 "dependencies"
+   ```
+
+4. **Review CLI entry points:**
+   ```bash
+   grep -r "def main\|def run_" src/haoline/*.py
+   ```
+
+### No Telemetry Guarantee
+
+HaoLine does NOT:
+- Send usage analytics
+- Phone home for license checks
+- Track which models you analyze
+- Upload any data without explicit user action (like `--llm-summary`)
+
+---
+
+## Compliance Notes
+
+### GDPR / Data Residency
+
+Since HaoLine runs entirely locally, your model data never crosses network boundaries (unless you explicitly use LLM features). This makes it suitable for:
+- Air-gapped environments
+- Regulated industries (finance, healthcare)
+- Government/defense use cases
+
+### SOC 2 / ISO 27001
+
+For organizations with compliance requirements:
+- All processing is local
+- No cloud dependencies for core features
+- Audit trail via open source code
+
+---
+
 ## Contact
 
 Questions about privacy or security? Open an issue on GitHub or contact the maintainers.

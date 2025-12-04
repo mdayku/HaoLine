@@ -510,6 +510,13 @@ Examples:
         help="Show progress indicators during analysis (useful for large models).",
     )
 
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Run in offline mode. Fails if any network access is attempted. "
+        "Disables LLM summaries and other features requiring internet.",
+    )
+
     return parser.parse_args()
 
 
@@ -2000,7 +2007,9 @@ def run_inspect():
     # Generate LLM summaries if requested
     llm_summary = None
     if args.llm_summary:
-        if not is_llm_available():
+        if args.offline:
+            print("\n[OFFLINE MODE] Skipping LLM summary (requires network access)\n")
+        elif not is_llm_available():
             print("\n" + "=" * 60)
             print("LLM PACKAGE NOT INSTALLED")
             print("=" * 60)

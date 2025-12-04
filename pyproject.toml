@@ -101,6 +101,7 @@ dev = [
 haoline = "haoline.cli:run_inspect"
 haoline-compare = "haoline.compare:main"
 haoline-web = "haoline.web:main"
+haoline-import-eval = "haoline.eval.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/mdayku/HaoLine"

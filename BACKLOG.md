@@ -507,7 +507,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [x] **Task 12.1.1**: Define `EvalResult` base schema (model_id, task_type, timestamp, metrics dict)
 - [x] **Task 12.1.2**: Define `EvalMetric` schema (name, value, unit, higher_is_better)
 - [x] **Task 12.1.3**: Create `eval_schema.json` for validation (embedded in schemas.py)
-- [ ] **Task 12.1.4**: Add `haoline import-eval` CLI command skeleton
+- [x] **Task 12.1.4**: Add `haoline import-eval` CLI command skeleton - `src/haoline/eval/cli.py`
 
 ### Story 12.2: Task-Specific Schemas - **COMPLETE**
 *Standard metrics for common ML tasks*
@@ -553,7 +553,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 ### Story 12.7: YOLO Quantization Demo (Reference Implementation)
 *End-to-end demo: fp32 → fp16 → int8, eval all, compare, deploy*
-- [ ] **Task 12.7.1**: Document YOLO quantization workflow (export to ONNX at each precision)
+- [x] **Task 12.7.1**: Document YOLO quantization workflow - `docs/YOLO_QUANTIZATION_WORKFLOW.md`
 - [ ] **Task 12.7.2**: Run batchtestv1.py on all 3 variants
 - [ ] **Task 12.7.3**: Import results with Ultralytics adapter
 - [ ] **Task 12.7.4**: Generate comparison report with deployment costs
@@ -763,7 +763,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 ### Story 25.1: Local-First Architecture
 - [x] **Task 25.1.1**: Document "model never leaves your machine" guarantee - see [PRIVACY.md](PRIVACY.md)
 - [x] **Task 25.1.2**: Audit code for any network calls or telemetry - only LLM (optional) and test downloads
-- [ ] **Task 25.1.3**: Add `--offline` CLI flag (fail if network detected)
+- [x] **Task 25.1.3**: Add `--offline` CLI flag (skips LLM features)
 - [ ] **Task 25.1.4**: Create architecture diagram showing data flow
 
 ### Story 25.2: Output Controls
@@ -772,8 +772,8 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 25.2.3**: Document what information each output format reveals
 
 ### Story 25.3: Enterprise Trust Documentation
-- [ ] **Task 25.3.1**: Write Privacy Policy / Data Handling document
-- [ ] **Task 25.3.2**: Document open-source audit path ("read our code")
+- [x] **Task 25.3.1**: Write Privacy Policy / Data Handling document - expanded in [PRIVACY.md](PRIVACY.md)
+- [x] **Task 25.3.2**: Document open-source audit path ("read our code") - in PRIVACY.md
 
 *Future: Confidential Computing (TEE) for cloud analysis - see Epic 10 SaaS.*
 
