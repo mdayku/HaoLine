@@ -654,7 +654,8 @@ HaoLine/
 |   |
 |   +-- eval/                # Evaluation import module (Epic 12)
 |   |   +-- __init__.py      # Public API exports
-|   |   +-- schemas.py       # EvalMetric, EvalResult, task-specific schemas
+|   |   +-- schemas.py       # EvalMetric, EvalResult, CombinedReport, task schemas
+|   |   +-- adapters.py      # Import adapters (Ultralytics, CSV/JSON)
 |   |   +-- cli.py           # haoline-import-eval command
 |   |
 |   +-- privacy.py           # Name redaction, summary-only output (Epic 25)
@@ -983,8 +984,9 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | `llm_summarizer.py` | New LLM providers, prompt templates |
 | `formats/*.py` | New model format readers |
 | `privacy.py` | Redaction rules, summary filters |
-| `eval/schemas.py` | New task-specific evaluation schemas |
-| `eval/cli.py` | New import adapters (Ultralytics, HF, etc.) |
+| `eval/schemas.py` | Task-specific evaluation schemas, CombinedReport |
+| `eval/adapters.py` | Import adapters (Ultralytics YOLO, generic CSV/JSON) |
+| `eval/cli.py` | CLI entry point for `haoline-import-eval` |
 
 ---
 
