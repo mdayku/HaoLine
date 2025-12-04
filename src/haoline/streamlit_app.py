@@ -179,6 +179,15 @@ st.markdown(
         font-weight: 600 !important;
     }
 
+    /* Sidebar - remove top padding */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]:first-child {
+        padding-top: 0 !important;
+    }
+
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: 1rem !important;
+    }
+
     /* Sidebar section headers */
     [data-testid="stSidebar"] h4,
     [data-testid="stSidebar"] .stMarkdown h3 {
@@ -186,9 +195,19 @@ st.markdown(
         font-size: 0.8rem !important;
         text-transform: uppercase;
         letter-spacing: 0.1em;
-        margin-top: 1.5rem !important;
-        margin-bottom: 0.75rem !important;
+        margin-top: 1rem !important;
+        margin-bottom: 0.5rem !important;
         font-weight: 600 !important;
+    }
+
+    /* First header in sidebar - no top margin */
+    [data-testid="stSidebar"] .stMarkdown:first-of-type h3 {
+        margin-top: 0 !important;
+    }
+
+    /* Tighten sidebar dividers */
+    [data-testid="stSidebar"] hr {
+        margin: 0.75rem 0 !important;
     }
 
     /* Input fields */
