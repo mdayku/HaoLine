@@ -353,7 +353,7 @@ class InspectionReport:
             lines.append("## Executive Summary")
             lines.append("")
             if self.llm_summary.get("short_summary"):
-                lines.append(f"**TL;DR:** {self.llm_summary['short_summary']}")
+                lines.append(f"{self.llm_summary['short_summary']}")
                 lines.append("")
             if self.llm_summary.get("detailed_summary"):
                 lines.append("")
@@ -760,18 +760,16 @@ class InspectionReport:
         """
         )
 
-        # Executive Summary (LLM)
+        # Executive Summary (LLM) - Prominent AI-generated summary
         if self.llm_summary and self.llm_summary.get("success"):
             html_parts.append(
                 """
             <section class="executive-summary">
-                <h2>Executive Summary</h2>
+                <h2>AI Executive Summary</h2>
             """
             )
             if self.llm_summary.get("short_summary"):
-                html_parts.append(
-                    f'<p class="tldr"><strong>TL;DR:</strong> {self.llm_summary["short_summary"]}</p>'
-                )
+                html_parts.append(f'<p class="tldr">{self.llm_summary["short_summary"]}</p>')
             if self.llm_summary.get("detailed_summary"):
                 html_parts.append(f'<p>{self.llm_summary["detailed_summary"]}</p>')
             html_parts.append(
@@ -1376,10 +1374,12 @@ class InspectionReport:
 
         /* Executive Summary */
         .executive-summary {{
-            background: var(--bg-secondary);
+            background: linear-gradient(135deg, #1a2a3a 0%, #0d1a26 100%);
             padding: 2rem;
             border-radius: 12px;
-            border-left: 4px solid var(--accent-cyan);
+            border: 2px solid var(--accent-cyan);
+            margin: 2rem 0;
+            box-shadow: 0 4px 20px rgba(0, 200, 255, 0.15);
         }}
 
         .executive-summary .tldr {{
