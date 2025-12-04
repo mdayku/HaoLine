@@ -105,29 +105,27 @@ class PDFGenerator:
                 # Set the HTML content
                 await page.set_content(html_content, wait_until="networkidle")
 
-                # Add custom CSS for better PDF rendering
+                # Add custom CSS for better PDF rendering with smart page breaks
                 await page.add_style_tag(
-                    content="""
-                    @media print {
-                        body {
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                        }
-                        .no-print {
-                            display: none !important;
-                        }
-                        pre, code {
-                            white-space: pre-wrap !important;
-                            word-wrap: break-word !important;
-                        }
-                        table {
-                            page-break-inside: avoid;
-                        }
-                        h1, h2, h3 {
-                            page-break-after: avoid;
-                        }
-                    }
-                """
+                    content="""@media print {
+body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+.no-print, button, .toggle-btn, .search-box { display: none !important; }
+pre, code { white-space: pre-wrap !important; word-wrap: break-word !important; max-width: 100% !important; overflow-wrap: break-word !important; }
+p, li { orphans: 3; widows: 3; }
+h1, h2, h3, h4, h5, h6 { page-break-after: avoid !important; break-after: avoid !important; }
+section { page-break-inside: avoid; break-inside: avoid; }
+.kv-cache, .memory-breakdown, .visualizations, .graph-section, .layer-summary, .architecture, .hardware, .risks, .batch-scaling, .resolution-scaling { page-break-before: always !important; break-before: page !important; }
+.executive-summary, .metrics-cards, .param-details, .dataset-info, .system-requirements { page-break-inside: avoid !important; break-inside: avoid !important; }
+table { page-break-inside: avoid !important; break-inside: avoid !important; }
+tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+figure, .chart-container, .visualization-item { page-break-inside: avoid !important; break-inside: avoid !important; }
+img { page-break-inside: avoid !important; break-inside: avoid !important; max-width: 100% !important; height: auto !important; }
+.metric-card, .card { page-break-inside: avoid !important; break-inside: avoid !important; }
+.risk-item, .risk-signal { page-break-inside: avoid !important; break-inside: avoid !important; }
+.comparison-table, .variant-table { page-break-inside: avoid !important; }
+.engine-panel, .summary-panel { page-break-inside: avoid !important; break-inside: avoid !important; }
+.recommendation, .calibration-rec { page-break-inside: avoid !important; break-inside: avoid !important; }
+}"""
                 )
 
                 # Wait for any images to load

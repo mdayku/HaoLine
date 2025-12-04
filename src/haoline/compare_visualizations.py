@@ -489,19 +489,26 @@ def generate_memory_savings_chart(
             baseline_memory = v.get("memory_bytes") or baseline_size
             break
 
-    # Prepare data
+    # Prepare data - skip baseline since it shows 0% reduction
     precisions = []
     size_reductions = []
     memory_reductions = []
 
     for v in variants:
         precision = v.get("precision", "unknown")
+        # Skip baseline - it always shows 0% reduction
+        if precision == baseline_precision:
+            continue
+
         size = v.get("size_bytes", baseline_size)
         memory = v.get("memory_bytes") or size
 
-        precisions.append(precision.upper())
+        precisions.append(f"{precision.upper()} vs {baseline_precision.upper()}")
         size_reductions.append((1 - size / baseline_size) * 100)
         memory_reductions.append((1 - memory / baseline_memory) * 100)
+
+    if not precisions:
+        return None  # Nothing to compare if only baseline
 
     x = range(len(precisions))
     width = 0.35
@@ -1481,6 +1488,23 @@ def generate_compare_html(
             )
 
         html_parts.append("</div>")  # charts-grid
+
+    # INT8 Kernel Warning (if INT8 variant present)
+    has_int8 = any(v.get("precision", "").lower() == "int8" for v in variants)
+    if has_int8:
+        html_parts.append(
+            """
+            <div class="callout warning" style="background: #3d2c00; border-left: 4px solid #ffc107; padding: 1rem; margin: 1.5rem 0; border-radius: 4px;">
+                <strong style="color: #ffc107;">INT8 Performance Note</strong>
+                <p style="margin: 0.5rem 0 0 0; color: #e0e0e0;">
+                    ONNX Runtime does not have optimized INT8 kernels for GPU execution. The INT8 metrics shown here
+                    are based on <strong>CPU inference</strong>, which is significantly slower than GPU.
+                    For production INT8 GPU inference, consider converting to <strong>TensorRT</strong> or
+                    <strong>OpenVINO</strong> format which have native INT8 GPU support.
+                </p>
+            </div>
+        """
+        )
 
     # Recommendations
     html_parts.append("<h2>Recommendations</h2>")

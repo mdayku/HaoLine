@@ -829,6 +829,18 @@ class InspectionReport:
             )
         html_parts.append("</section>")
 
+        # Interactive Graph Visualization - Placed prominently after metrics (Task 5.7.8)
+        if graph_html:
+            html_parts.append('<section class="graph-section">')
+            html_parts.append("<h2>Neural Network Architecture</h2>")
+            html_parts.append(
+                '<p class="section-desc">Click nodes to expand/collapse blocks. '
+                "Use the search box to find specific operations.</p>"
+            )
+            html_parts.append('<div class="graph-container">')
+            html_parts.append(graph_html)
+            html_parts.append("</div></section>")
+
         # Complexity Metrics Details (KV Cache + Memory Breakdown)
         if self.memory_estimates:
             # KV Cache section (Task 4.4.2)
@@ -949,18 +961,6 @@ class InspectionReport:
                     </div>
                     """
                     )
-            html_parts.append("</div></section>")
-
-        # Interactive Graph Visualization (Task 5.7.8)
-        if graph_html:
-            html_parts.append('<section class="graph-section">')
-            html_parts.append("<h2>Interactive Graph</h2>")
-            html_parts.append(
-                '<p class="section-desc">Click nodes to expand/collapse blocks. '
-                "Use the search box to find specific operations.</p>"
-            )
-            html_parts.append('<div class="graph-container">')
-            html_parts.append(graph_html)
             html_parts.append("</div></section>")
 
         # Per-Layer Summary Table (Story 5.8)

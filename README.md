@@ -105,6 +105,50 @@ report.to_html("report.html")
 
 ---
 
+## LLM Setup (Optional)
+
+HaoLine can generate AI-powered summaries of your model architectures. Install with LLM support and set the API key for your preferred provider:
+
+```bash
+pip install haoline[llm]
+```
+
+| Provider | Environment Variable | Get API Key |
+|----------|---------------------|-------------|
+| OpenAI | `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com/api-keys) |
+| Anthropic | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com/) |
+| Google Gemini | `GOOGLE_API_KEY` | [aistudio.google.com](https://aistudio.google.com/app/apikey) |
+| xAI Grok | `XAI_API_KEY` | [console.x.ai](https://console.x.ai/) |
+
+```bash
+# Set your preferred provider's API key
+export OPENAI_API_KEY="sk-..."           # OpenAI
+export ANTHROPIC_API_KEY="sk-ant-..."    # Anthropic  
+export GOOGLE_API_KEY="..."              # Google Gemini
+export XAI_API_KEY="xai-..."             # xAI Grok
+
+# Windows PowerShell
+$env:OPENAI_API_KEY="sk-..."
+
+# Use in analysis (auto-detects available provider)
+haoline model.onnx --llm-summary
+```
+
+---
+
+## Security Notice
+
+⚠️ **Loading untrusted models is inherently risky.**
+
+Like PyTorch's `torch.load()`, HaoLine uses `pickle` and `numpy.load(allow_pickle=True)` when loading JAX model parameters. These can execute arbitrary code if the model file is malicious.
+
+**Best practices:**
+- Only analyze models from trusted sources
+- Run in a sandboxed environment (Docker, VM) when analyzing unknown models
+- Review model provenance before loading
+
+---
+
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.

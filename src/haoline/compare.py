@@ -424,9 +424,9 @@ def _compute_deltas(baseline: VariantReport, other: VariantReport) -> dict[str, 
     if base_flops is not None and other_flops is not None:
         deltas["total_flops"] = int(other_flops - base_flops)
 
-    # Memory estimates
-    base_mem = _get_numeric_metric(baseline.report, "memory_estimates", "total_bytes")
-    other_mem = _get_numeric_metric(other.report, "memory_estimates", "total_bytes")
+    # Memory estimates (model size)
+    base_mem = _get_numeric_metric(baseline.report, "memory_estimates", "model_size_bytes")
+    other_mem = _get_numeric_metric(other.report, "memory_estimates", "model_size_bytes")
     if base_mem is not None and other_mem is not None:
         deltas["memory_bytes"] = int(other_mem - base_mem)
 
@@ -516,7 +516,7 @@ def _build_compare_json(
             "total_params": (param_counts.total if param_counts is not None else None),
             "total_flops": (flop_counts.total if flop_counts is not None else None),
             "memory_bytes": (
-                memory_estimates.total_bytes if memory_estimates is not None else None
+                memory_estimates.model_size_bytes if memory_estimates is not None else None
             ),
             # Eval/perf metrics from JSON
             "metrics": v.metrics,

@@ -1957,7 +1957,7 @@ def run_inspect():
             logger.info(f"Extracting metadata from: {weights_path}")
             metadata = _extract_ultralytics_metadata(weights_path, logger)
             if metadata:
-                from .haoline.report import DatasetInfo
+                from .report import DatasetInfo
 
                 report.dataset_info = DatasetInfo(
                     task=metadata.get("task"),
@@ -2085,7 +2085,7 @@ def run_inspect():
                 if hasattr(inspector, "_graph_info") and inspector._graph_info:
                     graph_info = inspector._graph_info
                 else:
-                    from .haoline.analyzer import ONNXGraphLoader
+                    from .analyzer import ONNXGraphLoader
 
                     loader = ONNXGraphLoader(logger=logger)
                     _, graph_info = loader.load(model_path)
@@ -2118,7 +2118,7 @@ def run_inspect():
                 if hasattr(inspector, "_graph_info") and inspector._graph_info:
                     graph_info = inspector._graph_info
                 else:
-                    from .haoline.analyzer import ONNXGraphLoader
+                    from .analyzer import ONNXGraphLoader
 
                     loader = ONNXGraphLoader(logger=logger)
                     _, graph_info = loader.load(model_path)
@@ -2204,7 +2204,7 @@ def run_inspect():
                 graph_info = inspector._graph_info
             else:
                 # Re-load the model to get graph_info
-                from .haoline.analyzer import ONNXGraphLoader
+                from .analyzer import ONNXGraphLoader
 
                 loader = ONNXGraphLoader(logger=logger)
                 _, graph_info = loader.load(model_path)
