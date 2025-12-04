@@ -1,0 +1,119 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "haoline"
+version = "0.1.0"
+description = "HaoLine (好线) - Universal Model Inspector. See what's really inside your models."
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Marcus Day", email = "marcusday3586@gmail.com" }
+]
+keywords = [
+    "machine-learning",
+    "deep-learning",
+    "neural-network",
+    "model-analysis",
+    "onnx",
+    "pytorch",
+    "tensorflow",
+    "tensorrt",
+    "model-inspector",
+    "flops",
+    "parameters",
+    "memory",
+    "profiling",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "onnx>=1.14.0",
+    "numpy>=1.20.0",
+]
+
+[project.optional-dependencies]
+runtime = [
+    "onnxruntime>=1.16.0",
+]
+viz = [
+    "matplotlib>=3.5.0",
+]
+llm = [
+    "anthropic>=0.20.0",
+]
+pdf = [
+    "playwright>=1.40.0",
+]
+gpu = [
+    "nvidia-ml-py>=12.0.0",
+]
+full = [
+    "haoline[runtime,viz,llm,pdf,gpu]",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+haoline = "haoline.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mdayku/HaoLine"
+Documentation = "https://github.com/mdayku/HaoLine#readme"
+Repository = "https://github.com/mdayku/HaoLine"
+Issues = "https://github.com/mdayku/HaoLine/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/haoline"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (handled by black)
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["src/haoline/tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+
