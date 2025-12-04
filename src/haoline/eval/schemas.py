@@ -1,64 +1,70 @@
 """
-Eval Result Schemas
+Eval Result Schemas (Pydantic v2)
 
 Task-agnostic and task-specific schemas for importing evaluation results
 from external tools like Ultralytics, HuggingFace evaluate, lm-eval, etc.
+
+All schemas use Pydantic for validation, serialization, and JSON Schema generation.
 """
 
-import json
-from dataclasses import dataclass, field
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Any
+from enum import Enum
+from typing import Annotated, Any
+
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class EvalMetric:
+class TaskType(str, Enum):
+    """Supported evaluation task types."""
+
+    detection = "detection"
+    classification = "classification"
+    nlp = "nlp"
+    llm = "llm"
+    segmentation = "segmentation"
+    generic = "generic"
+
+
+class EvalMetric(BaseModel):
     """A single evaluation metric."""
 
-    name: str  # e.g., "mAP@50", "top1_accuracy", "f1_macro"
-    value: float  # The metric value
-    unit: str = ""  # e.g., "%", "ms", "" (dimensionless)
-    higher_is_better: bool = True  # For ranking/comparison
-    category: str = ""  # e.g., "accuracy", "speed", "size"
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "name": self.name,
-            "value": self.value,
-            "unit": self.unit,
-            "higher_is_better": self.higher_is_better,
-            "category": self.category,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "EvalMetric":
-        return cls(
-            name=data["name"],
-            value=data["value"],
-            unit=data.get("unit", ""),
-            higher_is_better=data.get("higher_is_better", True),
-            category=data.get("category", ""),
-        )
+    name: Annotated[str, Field(description="Metric name, e.g., 'mAP@50', 'top1_accuracy'")]
+    value: Annotated[float, Field(description="The metric value")]
+    unit: Annotated[str, Field(default="", description="Unit, e.g., '%', 'ms', '' (dimensionless)")]
+    higher_is_better: Annotated[
+        bool, Field(default=True, description="Whether higher values are better")
+    ]
+    category: Annotated[
+        str, Field(default="", description="Category, e.g., 'accuracy', 'speed', 'size'")
+    ]
 
 
-@dataclass
-class EvalResult:
+class EvalResult(BaseModel):
     """
     Base class for evaluation results.
 
     Task-agnostic fields that all eval results share.
     """
 
-    model_id: str  # Identifier for the model (path, name, or hash)
-    task_type: str  # "detection", "classification", "nlp", "llm", "segmentation"
-    timestamp: str = ""  # ISO format timestamp of eval run
-    dataset: str = ""  # Dataset used for evaluation (e.g., "coco_val2017")
-    metrics: list[EvalMetric] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)  # Tool-specific extras
+    model_id: Annotated[str, Field(description="Identifier for the model (path, name, or hash)")]
+    task_type: Annotated[str, Field(description="Task type: detection, classification, etc.")]
+    timestamp: Annotated[str, Field(default="", description="ISO format timestamp of eval run")] = (
+        ""
+    )
+    dataset: Annotated[str, Field(default="", description="Dataset used for evaluation")] = ""
+    metrics: Annotated[
+        list[EvalMetric], Field(default_factory=list, description="List of evaluation metrics")
+    ]
+    metadata: Annotated[
+        dict[str, Any], Field(default_factory=dict, description="Tool-specific extras")
+    ]
 
-    def __post_init__(self):
+    def model_post_init(self, __context: Any) -> None:
+        """Set timestamp if not provided."""
         if not self.timestamp:
-            self.timestamp = datetime.now().isoformat()
+            object.__setattr__(self, "timestamp", datetime.now().isoformat())
 
     def get_metric(self, name: str) -> EvalMetric | None:
         """Get a metric by name."""
@@ -72,33 +78,14 @@ class EvalResult:
         m = self.get_metric(name)
         return m.value if m else default
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "model_id": self.model_id,
-            "task_type": self.task_type,
-            "timestamp": self.timestamp,
-            "dataset": self.dataset,
-            "metrics": [m.to_dict() for m in self.metrics],
-            "metadata": self.metadata,
-        }
-
     def to_json(self, indent: int = 2) -> str:
-        return json.dumps(self.to_dict(), indent=indent)
+        """Serialize to JSON string."""
+        return self.model_dump_json(indent=indent)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "EvalResult":
-        return cls(
-            model_id=data["model_id"],
-            task_type=data["task_type"],
-            timestamp=data.get("timestamp", ""),
-            dataset=data.get("dataset", ""),
-            metrics=[EvalMetric.from_dict(m) for m in data.get("metrics", [])],
-            metadata=data.get("metadata", {}),
-        )
-
-    @classmethod
-    def from_json(cls, json_str: str) -> "EvalResult":
-        return cls.from_dict(json.loads(json_str))
+    def from_json(cls, json_str: str) -> EvalResult:
+        """Deserialize from JSON string."""
+        return cls.model_validate_json(json_str)
 
 
 # =============================================================================
@@ -106,7 +93,6 @@ class EvalResult:
 # =============================================================================
 
 
-@dataclass
 class DetectionEvalResult(EvalResult):
     """
     Object detection evaluation results.
@@ -118,14 +104,21 @@ class DetectionEvalResult(EvalResult):
     task_type: str = "detection"
 
     # Per-class metrics
-    class_metrics: dict[str, dict[str, float]] = field(default_factory=dict)
-    # e.g., {"person": {"precision": 0.92, "recall": 0.88, "f1": 0.90, "ap50": 0.91}}
+    class_metrics: Annotated[
+        dict[str, dict[str, float]],
+        Field(
+            default_factory=dict,
+            description="Per-class metrics, e.g., {'person': {'precision': 0.92}}",
+        ),
+    ]
 
     # IoU thresholds used
-    iou_thresholds: list[float] = field(default_factory=lambda: [0.5, 0.75])
+    iou_thresholds: Annotated[
+        list[float], Field(default_factory=lambda: [0.5, 0.75], description="IoU thresholds")
+    ]
 
     # Confidence threshold
-    confidence_threshold: float = 0.5
+    confidence_threshold: Annotated[float, Field(default=0.5, description="Confidence threshold")]
 
     @classmethod
     def create(
@@ -138,15 +131,31 @@ class DetectionEvalResult(EvalResult):
         recall: float,
         f1: float,
         class_metrics: dict[str, dict[str, float]] | None = None,
-        **kwargs,
-    ) -> "DetectionEvalResult":
+        **kwargs: Any,
+    ) -> DetectionEvalResult:
         """Convenience constructor with standard detection metrics."""
         metrics = [
-            EvalMetric("mAP@50", map50, "%", True, "accuracy"),
-            EvalMetric("mAP@50:95", map50_95, "%", True, "accuracy"),
-            EvalMetric("precision", precision, "%", True, "accuracy"),
-            EvalMetric("recall", recall, "%", True, "accuracy"),
-            EvalMetric("f1", f1, "%", True, "accuracy"),
+            EvalMetric(
+                name="mAP@50", value=map50, unit="%", higher_is_better=True, category="accuracy"
+            ),
+            EvalMetric(
+                name="mAP@50:95",
+                value=map50_95,
+                unit="%",
+                higher_is_better=True,
+                category="accuracy",
+            ),
+            EvalMetric(
+                name="precision",
+                value=precision,
+                unit="%",
+                higher_is_better=True,
+                category="accuracy",
+            ),
+            EvalMetric(
+                name="recall", value=recall, unit="%", higher_is_better=True, category="accuracy"
+            ),
+            EvalMetric(name="f1", value=f1, unit="%", higher_is_better=True, category="accuracy"),
         ]
         return cls(
             model_id=model_id,
@@ -157,7 +166,6 @@ class DetectionEvalResult(EvalResult):
         )
 
 
-@dataclass
 class ClassificationEvalResult(EvalResult):
     """
     Image/text classification evaluation results.
@@ -169,11 +177,19 @@ class ClassificationEvalResult(EvalResult):
     task_type: str = "classification"
 
     # Per-class accuracy
-    class_accuracy: dict[str, float] = field(default_factory=dict)
+    class_accuracy: Annotated[
+        dict[str, float],
+        Field(default_factory=dict, description="Per-class accuracy"),
+    ]
 
     # Confusion matrix (optional)
-    confusion_matrix: list[list[int]] | None = None
-    class_names: list[str] = field(default_factory=list)
+    confusion_matrix: Annotated[
+        list[list[int]] | None,
+        Field(default=None, description="Confusion matrix"),
+    ]
+    class_names: Annotated[
+        list[str], Field(default_factory=list, description="Class names for confusion matrix")
+    ]
 
     @classmethod
     def create(
@@ -183,12 +199,24 @@ class ClassificationEvalResult(EvalResult):
         top1_accuracy: float,
         top5_accuracy: float,
         class_accuracy: dict[str, float] | None = None,
-        **kwargs,
-    ) -> "ClassificationEvalResult":
+        **kwargs: Any,
+    ) -> ClassificationEvalResult:
         """Convenience constructor with standard classification metrics."""
         metrics = [
-            EvalMetric("top1_accuracy", top1_accuracy, "%", True, "accuracy"),
-            EvalMetric("top5_accuracy", top5_accuracy, "%", True, "accuracy"),
+            EvalMetric(
+                name="top1_accuracy",
+                value=top1_accuracy,
+                unit="%",
+                higher_is_better=True,
+                category="accuracy",
+            ),
+            EvalMetric(
+                name="top5_accuracy",
+                value=top5_accuracy,
+                unit="%",
+                higher_is_better=True,
+                category="accuracy",
+            ),
         ]
         return cls(
             model_id=model_id,
@@ -199,7 +227,6 @@ class ClassificationEvalResult(EvalResult):
         )
 
 
-@dataclass
 class NLPEvalResult(EvalResult):
     """
     NLP task evaluation results.
@@ -211,7 +238,13 @@ class NLPEvalResult(EvalResult):
     task_type: str = "nlp"
 
     # Task subtype
-    nlp_task: str = ""  # "classification", "ner", "qa", "translation", "summarization"
+    nlp_task: Annotated[
+        str,
+        Field(
+            default="",
+            description="NLP task: classification, ner, qa, translation, summarization",
+        ),
+    ] = ""
 
     @classmethod
     def create(
@@ -224,20 +257,24 @@ class NLPEvalResult(EvalResult):
         exact_match: float | None = None,
         bleu: float | None = None,
         rouge_l: float | None = None,
-        **kwargs,
-    ) -> "NLPEvalResult":
+        **kwargs: Any,
+    ) -> NLPEvalResult:
         """Convenience constructor with standard NLP metrics."""
         metrics = []
         if accuracy is not None:
-            metrics.append(EvalMetric("accuracy", accuracy, "%", True, "accuracy"))
+            metrics.append(
+                EvalMetric(name="accuracy", value=accuracy, unit="%", category="accuracy")
+            )
         if f1 is not None:
-            metrics.append(EvalMetric("f1", f1, "%", True, "accuracy"))
+            metrics.append(EvalMetric(name="f1", value=f1, unit="%", category="accuracy"))
         if exact_match is not None:
-            metrics.append(EvalMetric("exact_match", exact_match, "%", True, "accuracy"))
+            metrics.append(
+                EvalMetric(name="exact_match", value=exact_match, unit="%", category="accuracy")
+            )
         if bleu is not None:
-            metrics.append(EvalMetric("bleu", bleu, "", True, "accuracy"))
+            metrics.append(EvalMetric(name="bleu", value=bleu, category="accuracy"))
         if rouge_l is not None:
-            metrics.append(EvalMetric("rouge_l", rouge_l, "", True, "accuracy"))
+            metrics.append(EvalMetric(name="rouge_l", value=rouge_l, category="accuracy"))
 
         return cls(
             model_id=model_id,
@@ -248,7 +285,6 @@ class NLPEvalResult(EvalResult):
         )
 
 
-@dataclass
 class LLMEvalResult(EvalResult):
     """
     Large Language Model evaluation results.
@@ -260,8 +296,13 @@ class LLMEvalResult(EvalResult):
     task_type: str = "llm"
 
     # Benchmark scores (0-100 or 0-1 depending on benchmark)
-    benchmark_scores: dict[str, float] = field(default_factory=dict)
-    # e.g., {"mmlu": 0.72, "hellaswag": 0.81, "truthfulqa": 0.45}
+    benchmark_scores: Annotated[
+        dict[str, float],
+        Field(
+            default_factory=dict,
+            description="Benchmark scores, e.g., {'mmlu': 0.72, 'hellaswag': 0.81}",
+        ),
+    ]
 
     @classmethod
     def create(
@@ -273,16 +314,18 @@ class LLMEvalResult(EvalResult):
         truthfulqa: float | None = None,
         arc_challenge: float | None = None,
         winogrande: float | None = None,
-        **kwargs,
-    ) -> "LLMEvalResult":
+        **kwargs: Any,
+    ) -> LLMEvalResult:
         """Convenience constructor with standard LLM benchmarks."""
         metrics = []
         benchmark_scores = {}
 
         if perplexity is not None:
             metrics.append(
-                EvalMetric("perplexity", perplexity, "", False, "accuracy")
-            )  # Lower is better
+                EvalMetric(
+                    name="perplexity", value=perplexity, higher_is_better=False, category="accuracy"
+                )
+            )
 
         benchmarks = {
             "mmlu": mmlu,
@@ -294,7 +337,7 @@ class LLMEvalResult(EvalResult):
 
         for name, value in benchmarks.items():
             if value is not None:
-                metrics.append(EvalMetric(name, value, "%", True, "accuracy"))
+                metrics.append(EvalMetric(name=name, value=value, unit="%", category="accuracy"))
                 benchmark_scores[name] = value
 
         return cls(
@@ -306,7 +349,6 @@ class LLMEvalResult(EvalResult):
         )
 
 
-@dataclass
 class SegmentationEvalResult(EvalResult):
     """
     Semantic/instance segmentation evaluation results.
@@ -318,10 +360,16 @@ class SegmentationEvalResult(EvalResult):
     task_type: str = "segmentation"
 
     # Per-class IoU
-    class_iou: dict[str, float] = field(default_factory=dict)
+    class_iou: Annotated[
+        dict[str, float],
+        Field(default_factory=dict, description="Per-class IoU values"),
+    ]
 
     # Segmentation type
-    segmentation_type: str = "semantic"  # "semantic", "instance", "panoptic"
+    segmentation_type: Annotated[
+        str,
+        Field(default="semantic", description="Type: semantic, instance, or panoptic"),
+    ] = "semantic"
 
     @classmethod
     def create(
@@ -332,14 +380,14 @@ class SegmentationEvalResult(EvalResult):
         dice: float | None = None,
         class_iou: dict[str, float] | None = None,
         segmentation_type: str = "semantic",
-        **kwargs,
-    ) -> "SegmentationEvalResult":
+        **kwargs: Any,
+    ) -> SegmentationEvalResult:
         """Convenience constructor with standard segmentation metrics."""
         metrics = [
-            EvalMetric("mIoU", miou, "%", True, "accuracy"),
+            EvalMetric(name="mIoU", value=miou, unit="%", category="accuracy"),
         ]
         if dice is not None:
-            metrics.append(EvalMetric("dice", dice, "%", True, "accuracy"))
+            metrics.append(EvalMetric(name="dice", value=dice, unit="%", category="accuracy"))
 
         return cls(
             model_id=model_id,
@@ -351,20 +399,23 @@ class SegmentationEvalResult(EvalResult):
         )
 
 
-@dataclass
 class GenericEvalResult(EvalResult):
     """
     Generic evaluation results with user-defined metrics.
 
     Use this when no task-specific schema fits, or for custom evaluation tasks.
-    The user provides metric definitions explicitly.
     """
 
     task_type: str = "generic"
 
     # User can specify what metrics mean
-    metric_definitions: dict[str, str] = field(default_factory=dict)
-    # e.g., {"custom_score": "Higher values indicate better model performance"}
+    metric_definitions: Annotated[
+        dict[str, str],
+        Field(
+            default_factory=dict,
+            description="Metric definitions, e.g., {'custom_score': 'Higher is better'}",
+        ),
+    ]
 
     @classmethod
     def create(
@@ -374,18 +425,9 @@ class GenericEvalResult(EvalResult):
         metrics: dict[str, float] | None = None,
         metric_definitions: dict[str, str] | None = None,
         higher_is_better: dict[str, bool] | None = None,
-        **kwargs,
-    ) -> "GenericEvalResult":
-        """
-        Convenience constructor for generic metrics.
-
-        Args:
-            model_id: Model identifier.
-            dataset: Dataset name.
-            metrics: Dict of metric_name -> value.
-            metric_definitions: Dict of metric_name -> description.
-            higher_is_better: Dict of metric_name -> bool (default True).
-        """
+        **kwargs: Any,
+    ) -> GenericEvalResult:
+        """Convenience constructor for generic metrics."""
         metric_list = []
         higher_map = higher_is_better or {}
 
@@ -413,8 +455,7 @@ class GenericEvalResult(EvalResult):
 # =============================================================================
 
 
-@dataclass
-class CombinedReport:
+class CombinedReport(BaseModel):
     """
     Combines architecture analysis with evaluation results.
 
@@ -422,28 +463,46 @@ class CombinedReport:
     EvalResult (accuracy, speed benchmarks) for unified comparison.
     """
 
-    model_id: str
-    model_path: str = ""
+    model_id: Annotated[str, Field(description="Model identifier")]
+    model_path: Annotated[str, Field(default="", description="Path to model file")]
 
     # Architecture analysis (from haoline inspect)
-    architecture: dict[str, Any] = field(default_factory=dict)
-    # Keys: params_total, flops_total, memory_bytes, architecture_type, etc.
+    architecture: Annotated[
+        dict[str, Any],
+        Field(
+            default_factory=dict,
+            description="Architecture summary: params_total, flops_total, etc.",
+        ),
+    ]
 
     # Evaluation results (from external tools)
-    eval_results: list[EvalResult] = field(default_factory=list)
+    eval_results: Annotated[
+        list[EvalResult],
+        Field(default_factory=list, description="Evaluation results from external tools"),
+    ]
 
     # Computed summaries
-    primary_accuracy_metric: str = ""  # e.g., "mAP@50" or "top1_accuracy"
-    primary_accuracy_value: float = 0.0
+    primary_accuracy_metric: Annotated[
+        str, Field(default="", description="Primary accuracy metric name")
+    ] = ""
+    primary_accuracy_value: Annotated[
+        float, Field(default=0.0, description="Primary accuracy metric value")
+    ] = 0.0
 
     # Hardware estimates (from haoline)
-    hardware_profile: str = ""
-    latency_ms: float = 0.0
-    throughput_fps: float = 0.0
+    hardware_profile: Annotated[str, Field(default="", description="Hardware profile name")] = ""
+    latency_ms: Annotated[float, Field(default=0.0, description="Latency in milliseconds")] = 0.0
+    throughput_fps: Annotated[
+        float, Field(default=0.0, description="Throughput in frames per second")
+    ] = 0.0
 
     # Deployment cost (if calculated)
-    cost_per_day_usd: float = 0.0
-    cost_per_month_usd: float = 0.0
+    cost_per_day_usd: Annotated[
+        float, Field(default=0.0, description="Estimated cost per day in USD")
+    ] = 0.0
+    cost_per_month_usd: Annotated[
+        float, Field(default=0.0, description="Estimated cost per month in USD")
+    ] = 0.0
 
     def add_eval_result(self, result: EvalResult) -> None:
         """Add an evaluation result."""
@@ -463,32 +522,16 @@ class CombinedReport:
             metrics.extend(r.metrics)
         return metrics
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "model_id": self.model_id,
-            "model_path": self.model_path,
-            "architecture": self.architecture,
-            "eval_results": [r.to_dict() for r in self.eval_results],
-            "primary_accuracy_metric": self.primary_accuracy_metric,
-            "primary_accuracy_value": self.primary_accuracy_value,
-            "hardware_profile": self.hardware_profile,
-            "latency_ms": self.latency_ms,
-            "throughput_fps": self.throughput_fps,
-            "cost_per_day_usd": self.cost_per_day_usd,
-            "cost_per_month_usd": self.cost_per_month_usd,
-        }
-
     def to_json(self, indent: int = 2) -> str:
         """Serialize to JSON string."""
-        return json.dumps(self.to_dict(), indent=indent)
+        return self.model_dump_json(indent=indent)
 
     @classmethod
     def from_inspection_report(
         cls,
         report: Any,  # InspectionReport
         model_path: str = "",
-    ) -> "CombinedReport":
+    ) -> CombinedReport:
         """
         Create from an InspectionReport.
 
@@ -525,58 +568,33 @@ class CombinedReport:
 
 
 # =============================================================================
-# JSON Schema for Validation
+# Schema Generation and Validation
 # =============================================================================
 
-EVAL_RESULT_SCHEMA = {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "HaoLine Eval Result",
-    "type": "object",
-    "required": ["model_id", "task_type"],
-    "properties": {
-        "model_id": {"type": "string", "description": "Model identifier"},
-        "task_type": {
-            "type": "string",
-            "enum": ["detection", "classification", "nlp", "llm", "segmentation", "generic"],
-        },
-        "timestamp": {"type": "string", "format": "date-time"},
-        "dataset": {"type": "string"},
-        "metrics": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "required": ["name", "value"],
-                "properties": {
-                    "name": {"type": "string"},
-                    "value": {"type": "number"},
-                    "unit": {"type": "string"},
-                    "higher_is_better": {"type": "boolean"},
-                    "category": {"type": "string"},
-                },
-            },
-        },
-        "metadata": {"type": "object"},
-    },
-}
+
+def get_eval_schema() -> dict[str, Any]:
+    """Get JSON Schema for EvalResult."""
+    return EvalResult.model_json_schema()
+
+
+def get_combined_report_schema() -> dict[str, Any]:
+    """Get JSON Schema for CombinedReport."""
+    return CombinedReport.model_json_schema()
 
 
 def validate_eval_result(data: dict[str, Any]) -> bool:
     """
-    Basic validation of eval result data.
+    Validate eval result data using Pydantic.
 
-    For full JSON Schema validation, use jsonschema library.
+    Returns True if valid, False otherwise.
     """
-    if "model_id" not in data:
+    try:
+        EvalResult.model_validate(data)
+        return True
+    except Exception:
         return False
-    if "task_type" not in data:
-        return False
-    if data["task_type"] not in [
-        "detection",
-        "classification",
-        "nlp",
-        "llm",
-        "segmentation",
-        "generic",
-    ]:
-        return False
-    return True
+
+
+def is_valid_task_type(task_type: str) -> bool:
+    """Check if a task type is valid."""
+    return task_type in [t.value for t in TaskType]

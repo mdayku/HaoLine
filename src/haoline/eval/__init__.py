@@ -24,6 +24,11 @@ from .schemas import (
     LLMEvalResult,
     NLPEvalResult,
     SegmentationEvalResult,
+    TaskType,
+    get_combined_report_schema,
+    get_eval_schema,
+    is_valid_task_type,
+    validate_eval_result,
 )
 
 __all__ = [
@@ -37,6 +42,12 @@ __all__ = [
     "SegmentationEvalResult",
     "GenericEvalResult",
     "CombinedReport",
+    "TaskType",
+    # Schema utilities
+    "get_eval_schema",
+    "get_combined_report_schema",
+    "validate_eval_result",
+    "is_valid_task_type",
     # Adapters
     "parse_ultralytics_val",
     "load_ultralytics_json",

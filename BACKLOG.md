@@ -48,7 +48,7 @@
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
 | Epic 33: QAT Linters | Not Started | 4 | 0/22 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
-| Epic 39: Pydantic Schema Migration | In Progress | 2 | 6/10 | P1 |
+| Epic 39: Pydantic Schema Migration | In Progress | 2 | 10/12 | P1 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | P3 |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
@@ -1257,11 +1257,11 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [x] **Task 39.2.1**: Update `validate_report()` to use Pydantic validation (with jsonschema fallback)
 - [x] **Task 39.2.2**: Update `get_schema()` to return Pydantic-generated schema
 - [x] **Task 39.2.3**: Add `validate_with_pydantic()` for direct model access
-- [ ] **Task 39.2.4**: Export schema for external consumers (e.g., `haoline --schema`)
+- [x] **Task 39.2.4**: Export schema for external consumers (`haoline --schema`)
 - [ ] **Task 39.2.5**: Update tests to use Pydantic validation
 
 ### Story 39.3: Eval Schema Migration
-- [ ] **Task 39.3.1**: Convert `EvalMetric` to Pydantic model
-- [ ] **Task 39.3.2**: Convert `EvalResult` and task-specific variants to Pydantic
-- [ ] **Task 39.3.3**: Convert `CombinedReport` to Pydantic model
-- [ ] **Task 39.3.4**: Update adapters to use Pydantic serialization
+- [x] **Task 39.3.1**: Convert `EvalMetric` to Pydantic model
+- [x] **Task 39.3.2**: Convert `EvalResult` and task-specific variants to Pydantic
+- [x] **Task 39.3.3**: Convert `CombinedReport` to Pydantic model
+- [x] **Task 39.3.4**: Adapters work with Pydantic models (no changes needed)

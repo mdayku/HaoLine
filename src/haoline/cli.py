@@ -143,6 +143,13 @@ Examples:
     )
 
     parser.add_argument(
+        "--schema",
+        action="store_true",
+        help="Output the JSON Schema for InspectionReport and exit. "
+        "Useful for integrating HaoLine output with other tools.",
+    )
+
+    parser.add_argument(
         "--out-json",
         type=pathlib.Path,
         default=None,
@@ -1406,6 +1413,16 @@ def run_inspect():
 
     args = parse_args()
     logger = setup_logging(args.log_level)
+
+    # Handle --schema
+    if args.schema:
+        import json
+
+        from .schema import get_schema
+
+        schema = get_schema()
+        print(json.dumps(schema, indent=2))
+        return 0
 
     # Handle --list-hardware
     if args.list_hardware:

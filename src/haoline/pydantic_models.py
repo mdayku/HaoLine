@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Any, Dict, List, Optional, Union
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 
@@ -16,127 +16,127 @@ class Metadata(BaseModel):
     ir_version: Annotated[int, Field(description="ONNX IR version", ge=1)]
     producer_name: Annotated[str, Field(description="Name of the tool that produced the model")]
     producer_version: Annotated[
-        Optional[str], Field(description="Version of the producer tool")
+        str | None, Field(description="Version of the producer tool")
     ] = None
-    domain: Annotated[Optional[str], Field(description="Model domain")] = None
-    model_version: Annotated[Optional[int], Field(description="Model version number")] = None
-    doc_string: Annotated[Optional[str], Field(description="Model documentation string")] = None
-    opsets: Annotated[Dict[str, int], Field(description="Opset versions by domain")]
+    domain: Annotated[str | None, Field(description="Model domain")] = None
+    model_version: Annotated[int | None, Field(description="Model version number")] = None
+    doc_string: Annotated[str | None, Field(description="Model documentation string")] = None
+    opsets: Annotated[dict[str, int], Field(description="Opset versions by domain")]
 
 
 class GraphSummary(BaseModel):
     num_nodes: Annotated[
-        Optional[int], Field(description="Total number of nodes in graph", ge=0)
+        int | None, Field(description="Total number of nodes in graph", ge=0)
     ] = None
-    num_inputs: Annotated[Optional[int], Field(description="Number of graph inputs", ge=0)] = None
-    num_outputs: Annotated[Optional[int], Field(description="Number of graph outputs", ge=0)] = None
+    num_inputs: Annotated[int | None, Field(description="Number of graph inputs", ge=0)] = None
+    num_outputs: Annotated[int | None, Field(description="Number of graph outputs", ge=0)] = None
     num_initializers: Annotated[
-        Optional[int], Field(description="Number of initializers (weights)", ge=0)
+        int | None, Field(description="Number of initializers (weights)", ge=0)
     ] = None
     input_shapes: Annotated[
-        Optional[Dict[str, List[Union[int, str]]]], Field(description="Input tensor shapes by name")
+        dict[str, list[int | str]] | None, Field(description="Input tensor shapes by name")
     ] = None
     output_shapes: Annotated[
-        Optional[Dict[str, List[Union[int, str]]]],
+        dict[str, list[int | str]] | None,
         Field(description="Output tensor shapes by name"),
     ] = None
     op_type_counts: Annotated[
-        Optional[Dict[str, int]], Field(description="Count of each operator type")
+        dict[str, int] | None, Field(description="Count of each operator type")
     ] = None
 
 
 class SharedWeights(BaseModel):
     count: Annotated[
-        Optional[int], Field(description="Number of weights shared across 2+ nodes", ge=0)
+        int | None, Field(description="Number of weights shared across 2+ nodes", ge=0)
     ] = None
     details: Annotated[
-        Optional[Dict[str, List[str]]],
+        dict[str, list[str]] | None,
         Field(description="Shared weight name to list of node names using it"),
     ] = None
 
 
 class ParamCounts(BaseModel):
-    total: Annotated[Optional[int], Field(description="Total parameter count", ge=0)] = None
-    trainable: Annotated[Optional[int], Field(description="Trainable parameter count", ge=0)] = None
+    total: Annotated[int | None, Field(description="Total parameter count", ge=0)] = None
+    trainable: Annotated[int | None, Field(description="Trainable parameter count", ge=0)] = None
     non_trainable: Annotated[
-        Optional[int], Field(description="Non-trainable parameter count", ge=0)
+        int | None, Field(description="Non-trainable parameter count", ge=0)
     ] = None
     by_op_type: Annotated[
-        Optional[Dict[str, float]],
+        dict[str, float] | None,
         Field(description="Parameters by operator type (fractional for shared weights)"),
     ] = None
     shared_weights: Annotated[
-        Optional[SharedWeights], Field(description="Information about shared weights")
+        SharedWeights | None, Field(description="Information about shared weights")
     ] = None
     precision_breakdown: Annotated[
-        Optional[Dict[str, int]],
+        dict[str, int] | None,
         Field(description="Parameter count by data type (fp32, fp16, int8, etc.)"),
     ] = None
     is_quantized: Annotated[
-        Optional[bool], Field(description="Whether model uses quantized weights or ops")
+        bool | None, Field(description="Whether model uses quantized weights or ops")
     ] = None
     quantized_ops: Annotated[
-        Optional[List[str]], Field(description="List of quantized operation types detected")
+        list[str] | None, Field(description="List of quantized operation types detected")
     ] = None
 
 
 class Hotspot(BaseModel):
-    name: Optional[str] = None
-    op_type: Optional[str] = None
-    flops: Annotated[Optional[int], Field(ge=0)] = None
+    name: str | None = None
+    op_type: str | None = None
+    flops: Annotated[int | None, Field(ge=0)] = None
 
 
 class FlopCounts(BaseModel):
-    total: Annotated[Optional[int], Field(description="Total estimated FLOPs", ge=0)] = None
+    total: Annotated[int | None, Field(description="Total estimated FLOPs", ge=0)] = None
     by_node_type: Annotated[
-        Optional[Dict[str, int]], Field(description="FLOPs by operator type")
+        dict[str, int] | None, Field(description="FLOPs by operator type")
     ] = None
     hotspots: Annotated[
-        Optional[List[Hotspot]], Field(description="Top compute-intensive nodes")
+        list[Hotspot] | None, Field(description="Top compute-intensive nodes")
     ] = None
 
 
 class KvCacheConfig(BaseModel):
-    num_layers: Annotated[Optional[int], Field(ge=0)] = None
-    hidden_dim: Annotated[Optional[int], Field(ge=0)] = None
-    seq_len: Annotated[Optional[int], Field(ge=0)] = None
-    bytes_per_element: Annotated[Optional[int], Field(ge=1)] = None
+    num_layers: Annotated[int | None, Field(ge=0)] = None
+    hidden_dim: Annotated[int | None, Field(ge=0)] = None
+    seq_len: Annotated[int | None, Field(ge=0)] = None
+    bytes_per_element: Annotated[int | None, Field(ge=1)] = None
 
 
 class Breakdown(BaseModel):
-    weights_by_op_type: Optional[Dict[str, int]] = None
-    activations_by_op_type: Optional[Dict[str, int]] = None
+    weights_by_op_type: dict[str, int] | None = None
+    activations_by_op_type: dict[str, int] | None = None
 
 
 class MemoryEstimates(BaseModel):
-    model_size_bytes: Annotated[Optional[int], Field(description="Model size in bytes", ge=0)] = (
+    model_size_bytes: Annotated[int | None, Field(description="Model size in bytes", ge=0)] = (
         None
     )
     peak_activation_bytes: Annotated[
-        Optional[int], Field(description="Peak activation memory in bytes", ge=0)
+        int | None, Field(description="Peak activation memory in bytes", ge=0)
     ] = None
     kv_cache_bytes_per_token: Annotated[
-        Optional[int], Field(description="KV cache memory per token (transformers)", ge=0)
+        int | None, Field(description="KV cache memory per token (transformers)", ge=0)
     ] = None
     kv_cache_bytes_full_context: Annotated[
-        Optional[int], Field(description="KV cache for full context length", ge=0)
+        int | None, Field(description="KV cache for full context length", ge=0)
     ] = None
     kv_cache_config: Annotated[
-        Optional[KvCacheConfig], Field(description="KV cache configuration")
+        KvCacheConfig | None, Field(description="KV cache configuration")
     ] = None
     breakdown: Annotated[
-        Optional[Breakdown], Field(description="Memory breakdown by component")
+        Breakdown | None, Field(description="Memory breakdown by component")
     ] = None
 
 
 class DetectedBlock(BaseModel):
     block_type: Annotated[str, Field(description="Type of block (e.g., ResidualAdd, Attention)")]
     name: Annotated[str, Field(description="Block identifier")]
-    nodes: Annotated[Optional[List[str]], Field(description="Node names in this block")] = None
-    start_node: Optional[str] = None
-    end_node: Optional[str] = None
+    nodes: Annotated[list[str] | None, Field(description="Node names in this block")] = None
+    start_node: str | None = None
+    end_node: str | None = None
     attributes: Annotated[
-        Optional[Dict[str, Any]], Field(description="Block-specific attributes")
+        dict[str, Any] | None, Field(description="Block-specific attributes")
     ] = None
 
 
@@ -158,44 +158,44 @@ class RiskSignal(BaseModel):
     id: Annotated[str, Field(description="Risk signal identifier")]
     severity: Annotated[Severity, Field(description="Severity level")]
     description: Annotated[str, Field(description="Human-readable description")]
-    nodes: Annotated[Optional[List[str]], Field(description="Affected node names")] = None
-    recommendation: Annotated[Optional[str], Field(description="Recommended action")] = None
+    nodes: Annotated[list[str] | None, Field(description="Affected node names")] = None
+    recommendation: Annotated[str | None, Field(description="Recommended action")] = None
 
 
 class HardwareProfile(BaseModel):
-    name: Optional[str] = None
-    vram_bytes: Annotated[Optional[int], Field(ge=0)] = None
-    peak_fp32_tflops: Annotated[Optional[float], Field(ge=0.0)] = None
-    peak_fp16_tflops: Annotated[Optional[float], Field(ge=0.0)] = None
-    memory_bandwidth_gbps: Annotated[Optional[float], Field(ge=0.0)] = None
-    tdp_watts: Optional[int] = None
+    name: str | None = None
+    vram_bytes: Annotated[int | None, Field(ge=0)] = None
+    peak_fp32_tflops: Annotated[float | None, Field(ge=0.0)] = None
+    peak_fp16_tflops: Annotated[float | None, Field(ge=0.0)] = None
+    memory_bandwidth_gbps: Annotated[float | None, Field(ge=0.0)] = None
+    tdp_watts: int | None = None
 
 
 class HardwareEstimates(BaseModel):
-    device: Optional[str] = None
-    precision: Optional[str] = None
-    batch_size: Annotated[Optional[int], Field(ge=1)] = None
-    vram_required_bytes: Annotated[Optional[int], Field(ge=0)] = None
-    fits_in_vram: Optional[bool] = None
-    theoretical_latency_ms: Annotated[Optional[float], Field(ge=0.0)] = None
-    bottleneck: Optional[str] = None
-    compute_utilization_estimate: Annotated[Optional[float], Field(ge=0.0)] = None
-    gpu_saturation: Annotated[Optional[float], Field(ge=0.0)] = None
+    device: str | None = None
+    precision: str | None = None
+    batch_size: Annotated[int | None, Field(ge=1)] = None
+    vram_required_bytes: Annotated[int | None, Field(ge=0)] = None
+    fits_in_vram: bool | None = None
+    theoretical_latency_ms: Annotated[float | None, Field(ge=0.0)] = None
+    bottleneck: str | None = None
+    compute_utilization_estimate: Annotated[float | None, Field(ge=0.0)] = None
+    gpu_saturation: Annotated[float | None, Field(ge=0.0)] = None
 
 
 class LlmSummary(BaseModel):
-    success: Optional[bool] = None
-    short_summary: Optional[str] = None
-    detailed_summary: Optional[str] = None
-    model: Optional[str] = None
-    error: Optional[str] = None
+    success: bool | None = None
+    short_summary: str | None = None
+    detailed_summary: str | None = None
+    model: str | None = None
+    error: str | None = None
 
 
 class DatasetInfo(BaseModel):
-    task: Optional[str] = None
-    num_classes: Annotated[Optional[int], Field(ge=0)] = None
-    class_names: Optional[List[str]] = None
-    source: Optional[str] = None
+    task: str | None = None
+    num_classes: Annotated[int | None, Field(ge=0)] = None
+    class_names: list[str] | None = None
+    source: str | None = None
 
 
 class HaolineInspectionReport(BaseModel):
@@ -211,33 +211,33 @@ class HaolineInspectionReport(BaseModel):
         ),
     ]
     graph_summary: Annotated[
-        Optional[GraphSummary], Field(description="Summary statistics about the ONNX graph")
+        GraphSummary | None, Field(description="Summary statistics about the ONNX graph")
     ] = None
     param_counts: Annotated[
-        Optional[ParamCounts], Field(description="Parameter count statistics")
+        ParamCounts | None, Field(description="Parameter count statistics")
     ] = None
     flop_counts: Annotated[
-        Optional[FlopCounts], Field(description="FLOP estimation statistics")
+        FlopCounts | None, Field(description="FLOP estimation statistics")
     ] = None
     memory_estimates: Annotated[
-        Optional[MemoryEstimates], Field(description="Memory usage estimates")
+        MemoryEstimates | None, Field(description="Memory usage estimates")
     ] = None
     detected_blocks: Annotated[
-        Optional[List[DetectedBlock]], Field(description="Detected architectural blocks")
+        list[DetectedBlock] | None, Field(description="Detected architectural blocks")
     ] = None
     architecture_type: Annotated[
-        Optional[ArchitectureType], Field(description="Detected architecture type")
+        ArchitectureType | None, Field(description="Detected architecture type")
     ] = None
     risk_signals: Annotated[
-        Optional[List[RiskSignal]], Field(description="Detected risk signals")
+        list[RiskSignal] | None, Field(description="Detected risk signals")
     ] = None
     hardware_profile: Annotated[
-        Optional[HardwareProfile], Field(description="Target hardware profile")
+        HardwareProfile | None, Field(description="Target hardware profile")
     ] = None
     hardware_estimates: Annotated[
-        Optional[HardwareEstimates], Field(description="Hardware-specific estimates")
+        HardwareEstimates | None, Field(description="Hardware-specific estimates")
     ] = None
-    llm_summary: Annotated[Optional[LlmSummary], Field(description="LLM-generated summary")] = None
+    llm_summary: Annotated[LlmSummary | None, Field(description="LLM-generated summary")] = None
     dataset_info: Annotated[
-        Optional[DatasetInfo], Field(description="Dataset and class information")
+        DatasetInfo | None, Field(description="Dataset and class information")
     ] = None
