@@ -368,6 +368,24 @@ Examples:
         help="Optional throughput target (frames/requests per second) for system requirements.",
     )
 
+    hardware_group.add_argument(
+        "--deployment-fps",
+        type=float,
+        default=None,
+        metavar="FPS",
+        help="Target inference rate for deployment cost calculation (e.g., 3 for 3 fps continuous). "
+        "Combined with --deployment-hours to estimate $/day and $/month.",
+    )
+
+    hardware_group.add_argument(
+        "--deployment-hours",
+        type=float,
+        default=24.0,
+        metavar="HOURS",
+        help="Hours per day the model runs for deployment cost calculation (default: 24). "
+        "E.g., 8 for business hours only.",
+    )
+
     # Epic 6C features
     hardware_group.add_argument(
         "--system-requirements",

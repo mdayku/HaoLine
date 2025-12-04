@@ -27,7 +27,7 @@
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
 | Epic 11: Streamlit Web UI | In Progress | 3 | 16/17 | P0 |
-| Epic 12: Eval Import & Comparison | Not Started | 7 | 0/36 | P1 |
+| Epic 12: Eval Import & Comparison | In Progress | 7 | 9/36 | P1 |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | Not Started | 3 | 0/12 | P1 |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
@@ -36,7 +36,7 @@
 | Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | P3 |
 | Epic 23: OpenVINO | In Progress | 2 | 4/10 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 4/8 | P3 |
-| Epic 25: Privacy/Trust | Not Started | 3 | 0/9 | P1 |
+| Epic 25: Privacy/Trust | In Progress | 3 | 2/9 | P1 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
 | Epic 27: Attention Variants | Not Started | 4 | 0/19 | P3 |
@@ -502,20 +502,20 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 (Ultralytics, HF evaluate, lm-eval, timm, custom)
 ```
 
-### Story 12.1: Base Eval Schema
+### Story 12.1: Base Eval Schema - **COMPLETE**
 *Task-agnostic fields all eval results share*
-- [ ] **Task 12.1.1**: Define `EvalResult` base schema (model_id, task_type, timestamp, metrics dict)
-- [ ] **Task 12.1.2**: Define `EvalMetric` schema (name, value, unit, higher_is_better)
-- [ ] **Task 12.1.3**: Create `eval_schema.json` for validation
+- [x] **Task 12.1.1**: Define `EvalResult` base schema (model_id, task_type, timestamp, metrics dict)
+- [x] **Task 12.1.2**: Define `EvalMetric` schema (name, value, unit, higher_is_better)
+- [x] **Task 12.1.3**: Create `eval_schema.json` for validation (embedded in schemas.py)
 - [ ] **Task 12.1.4**: Add `haoline import-eval` CLI command skeleton
 
-### Story 12.2: Task-Specific Schemas
+### Story 12.2: Task-Specific Schemas - **COMPLETE**
 *Standard metrics for common ML tasks*
-- [ ] **Task 12.2.1**: Detection schema (mAP@50, mAP@50:95, P/R/F1 per class)
-- [ ] **Task 12.2.2**: Classification schema (top-1, top-5 accuracy, per-class accuracy)
-- [ ] **Task 12.2.3**: NLP schema (accuracy, F1, exact_match, BLEU)
-- [ ] **Task 12.2.4**: LLM schema (perplexity, mmlu, hellaswag, truthfulqa)
-- [ ] **Task 12.2.5**: Segmentation schema (mIoU, dice, per-class IoU)
+- [x] **Task 12.2.1**: Detection schema (mAP@50, mAP@50:95, P/R/F1 per class) - `DetectionEvalResult`
+- [x] **Task 12.2.2**: Classification schema (top-1, top-5 accuracy, per-class accuracy) - `ClassificationEvalResult`
+- [x] **Task 12.2.3**: NLP schema (accuracy, F1, exact_match, BLEU) - `NLPEvalResult`
+- [x] **Task 12.2.4**: LLM schema (perplexity, mmlu, hellaswag, truthfulqa) - `LLMEvalResult`
+- [x] **Task 12.2.5**: Segmentation schema (mIoU, dice, per-class IoU) - `SegmentationEvalResult`
 - [ ] **Task 12.2.6**: Generic schema (user-defined metrics)
 
 ### Story 12.3: Import Adapters
@@ -549,7 +549,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 12.6.3**: Estimate $/day and $/month for deployment
 - [ ] **Task 12.6.4**: Compare cost across precision variants (fp32 vs fp16 vs int8)
 - [ ] **Task 12.6.5**: Generate "Deployment Recommendation" section in report
-- [ ] **Task 12.6.6**: Add `--deployment-fps` and `--deployment-hours` CLI flags
+- [x] **Task 12.6.6**: Add `--deployment-fps` and `--deployment-hours` CLI flags
 
 ### Story 12.7: YOLO Quantization Demo (Reference Implementation)
 *End-to-end demo: fp32 → fp16 → int8, eval all, compare, deploy*
@@ -761,8 +761,8 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 *Enterprise customers need proof we won't steal their model IP.*
 
 ### Story 25.1: Local-First Architecture
-- [ ] **Task 25.1.1**: Document "model never leaves your machine" guarantee
-- [ ] **Task 25.1.2**: Audit code for any network calls or telemetry
+- [x] **Task 25.1.1**: Document "model never leaves your machine" guarantee - see [PRIVACY.md](PRIVACY.md)
+- [x] **Task 25.1.2**: Audit code for any network calls or telemetry - only LLM (optional) and test downloads
 - [ ] **Task 25.1.3**: Add `--offline` CLI flag (fail if network detected)
 - [ ] **Task 25.1.4**: Create architecture diagram showing data flow
 
