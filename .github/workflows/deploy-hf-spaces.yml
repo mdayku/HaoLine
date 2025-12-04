@@ -1,0 +1,159 @@
+# Deploy to Hugging Face Spaces
+# Automatically syncs the Streamlit app to HF Spaces on push to main
+#
+# Setup required:
+# 1. Create a Space at huggingface.co/new-space (SDK: Streamlit)
+# 2. Add HF_TOKEN secret in GitHub repo settings (Settings > Secrets > Actions)
+#    - Get token from huggingface.co/settings/tokens (write access required)
+# 3. Update HF_SPACE_NAME below to match your Space
+
+name: Deploy to HF Spaces
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/haoline/**'
+      - 'pyproject.toml'
+      - '.github/workflows/deploy-hf-spaces.yml'
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  HF_SPACE_NAME: mdayku/haoline  # Change to your-username/your-space-name
+
+jobs:
+  deploy:
+    name: Deploy to Hugging Face Spaces
+    runs-on: ubuntu-latest
+    # Only run if HF_TOKEN is configured
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Check if HF_TOKEN is set
+        id: check_token
+        run: |
+          if [ -z "${{ secrets.HF_TOKEN }}" ]; then
+            echo "HF_TOKEN not set, skipping deployment"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Python
+        if: steps.check_token.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install huggingface_hub
+        if: steps.check_token.outputs.skip != 'true'
+        run: pip install huggingface_hub
+
+      - name: Create Space files
+        if: steps.check_token.outputs.skip != 'true'
+        run: |
+          mkdir -p hf_space
+
+          # Create app.py that imports from haoline
+          cat > hf_space/app.py << 'EOF'
+          """
+          HaoLine - Universal Model Inspector
+          Deployed via GitHub Actions from https://github.com/mdayku/HaoLine
+          """
+          import sys
+          import subprocess
+
+          # Ensure haoline is installed with web extras
+          subprocess.check_call([
+              sys.executable, "-m", "pip", "install", 
+              "haoline[web]", "--quiet"
+          ])
+
+          # Import and run the Streamlit app
+          from haoline.streamlit_app import main
+
+          if __name__ == "__main__":
+              main()
+          EOF
+
+          # Create requirements.txt
+          cat > hf_space/requirements.txt << 'EOF'
+          haoline[web]>=0.2.3
+          EOF
+
+          # Create README for the Space
+          cat > hf_space/README.md << 'EOF'
+          ---
+          title: HaoLine
+          emoji: 🔍
+          colorFrom: green
+          colorTo: blue
+          sdk: streamlit
+          sdk_version: 1.28.0
+          app_file: app.py
+          pinned: false
+          license: mit
+          ---
+
+          # HaoLine (皓线) - Universal Model Inspector
+
+          Analyze neural network architectures with interactive visualizations.
+
+          **Features:**
+          - Upload ONNX, PyTorch, or SafeTensors models
+          - Interactive D3.js graph visualization
+          - Hardware performance estimates (50+ GPU profiles)
+          - AI-powered architecture summaries
+          - Export to PDF, HTML, JSON, Markdown
+
+          **Source:** [github.com/mdayku/HaoLine](https://github.com/mdayku/HaoLine)
+
+          **Install locally:** `pip install haoline[web] && haoline-web`
+          EOF
+
+          echo "Created HF Space files:"
+          ls -la hf_space/
+
+      - name: Push to Hugging Face Space
+        if: steps.check_token.outputs.skip != 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd hf_space
+          
+          # Configure git for HF
+          git init
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          
+          # Add all files
+          git add .
+          git commit -m "Deploy from GitHub Actions - $(date -u +%Y-%m-%d_%H:%M:%S)"
+          
+          # Push to HF Space
+          git push --force https://HF_USER:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE_NAME} main
+
+      - name: Deployment status
+        if: steps.check_token.outputs.skip != 'true'
+        run: |
+          echo "✅ Deployed to https://huggingface.co/spaces/${HF_SPACE_NAME}"
+          echo ""
+          echo "Note: Space may take 1-2 minutes to rebuild"
+
+      - name: Skipped deployment
+        if: steps.check_token.outputs.skip == 'true'
+        run: |
+          echo "⚠️ Deployment skipped - HF_TOKEN secret not configured"
+          echo ""
+          echo "To enable auto-deploy:"
+          echo "1. Create a Space at https://huggingface.co/new-space"
+          echo "2. Get a token from https://huggingface.co/settings/tokens"
+          echo "3. Add HF_TOKEN secret in GitHub repo settings"
+          echo "4. Update HF_SPACE_NAME in this workflow file"
+

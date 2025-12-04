@@ -52,6 +52,17 @@ haoline[web]>=0.2.3
 
 3. **Push and deploy** — HF Spaces auto-builds on push
 
+### Auto-Deploy via GitHub Actions
+
+The repo includes a workflow that auto-deploys to HF Spaces on push to main:
+
+1. Create your Space at [huggingface.co/new-space](https://huggingface.co/new-space)
+2. Get a token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) (write access)
+3. Add `HF_TOKEN` secret in GitHub repo settings (Settings → Secrets → Actions)
+4. Update `HF_SPACE_NAME` in `.github/workflows/deploy-hf-spaces.yml`
+
+After setup, every push to `main` auto-deploys to your Space.
+
 ### Environment Variables (Optional)
 
 For LLM summaries, add secrets in Space Settings:
