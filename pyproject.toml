@@ -38,6 +38,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+    "Environment :: Console",
+    "Environment :: Web Environment",
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -108,6 +111,7 @@ Homepage = "https://github.com/mdayku/HaoLine"
 Documentation = "https://github.com/mdayku/HaoLine#readme"
 Repository = "https://github.com/mdayku/HaoLine"
 Issues = "https://github.com/mdayku/HaoLine/issues"
+Changelog = "https://github.com/mdayku/HaoLine/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/haoline"]

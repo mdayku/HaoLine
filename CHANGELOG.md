@@ -1,0 +1,90 @@
+# Changelog
+
+All notable changes to HaoLine will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.3] - 2024-12-04
+
+### Added
+- CLI Reference section in README with all flags documented
+- Privacy controls: `--offline`, `--redact-names`, `--summary-only` flags
+- Privacy documentation (PRIVACY.md)
+- Eval import framework: `haoline-import-eval` CLI command
+- Evaluation schemas for detection, classification, NLP, LLM, segmentation tasks
+- `GenericEvalResult` for user-defined metrics
+- `CombinedReport` dataclass for architecture + eval data
+- Ultralytics YOLO adapter for importing validation results
+- Generic CSV/JSON adapter for eval import
+- Deployment cost CLI flags: `--deployment-fps`, `--deployment-hours`
+- YOLO quantization workflow guide
+
+### Changed
+- Moved Docker distribution to Epic 38 (deferred)
+
+## [0.2.2] - 2024-12-04
+
+### Added
+- Format readers for GGUF, SafeTensors, TFLite, CoreML, OpenVINO
+- Model comparison mode in Streamlit UI (side-by-side metrics)
+- Session history in Streamlit UI (last 10 analyses)
+- FLOPs-based node sizing in interactive graph (log scale)
+- Collapsible sidebar in D3.js graph visualization
+- PDF export in Streamlit UI
+
+### Changed
+- Modern dark theme with emerald accents in Streamlit UI
+- Improved hardware dropdown with search and categorization
+
+### Fixed
+- Various mypy type errors
+- Black/ruff formatting compliance
+
+## [0.2.1] - 2024-12-04
+
+### Added
+- `haoline-web` CLI command to launch Streamlit app
+- `haoline-compare` CLI command for model comparison
+- Hardware selection dropdown in Streamlit (50+ GPUs)
+- Interactive D3.js graph visualization in Streamlit
+
+### Fixed
+- `.env` file auto-loading for API keys
+- LLM summary prompts when API key missing
+
+## [0.2.0] - 2024-12-04
+
+### Added
+- Streamlit Web UI (`streamlit_app.py`)
+- Model file upload and analysis
+- HTML/JSON/Markdown/PDF export options
+- LLM summary integration with secure API key input
+
+### Changed
+- Moved `matplotlib` from optional to core dependency
+- Bumped version for PyPI release
+
+## [0.1.0] - 2024-12-03
+
+### Added
+- Initial PyPI release
+- Core analysis engine (params, FLOPs, memory estimation)
+- Pattern detection (Conv-BN-ReLU, Transformer blocks, residual connections)
+- Risk signal detection (deep networks, oversized layers, dynamic shapes)
+- Hardware estimation for 50+ GPU profiles
+- Runtime profiling with ONNX Runtime
+- Visualization module (matplotlib charts)
+- Interactive D3.js graph export
+- LLM summarization (OpenAI, Anthropic, Google, xAI)
+- PDF generation via Playwright
+- Model conversion (PyTorch, TensorFlow, Keras, JAX → ONNX)
+- Compare mode for quantization analysis
+- CLI: `haoline` command with comprehensive flags
+
+[0.2.3]: https://github.com/mdayku/HaoLine/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/mdayku/HaoLine/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/mdayku/HaoLine/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/mdayku/HaoLine/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/mdayku/HaoLine/releases/tag/v0.1.0
+
