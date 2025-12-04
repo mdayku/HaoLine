@@ -1,0 +1,369 @@
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
+
+"""
+TFLite format reader.
+
+TensorFlow Lite models use FlatBuffer format. This reader extracts
+basic metadata without requiring TensorFlow dependencies.
+
+For full analysis, use tflite-runtime or convert to ONNX first.
+
+Reference: https://www.tensorflow.org/lite/guide
+"""
+
+from __future__ import annotations
+
+import struct
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+# TFLite FlatBuffer identifier
+TFLITE_IDENTIFIER = b"TFL3"
+
+# TFLite tensor types
+TFLITE_TYPES: dict[int, tuple[str, int]] = {
+    0: ("FLOAT32", 4),
+    1: ("FLOAT16", 2),
+    2: ("INT32", 4),
+    3: ("UINT8", 1),
+    4: ("INT64", 8),
+    5: ("STRING", 0),  # Variable
+    6: ("BOOL", 1),
+    7: ("INT16", 2),
+    8: ("COMPLEX64", 8),
+    9: ("INT8", 1),
+    10: ("FLOAT64", 8),
+    11: ("COMPLEX128", 16),
+    12: ("UINT64", 8),
+    13: ("RESOURCE", 0),
+    14: ("VARIANT", 0),
+    15: ("UINT32", 4),
+    16: ("UINT16", 2),
+    17: ("INT4", 0),  # Packed
+}
+
+# TFLite builtin operators
+TFLITE_BUILTINS: dict[int, str] = {
+    0: "ADD",
+    1: "AVERAGE_POOL_2D",
+    2: "CONCATENATION",
+    3: "CONV_2D",
+    4: "DEPTHWISE_CONV_2D",
+    5: "DEPTH_TO_SPACE",
+    6: "DEQUANTIZE",
+    7: "EMBEDDING_LOOKUP",
+    8: "FLOOR",
+    9: "FULLY_CONNECTED",
+    10: "HASHTABLE_LOOKUP",
+    11: "L2_NORMALIZATION",
+    12: "L2_POOL_2D",
+    13: "LOCAL_RESPONSE_NORMALIZATION",
+    14: "LOGISTIC",
+    15: "LSH_PROJECTION",
+    16: "LSTM",
+    17: "MAX_POOL_2D",
+    18: "MUL",
+    19: "RELU",
+    20: "RELU_N1_TO_1",
+    21: "RELU6",
+    22: "RESHAPE",
+    23: "RESIZE_BILINEAR",
+    24: "RNN",
+    25: "SOFTMAX",
+    26: "SPACE_TO_DEPTH",
+    27: "SVDF",
+    28: "TANH",
+    29: "CONCAT_EMBEDDINGS",
+    30: "SKIP_GRAM",
+    31: "CALL",
+    32: "CUSTOM",
+    33: "EMBEDDING_LOOKUP_SPARSE",
+    34: "PAD",
+    35: "UNIDIRECTIONAL_SEQUENCE_RNN",
+    36: "GATHER",
+    37: "BATCH_TO_SPACE_ND",
+    38: "SPACE_TO_BATCH_ND",
+    39: "TRANSPOSE",
+    40: "MEAN",
+    41: "SUB",
+    42: "DIV",
+    43: "SQUEEZE",
+    44: "UNIDIRECTIONAL_SEQUENCE_LSTM",
+    45: "STRIDED_SLICE",
+    46: "BIDIRECTIONAL_SEQUENCE_RNN",
+    47: "EXP",
+    48: "TOPK_V2",
+    49: "SPLIT",
+    50: "LOG_SOFTMAX",
+    # ... many more, but these are the common ones
+}
+
+
+@dataclass
+class TFLiteTensorInfo:
+    """Information about a TFLite tensor."""
+
+    name: str
+    shape: tuple[int, ...]
+    type_id: int
+    buffer_idx: int
+    quantization: dict[str, Any] | None = None
+
+    @property
+    def type_name(self) -> str:
+        """Human-readable type name."""
+        return TFLITE_TYPES.get(self.type_id, ("UNKNOWN", 4))[0]
+
+    @property
+    def bytes_per_element(self) -> int:
+        """Bytes per element."""
+        return TFLITE_TYPES.get(self.type_id, ("UNKNOWN", 4))[1]
+
+    @property
+    def n_elements(self) -> int:
+        """Total number of elements."""
+        result = 1
+        for d in self.shape:
+            result *= d
+        return result
+
+    @property
+    def size_bytes(self) -> int:
+        """Estimated size in bytes."""
+        bpe = self.bytes_per_element
+        if bpe == 0:
+            return 0  # Variable size types
+        return self.n_elements * bpe
+
+
+@dataclass
+class TFLiteOperatorInfo:
+    """Information about a TFLite operator."""
+
+    opcode_index: int
+    builtin_code: int
+    inputs: list[int]
+    outputs: list[int]
+
+    @property
+    def op_name(self) -> str:
+        """Human-readable operator name."""
+        return TFLITE_BUILTINS.get(self.builtin_code, f"CUSTOM_{self.builtin_code}")
+
+
+@dataclass
+class TFLiteInfo:
+    """Parsed TFLite file information."""
+
+    path: Path
+    version: int
+    description: str
+    tensors: list[TFLiteTensorInfo] = field(default_factory=list)
+    operators: list[TFLiteOperatorInfo] = field(default_factory=list)
+    inputs: list[int] = field(default_factory=list)
+    outputs: list[int] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def total_params(self) -> int:
+        """Total parameter count (non-input tensors)."""
+        input_set = set(self.inputs)
+        return sum(t.n_elements for i, t in enumerate(self.tensors) if i not in input_set)
+
+    @property
+    def total_size_bytes(self) -> int:
+        """Total model size in bytes."""
+        return sum(t.size_bytes for t in self.tensors)
+
+    @property
+    def op_counts(self) -> dict[str, int]:
+        """Count of operators by type."""
+        counts: dict[str, int] = {}
+        for op in self.operators:
+            name = op.op_name
+            counts[name] = counts.get(name, 0) + 1
+        return counts
+
+    @property
+    def type_breakdown(self) -> dict[str, int]:
+        """Count of tensors by type."""
+        breakdown: dict[str, int] = {}
+        for t in self.tensors:
+            type_name = t.type_name
+            breakdown[type_name] = breakdown.get(type_name, 0) + 1
+        return breakdown
+
+    @property
+    def is_quantized(self) -> bool:
+        """Check if model uses quantized types."""
+        quant_types = {"INT8", "UINT8", "INT16", "INT4"}
+        return any(t.type_name in quant_types for t in self.tensors)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "path": str(self.path),
+            "version": self.version,
+            "description": self.description,
+            "tensor_count": len(self.tensors),
+            "operator_count": len(self.operators),
+            "total_params": self.total_params,
+            "total_size_bytes": self.total_size_bytes,
+            "is_quantized": self.is_quantized,
+            "op_counts": self.op_counts,
+            "type_breakdown": self.type_breakdown,
+            "inputs": self.inputs,
+            "outputs": self.outputs,
+        }
+
+
+class TFLiteReader:
+    """
+    Reader for TFLite format files.
+
+    This provides basic metadata extraction using pure Python.
+    For full tensor access, use tflite-runtime.
+    """
+
+    def __init__(self, path: str | Path):
+        """
+        Initialize reader with file path.
+
+        Args:
+            path: Path to the TFLite file.
+        """
+        self.path = Path(path)
+        if not self.path.exists():
+            raise FileNotFoundError(f"TFLite file not found: {self.path}")
+
+    def read(self) -> TFLiteInfo:
+        """
+        Read and parse the TFLite file.
+
+        This uses tflite-runtime if available, otherwise falls back
+        to basic FlatBuffer parsing.
+
+        Returns:
+            TFLiteInfo with parsed metadata.
+        """
+        # Try tflite-runtime first
+        try:
+            return self._read_with_interpreter()
+        except ImportError:
+            pass
+
+        # Fall back to basic parsing
+        return self._read_basic()
+
+    def _read_with_interpreter(self) -> TFLiteInfo:
+        """Read using TFLite Interpreter."""
+        from tflite_runtime.interpreter import Interpreter
+
+        interpreter = Interpreter(model_path=str(self.path))
+        interpreter.allocate_tensors()
+
+        # Get tensor details
+        tensor_details = interpreter.get_tensor_details()
+        tensors = []
+        for td in tensor_details:
+            quant = None
+            if "quantization" in td:
+                quant = {
+                    "scale": td["quantization"][0],
+                    "zero_point": td["quantization"][1],
+                }
+            tensors.append(
+                TFLiteTensorInfo(
+                    name=td["name"],
+                    shape=tuple(td["shape"]),
+                    type_id=td["dtype"],
+                    buffer_idx=td.get("buffer_idx", 0),
+                    quantization=quant,
+                )
+            )
+
+        # Get input/output indices
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
+        inputs = [d["index"] for d in input_details]
+        outputs = [d["index"] for d in output_details]
+
+        return TFLiteInfo(
+            path=self.path,
+            version=3,  # TFL3
+            description="",
+            tensors=tensors,
+            operators=[],  # Not easily accessible via interpreter
+            inputs=inputs,
+            outputs=outputs,
+        )
+
+    def _read_basic(self) -> TFLiteInfo:
+        """Basic FlatBuffer parsing without tflite-runtime."""
+        with open(self.path, "rb") as f:
+            data = f.read()
+
+        # Verify file identifier (at offset 4-8)
+        if len(data) < 8:
+            raise ValueError("File too small to be a valid TFLite model")
+
+        identifier = data[4:8]
+        if identifier != TFLITE_IDENTIFIER:
+            raise ValueError(
+                f"Not a TFLite file: expected {TFLITE_IDENTIFIER!r}, got {identifier!r}"
+            )
+
+        # FlatBuffer root table offset
+        root_offset = struct.unpack("<I", data[0:4])[0]
+
+        # This is a simplified parser - full FlatBuffer parsing is complex
+        # We extract what we can from the structure
+
+        return TFLiteInfo(
+            path=self.path,
+            version=3,
+            description="TFLite model (basic parsing - install tflite-runtime for full details)",
+            tensors=[],
+            operators=[],
+            inputs=[],
+            outputs=[],
+            metadata={"file_size": len(data), "root_offset": root_offset},
+        )
+
+
+def is_tflite_file(path: str | Path) -> bool:
+    """
+    Check if a file is a valid TFLite file.
+
+    Args:
+        path: Path to check.
+
+    Returns:
+        True if the file is a TFLite model.
+    """
+    path = Path(path)
+    if not path.exists() or not path.is_file():
+        return False
+
+    try:
+        with open(path, "rb") as f:
+            # Read enough for identifier check
+            data = f.read(8)
+            if len(data) < 8:
+                return False
+            identifier = data[4:8]
+            return identifier == TFLITE_IDENTIFIER
+    except Exception:
+        return False
+
+
+def is_available() -> bool:
+    """Check if tflite-runtime is available."""
+    try:
+        from tflite_runtime.interpreter import Interpreter  # noqa: F401
+
+        return True
+    except ImportError:
+        return False

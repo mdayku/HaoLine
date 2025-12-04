@@ -69,8 +69,25 @@ gpu = [
 web = [
     "streamlit>=1.28.0",
 ]
+# Format adapters (Epics 19-24)
+safetensors = [
+    "safetensors>=0.4.0",
+]
+tflite = [
+    "tflite-runtime>=2.14.0",
+]
+coreml = [
+    "coremltools>=7.0",
+]
+openvino = [
+    "openvino>=2024.0.0",
+]
+formats = [
+    "haoline[safetensors,tflite]",
+    # coreml and openvino have platform-specific deps, install separately
+]
 full = [
-    "haoline[runtime,viz,llm,pdf,gpu,web]",
+    "haoline[runtime,viz,llm,pdf,gpu,web,formats]",
 ]
 dev = [
     "pytest>=7.0.0",
