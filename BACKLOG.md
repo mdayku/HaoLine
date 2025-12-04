@@ -48,6 +48,7 @@
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
 | Epic 33: QAT Linters | Not Started | 4 | 0/22 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
+| Epic 39: Pydantic Schema Migration | Not Started | 3 | 0/15 | P1 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | P3 |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
@@ -479,12 +480,7 @@
   - [ ] **11.3.1c**: Add `HF_TOKEN` secret in GitHub repo settings
   - [ ] **11.3.1d**: Update `HF_SPACE_NAME` in `.github/workflows/deploy-hf-spaces.yml`
   - [ ] **11.3.1e**: Trigger workflow and verify deployment works
-- [ ] **Task 11.3.2**: Add Streamlit Cloud deployment option
-  - [ ] **11.3.2a**: Create account at share.streamlit.io (if needed)
-  - [ ] **11.3.2b**: Connect GitHub repo to Streamlit Cloud
-  - [ ] **11.3.2c**: Set main file path: `src/haoline/streamlit_app.py`
-  - [ ] **11.3.2d**: Add `OPENAI_API_KEY` secret (optional)
-  - [ ] **11.3.2e**: Deploy and verify it works
+- [x] **Task 11.3.2**: ~~Add Streamlit Cloud deployment option~~ **CANCELLED** - HuggingFace Spaces is sufficient
 - [x] **Task 11.3.3**: Create deployment documentation - see [DEPLOYMENT.md](DEPLOYMENT.md)
 - [x] **Task 11.3.4**: Set up CI/CD for auto-deploy on push - `.github/workflows/deploy-hf-spaces.yml`
 
@@ -1239,3 +1235,33 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 38.1.3**: Add GPU support variant (CUDA base image)
 - [ ] **Task 38.1.4**: Publish to Docker Hub / GitHub Container Registry
 - [ ] **Task 38.1.5**: Create docker-compose.yml for easy local setup
+
+---
+
+## Epic 39: Pydantic Schema Migration (P1)
+
+*Replace manual JSON Schema with Pydantic models for better validation, type safety, and maintainability.*
+
+**Why:** Current `schema.py` has 450 lines of manually-maintained JSON Schema that duplicates the dataclass definitions in `report.py`. Pydantic provides auto-generated schemas, runtime validation, and better IDE support.
+
+### Story 39.1: Core Model Migration
+- [ ] **Task 39.1.1**: Add `pydantic>=2.0` to core dependencies
+- [ ] **Task 39.1.2**: Convert `ParamCounts` dataclass to Pydantic model
+- [ ] **Task 39.1.3**: Convert `FLOPCounts` dataclass to Pydantic model
+- [ ] **Task 39.1.4**: Convert `MemoryEstimates` dataclass to Pydantic model
+- [ ] **Task 39.1.5**: Convert `GraphSummary` dataclass to Pydantic model
+- [ ] **Task 39.1.6**: Convert `HardwareEstimates` dataclass to Pydantic model
+- [ ] **Task 39.1.7**: Convert `InspectionReport` dataclass to Pydantic model
+- [ ] **Task 39.1.8**: Update `to_dict()` / `to_json()` to use Pydantic methods
+
+### Story 39.2: Schema Cleanup
+- [ ] **Task 39.2.1**: Replace manual `INSPECTION_REPORT_SCHEMA` with `InspectionReport.model_json_schema()`
+- [ ] **Task 39.2.2**: Remove redundant validation functions (Pydantic handles this)
+- [ ] **Task 39.2.3**: Export schema for external consumers (e.g., `haoline --schema`)
+- [ ] **Task 39.2.4**: Update tests to use Pydantic validation
+
+### Story 39.3: Eval Schema Migration
+- [ ] **Task 39.3.1**: Convert `EvalMetric` to Pydantic model
+- [ ] **Task 39.3.2**: Convert `EvalResult` and task-specific variants to Pydantic
+- [ ] **Task 39.3.3**: Convert `CombinedReport` to Pydantic model
+- [ ] **Task 39.3.4**: Update adapters to use Pydantic serialization
