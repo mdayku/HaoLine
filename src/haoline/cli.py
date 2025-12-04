@@ -1361,10 +1361,11 @@ def run_inspect():
     # Load environment variables from .env file if present
     try:
         from dotenv import load_dotenv
+
         load_dotenv()
     except ImportError:
         pass  # python-dotenv not installed, use environment variables directly
-    
+
     args = parse_args()
     logger = setup_logging(args.log_level)
 

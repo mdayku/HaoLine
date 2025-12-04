@@ -77,14 +77,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
             position: relative;
         }}
-        
+
         .sidebar.collapsed {{
             width: 0;
             padding: 0;
             overflow: hidden;
             border-right: none;
         }}
-        
+
         .sidebar-toggle {{
             position: fixed;
             top: 12px;
@@ -103,13 +103,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             z-index: 1000;
             transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
         }}
-        
+
         .sidebar-toggle:hover {{
             background: var(--accent);
             color: white;
             border-color: var(--accent);
         }}
-        
+
         .sidebar.collapsed + .main .sidebar-toggle,
         .sidebar.collapsed ~ .sidebar-toggle {{
             left: 8px;
@@ -277,12 +277,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             opacity: 0;
             transition: opacity 0.2s ease;
         }}
-        
+
         /* Show labels on hover */
         .node:hover .node-label {{
             opacity: 1;
         }}
-        
+
         /* Always show labels for large/important nodes */
         .node.show-label .node-label {{
             opacity: 1;
@@ -296,7 +296,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             opacity: 0;
             transition: opacity 0.2s ease;
         }}
-        
+
         .node:hover .node-sublabel {{
             opacity: 1;
         }}
@@ -695,11 +695,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         // Get node size based on type and compute
         // Track max FLOPs for scaling (computed once during render)
         let globalMaxFlops = 1;
-        
+
         function getNodeSize(node) {{
             // Scale by FLOPs - expensive ops are visually bigger
             const flops = node.total_flops || 0;
-            
+
             if (flops > 0 && globalMaxFlops > 1) {{
                 // Log scale: 12px min, 45px max based on FLOPs
                 const logFlops = Math.log10(flops + 1);
@@ -707,7 +707,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const ratio = logFlops / logMax;
                 return 12 + ratio * 33;
             }}
-            
+
             // Fallback for nodes without FLOPs data - use hierarchy
             const base = node.node_type === 'model' ? 40 :
                          node.node_type === 'layer' ? 30 :
@@ -916,7 +916,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 for (let d = 0; d <= maxDepth; d++) {{
                     const nodesAtDepth = byDepth[d] || [];
                     const x = padding + d * colWidth + colWidth / 2;
-                    
+
                     // Distribute vertically within available height
                     const rowH = availableHeight / Math.max(nodesAtDepth.length, 1);
 
@@ -1053,8 +1053,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 .append('g')
                 .attr('class', d => {{
                     // Show labels for important nodes: model, layers, blocks
-                    const isImportant = d.node_type === 'model' || 
-                                       d.node_type === 'layer' || 
+                    const isImportant = d.node_type === 'model' ||
+                                       d.node_type === 'layer' ||
                                        d.node_type === 'block' ||
                                        d.r > 35;
                     return 'node' + (isImportant ? ' show-label' : '');
@@ -1172,7 +1172,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             btn.style.background = showAllLabels ? 'var(--accent)' : '';
             btn.style.color = showAllLabels ? 'white' : '';
             btn.textContent = showAllLabels ? 'Hide Labels' : 'Show All Labels';
-            
+
             // Toggle show-label class on all nodes
             container.selectAll('.node').classed('show-label', showAllLabels);
         }}
