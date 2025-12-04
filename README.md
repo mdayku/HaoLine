@@ -94,6 +94,8 @@ haoline-web
 ```
 
 This opens an interactive dashboard at `http://localhost:8501` with:
+
+> **Want to deploy publicly?** See [DEPLOYMENT.md](DEPLOYMENT.md) for HuggingFace Spaces, Streamlit Cloud, Docker, and self-hosted options.
 - Drag-and-drop model upload (ONNX, PyTorch)
 - Hardware selection with 50+ GPU profiles (searchable)
 - Full interactive D3.js neural network graph

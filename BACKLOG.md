@@ -26,7 +26,7 @@
 | Epic 9: Runtime Profiling | **COMPLETE** | 6 | 22/22 | P2 |
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
-| Epic 11: Streamlit Web UI | In Progress | 3 | 14/16 | P0 |
+| Epic 11: Streamlit Web UI | In Progress | 3 | 15/17 | P0 |
 | Epic 12: Inference Platform | Not Started | 6 | 0/30 | P1 |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | Not Started | 3 | 0/12 | P1 |
@@ -475,7 +475,7 @@
 ### Story 11.3: Deployment
 - [ ] **Task 11.3.1**: Deploy to Hugging Face Spaces (free, GPU available)
 - [ ] **Task 11.3.2**: Add Streamlit Cloud deployment option
-- [ ] **Task 11.3.3**: Create deployment documentation
+- [x] **Task 11.3.3**: Create deployment documentation - see [DEPLOYMENT.md](DEPLOYMENT.md)
 - [ ] **Task 11.3.4**: Set up CI/CD for auto-deploy on push
 
 ---
