@@ -77,7 +77,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         epilog="""\
 Examples:
   # Basic quantization impact comparison
-  python -m haoline_compare \\
+  python -m onnxruntime.tools.model_inspect_compare \\
     --models resnet_fp32.onnx resnet_fp16.onnx resnet_int8.onnx \\
     --eval-metrics eval_fp32.json eval_fp16.json eval_int8.json \\
     --baseline-precision fp32 \\
@@ -513,23 +513,23 @@ def _build_compare_json(
             "model_path": str(v.model_path),
             "size_bytes": int(v.size_bytes),
             # Structural metrics from inspection
-            "total_params": (
-                param_counts.total if param_counts and hasattr(param_counts, "total") else None
-            ),
-            "total_flops": (
-                flop_counts.total if flop_counts and hasattr(flop_counts, "total") else None
-            ),
+            "total_params": (param_counts.total if param_counts is not None else None),
+            "total_flops": (flop_counts.total if flop_counts is not None else None),
             "memory_bytes": (
-                memory_estimates.total_bytes
-                if memory_estimates and hasattr(memory_estimates, "total_bytes")
-                else None
+                memory_estimates.total_bytes if memory_estimates is not None else None
             ),
             # Eval/perf metrics from JSON
             "metrics": v.metrics,
             "hardware_estimates": (
-                hw_estimates.to_dict() if hasattr(hw_estimates, "to_dict") else None
+                hw_estimates.to_dict()
+                if hw_estimates is not None and hasattr(hw_estimates, "to_dict")
+                else None
             ),
-            "hardware_profile": (hw_profile.to_dict() if hasattr(hw_profile, "to_dict") else None),
+            "hardware_profile": (
+                hw_profile.to_dict()
+                if hw_profile is not None and hasattr(hw_profile, "to_dict")
+                else None
+            ),
             "deltas_vs_baseline": deltas_vs_baseline,
         }
         out["variants"].append(out_variant)

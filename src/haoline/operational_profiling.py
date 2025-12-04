@@ -295,6 +295,7 @@ class OperationalProfiler:
             dtype_str = inp.type  # e.g., "tensor(float)", "tensor(int64)"
 
             # Determine numpy dtype from ONNX type
+            np_dtype: type[np.generic]
             if "int64" in dtype_str:
                 np_dtype = np.int64
                 is_text = True
@@ -465,6 +466,7 @@ class OperationalProfiler:
             dtype_str = inp.type  # e.g., "tensor(float)", "tensor(int64)"
 
             # Determine numpy dtype
+            np_dtype: type[np.generic]
             if "int64" in dtype_str:
                 np_dtype = np.int64
                 is_text = True  # Likely token IDs

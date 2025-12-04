@@ -290,7 +290,10 @@ class InspectionReport:
             # Fallback: convert to string
             return str(obj)
 
-        return _serialize(self)
+        result = _serialize(self)
+        # _serialize on a dataclass always returns a dict
+        assert isinstance(result, dict)
+        return result
 
     def to_json(self, indent: int = 2) -> str:
         """Serialize report to JSON string."""
