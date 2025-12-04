@@ -215,7 +215,7 @@ jobs:
               git \
               && rm -rf /var/lib/apt/lists/*
 
-          RUN pip install --no-cache-dir "haoline[web]>=0.2.3"
+          RUN pip install --no-cache-dir "haoline>=0.2.3" "streamlit>=1.28.0"
 
           COPY app.py .
 
