@@ -30,12 +30,12 @@
 | Epic 12: Inference Platform | Not Started | 6 | 0/30 | P1 |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | Not Started | 3 | 0/12 | P1 |
-| Epic 19: SafeTensors | In Progress | 2 | 4/8 | P2 |
-| Epic 20: CoreML | In Progress | 2 | 5/10 | P2 |
-| Epic 21: TFLite | In Progress | 2 | 5/10 | P2 |
+| Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
+| Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
+| Epic 21: TFLite | In Progress | 2 | 5/12 | P2 |
 | Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | P3 |
-| Epic 23: OpenVINO | In Progress | 2 | 4/8 | P3 |
-| Epic 24: GGUF | In Progress | 2 | 4/6 | P3 |
+| Epic 23: OpenVINO | In Progress | 2 | 4/10 | P3 |
+| Epic 24: GGUF | In Progress | 2 | 4/8 | P3 |
 | Epic 25: Privacy/Trust | Not Started | 3 | 0/9 | P1 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
@@ -575,7 +575,9 @@
 - [x] **Task 19.1.1**: Add safetensors dependency (optional) - in `[formats]` extra
 - [x] **Task 19.1.2**: Implement SafeTensorsReader.read() - load tensor dict
 - [x] **Task 19.1.3**: Extract metadata (tensor names, shapes, dtypes)
-- [x] **Task 19.1.4**: Integrate with analysis pipeline (param counts, memory) - **NEEDS TESTING**
+- [x] **Task 19.1.4**: Integrate with analysis pipeline (param counts, memory)
+- [ ] **Task 19.1.5**: Test with real SafeTensors model (e.g., HuggingFace LLM weights)
+- [ ] **Task 19.1.6**: Write unit tests for SafeTensorsReader
 
 ### Story 19.2: SafeTensors Writer
 - [ ] **Task 19.2.1**: Implement SafeTensorsAdapter.write() - export weights
@@ -594,7 +596,9 @@
 - [x] **Task 20.1.2**: Implement CoreMLReader.read() - load .mlmodel/.mlpackage
 - [x] **Task 20.1.3**: Map CoreML ops to layer info (op_type_counts, precision_breakdown)
 - [x] **Task 20.1.4**: Extract CoreML-specific metadata (compute units, iOS version)
-- [x] **Task 20.1.5**: Integrate with analysis pipeline - **NEEDS TESTING**
+- [x] **Task 20.1.5**: Integrate with analysis pipeline
+- [ ] **Task 20.1.6**: Test with real CoreML model (.mlmodel or .mlpackage)
+- [ ] **Task 20.1.7**: Write unit tests for CoreMLReader
 
 ### Story 20.2: CoreML Writer
 - [ ] **Task 20.2.1**: Implement CoreMLAdapter.write() via coremltools conversion
@@ -614,7 +618,9 @@
 - [x] **Task 21.1.2**: Implement TFLiteReader.read() - load .tflite
 - [x] **Task 21.1.3**: Parse FlatBuffer schema for ops and tensors
 - [x] **Task 21.1.4**: Map TFLite ops to op_type_counts
-- [x] **Task 21.1.5**: Extract quantization info (int8, float16) - **NEEDS TESTING**
+- [x] **Task 21.1.5**: Extract quantization info (int8, float16)
+- [ ] **Task 21.1.6**: Test with real TFLite model (e.g., TF Model Garden mobile model)
+- [ ] **Task 21.1.7**: Write unit tests for TFLiteReader
 
 ### Story 21.2: TFLite Writer
 - [ ] **Task 21.2.1**: Implement TFLiteAdapter.write() via tf.lite.TFLiteConverter
@@ -690,7 +696,9 @@
 - [x] **Task 23.1.1**: Add openvino dependency (optional) - in `[openvino]` extra
 - [x] **Task 23.1.2**: Implement OpenVINOReader.read() - load .xml/.bin
 - [x] **Task 23.1.3**: Map OpenVINO ops to layer_type_counts
-- [x] **Task 23.1.4**: Extract precision breakdown - **NEEDS TESTING**
+- [x] **Task 23.1.4**: Extract precision breakdown
+- [ ] **Task 23.1.5**: Test with real OpenVINO model (.xml + .bin)
+- [ ] **Task 23.1.6**: Write unit tests for OpenVINOReader
 
 ### Story 23.2: OpenVINO Writer
 - [ ] **Task 23.2.1**: Implement OpenVINOAdapter.write()
@@ -708,7 +716,9 @@
 - [x] **Task 24.1.1**: Implement GGUF header parser (pure Python, no deps)
 - [x] **Task 24.1.2**: Extract model metadata (arch, context_length, etc.)
 - [x] **Task 24.1.3**: Extract quantization type per tensor
-- [x] **Task 24.1.4**: Estimate memory footprint (VRAM estimation) - **NEEDS TESTING**
+- [x] **Task 24.1.4**: Estimate memory footprint (VRAM estimation)
+- [ ] **Task 24.1.5**: Test with real GGUF model (e.g., llama.cpp quantized model)
+- [ ] **Task 24.1.6**: Write unit tests for GGUFReader
 
 ### Story 24.2: GGUF Analysis Features
 - [ ] **Task 24.2.1**: Show quantization breakdown (data available, needs UI)
