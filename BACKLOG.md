@@ -27,7 +27,7 @@
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
 | Epic 11: Streamlit Web UI | In Progress | 3 | 16/17 | P0 |
-| Epic 12: Inference Platform | Not Started | 6 | 0/30 | P1 |
+| Epic 12: Eval Import & Comparison | Not Started | 7 | 0/36 | P1 |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | Not Started | 3 | 0/12 | P1 |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
@@ -490,54 +490,74 @@
 
 ---
 
-## Epic 12: Inference Platform (P1)
+## Epic 12: Eval Import & Comparison (P1)
 
-*Architecture analysis + Inference metrics = Complete picture.*
-*User feedback: 2/2 want familiar metrics (accuracy, mAP, F1) not just architecture stats.*
+*Import eval metrics from existing tools (Ultralytics, HF evaluate, etc.) — don't reinvent the wheel.*
+*Combine with architecture analysis for unified accuracy × speed × cost comparison.*
 
-### Story 12.1: Inference Runner Core
-- [ ] **Task 12.1.1**: Create `InferenceRunner` class wrapping ORT InferenceSession
-- [ ] **Task 12.1.2**: Add warmup runs and timing measurement
-- [ ] **Task 12.1.3**: Support batched inference with configurable batch sizes
-- [ ] **Task 12.1.4**: Add latency statistics (p50, p95, p99, mean, std)
-- [ ] **Task 12.1.5**: Add throughput calculation (items/sec, batches/sec)
+**Philosophy:** Users already have eval pipelines. We import their results, not run inference ourselves.
 
-### Story 12.2: Data Loader Interface
-- [ ] **Task 12.2.1**: Define abstract `DataLoader` interface
-- [ ] **Task 12.2.2**: Implement `ImageFolderLoader` (directory of images)
-- [ ] **Task 12.2.3**: Implement `NumpyArrayLoader` (precomputed tensors)
-- [ ] **Task 12.2.4**: Add preprocessing hooks (resize, normalize, tokenize)
-- [ ] **Task 12.2.5**: Support streaming for large datasets
+```
+User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
+(Ultralytics, HF evaluate, lm-eval, timm, custom)
+```
 
-### Story 12.3: Multi-Precision Comparison
-- [ ] **Task 12.3.1**: Load multiple precision variants (fp32, fp16, int8)
-- [ ] **Task 12.3.2**: Run same test data through all variants
-- [ ] **Task 12.3.3**: Compare latency across precisions
-- [ ] **Task 12.3.4**: Compare outputs (numerical diff, cosine similarity)
-- [ ] **Task 12.3.5**: Generate precision comparison report
+### Story 12.1: Base Eval Schema
+*Task-agnostic fields all eval results share*
+- [ ] **Task 12.1.1**: Define `EvalResult` base schema (model_id, task_type, timestamp, metrics dict)
+- [ ] **Task 12.1.2**: Define `EvalMetric` schema (name, value, unit, higher_is_better)
+- [ ] **Task 12.1.3**: Create `eval_schema.json` for validation
+- [ ] **Task 12.1.4**: Add `haoline import-eval` CLI command skeleton
 
-### Story 12.4: Metrics Extension Framework
-- [ ] **Task 12.4.1**: Define abstract `MetricsCalculator` interface
-- [ ] **Task 12.4.2**: Implement `RawOutputMetrics` (just latency, no accuracy)
-- [ ] **Task 12.4.3**: Add plugin/registration system for custom metrics
-- [ ] **Task 12.4.4**: Create example plugin for classification accuracy
-- [ ] **Task 12.4.5**: Document how to add new task-specific metrics
+### Story 12.2: Task-Specific Schemas
+*Standard metrics for common ML tasks*
+- [ ] **Task 12.2.1**: Detection schema (mAP@50, mAP@50:95, P/R/F1 per class)
+- [ ] **Task 12.2.2**: Classification schema (top-1, top-5 accuracy, per-class accuracy)
+- [ ] **Task 12.2.3**: NLP schema (accuracy, F1, exact_match, BLEU)
+- [ ] **Task 12.2.4**: LLM schema (perplexity, mmlu, hellaswag, truthfulqa)
+- [ ] **Task 12.2.5**: Segmentation schema (mIoU, dice, per-class IoU)
+- [ ] **Task 12.2.6**: Generic schema (user-defined metrics)
 
-### Story 12.5: Results Schema and Export
-- [ ] **Task 12.5.1**: Define standardized inference results schema
-- [ ] **Task 12.5.2**: Integrate inference results with existing report generator
-- [ ] **Task 12.5.3**: Add inference section to HTML/PDF reports
-- [ ] **Task 12.5.4**: Export raw results as CSV/JSON for custom analysis
+### Story 12.3: Import Adapters
+*Parse output from popular eval tools*
+- [ ] **Task 12.3.1**: Ultralytics adapter (parse YOLO val results) — **DEMO TARGET**
+- [ ] **Task 12.3.2**: HuggingFace evaluate adapter (parse evaluate output)
+- [ ] **Task 12.3.3**: lm-eval-harness adapter (parse LLM benchmark results)
+- [ ] **Task 12.3.4**: timm adapter (parse timm benchmark output)
+- [ ] **Task 12.3.5**: Generic CSV/JSON adapter (user maps columns to schema)
+- [ ] **Task 12.3.6**: Auto-detect adapter from file format/contents
 
-### Story 12.6: Model Leaderboard View
-*When comparing many models, show ranked leaderboard (moved from Story 6.11)*
-*Requires inference metrics for meaningful ranking*
-- [ ] **Task 12.6.1**: Define ranking criteria (speed, size, efficiency, accuracy)
-- [ ] **Task 12.6.2**: Generate sortable leaderboard table
-- [ ] **Task 12.6.3**: Add Pareto frontier visualization (no model dominates)
-- [ ] **Task 12.6.4**: Highlight "best in class" for each metric
-- [ ] **Task 12.6.5**: Export leaderboard as CSV/JSON
-- [ ] **Task 12.6.6**: Add filtering by architecture type, size range, etc.
+### Story 12.4: Merge Eval + Architecture
+*Combine imported eval metrics with HaoLine's architecture analysis*
+- [ ] **Task 12.4.1**: Link eval results to model files (by path or hash)
+- [ ] **Task 12.4.2**: Create `CombinedReport` dataclass (architecture + eval)
+- [ ] **Task 12.4.3**: Handle multiple eval runs per model (aggregate or select)
+- [ ] **Task 12.4.4**: Validate eval task matches model type (warn if mismatch)
+
+### Story 12.5: Unified Comparison Report
+*Architecture + Eval + Hardware in one view*
+- [ ] **Task 12.5.1**: Multi-model comparison table (accuracy, speed, size, cost)
+- [ ] **Task 12.5.2**: Accuracy vs Speed scatter plot (Pareto frontier)
+- [ ] **Task 12.5.3**: Per-class metric comparison (radar chart or grouped bars)
+- [ ] **Task 12.5.4**: Add eval metrics to existing HTML/PDF reports
+- [ ] **Task 12.5.5**: Export comparison as CSV/JSON
+
+### Story 12.6: Deployment Cost Calculator
+*Answer: "What does it cost to run this model at X fps?"*
+- [ ] **Task 12.6.1**: Define deployment scenario inputs (fps, hours/day, cloud vs edge)
+- [ ] **Task 12.6.2**: Calculate required hardware tier for latency SLA
+- [ ] **Task 12.6.3**: Estimate $/day and $/month for deployment
+- [ ] **Task 12.6.4**: Compare cost across precision variants (fp32 vs fp16 vs int8)
+- [ ] **Task 12.6.5**: Generate "Deployment Recommendation" section in report
+- [ ] **Task 12.6.6**: Add `--deployment-fps` and `--deployment-hours` CLI flags
+
+### Story 12.7: YOLO Quantization Demo (Reference Implementation)
+*End-to-end demo: fp32 → fp16 → int8, eval all, compare, deploy*
+- [ ] **Task 12.7.1**: Document YOLO quantization workflow (export to ONNX at each precision)
+- [ ] **Task 12.7.2**: Run batchtestv1.py on all 3 variants
+- [ ] **Task 12.7.3**: Import results with Ultralytics adapter
+- [ ] **Task 12.7.4**: Generate comparison report with deployment costs
+- [ ] **Task 12.7.5**: Create demo script/notebook for showcase
 
 ---
 
