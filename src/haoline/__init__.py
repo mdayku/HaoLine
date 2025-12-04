@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 """
-HaoLine (好线) - Universal Model Inspector.
+HaoLine (皓线) - Universal Model Inspector.
 
 See what's really inside your models.
 
@@ -23,7 +23,7 @@ Example usage:
     print(report.to_json())
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.3"
 
 from .analyzer import MetricsEngine, ONNXGraphLoader
 from .compare_visualizations import (

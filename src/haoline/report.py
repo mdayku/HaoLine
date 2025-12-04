@@ -769,7 +769,9 @@ class InspectionReport:
             """
             )
             if self.llm_summary.get("short_summary"):
-                html_parts.append(f'<p class="tldr">{self.llm_summary["short_summary"]}</p>')
+                html_parts.append(
+                    f'<p class="tldr">{self.llm_summary["short_summary"]}</p>'
+                )
             if self.llm_summary.get("detailed_summary"):
                 html_parts.append(f'<p>{self.llm_summary["detailed_summary"]}</p>')
             html_parts.append(

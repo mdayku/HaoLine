@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "haoline"
-version = "0.1.0"
-description = "HaoLine (好线) - Universal Model Inspector. See what's really inside your models."
+version = "0.2.3"
+description = "HaoLine (皓线) - Universal Model Inspector. See what's really inside your models."
 readme = "README.md"
 license = "MIT"
 authors = [
@@ -43,6 +43,7 @@ requires-python = ">=3.10"
 dependencies = [
     "onnx>=1.14.0",
     "numpy>=1.20.0",
+    "matplotlib>=3.5.0",
 ]
 
 [project.optional-dependencies]
@@ -50,6 +51,7 @@ runtime = [
     "onnxruntime>=1.16.0",
 ]
 viz = [
+    # Included in base now, kept for backwards compatibility
     "matplotlib>=3.5.0",
 ]
 llm = [
@@ -63,8 +65,11 @@ pdf = [
 gpu = [
     "nvidia-ml-py>=12.0.0",
 ]
+web = [
+    "streamlit>=1.28.0",
+]
 full = [
-    "haoline[runtime,viz,llm,pdf,gpu]",
+    "haoline[runtime,viz,llm,pdf,gpu,web]",
 ]
 dev = [
     "pytest>=7.0.0",

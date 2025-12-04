@@ -1358,6 +1358,13 @@ def _convert_jax_to_onnx(
 
 def run_inspect():
     """Main entry point for the model_inspect CLI."""
+    # Load environment variables from .env file if present
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass  # python-dotenv not installed, use environment variables directly
+    
     args = parse_args()
     logger = setup_logging(args.log_level)
 
@@ -1975,11 +1982,22 @@ def run_inspect():
     llm_summary = None
     if args.llm_summary:
         if not is_llm_available():
-            logger.warning(
-                "openai package not installed. Skipping LLM summaries. Install with: pip install openai"
-            )
+            print("\n" + "=" * 60)
+            print("LLM PACKAGE NOT INSTALLED")
+            print("=" * 60)
+            print("To enable AI-powered summaries, install the LLM extras:\n")
+            print("  pip install haoline[llm]")
+            print("\nThen set your API key and try again.")
+            print("=" * 60 + "\n")
         elif not has_llm_api_key():
-            logger.warning("OPENAI_API_KEY not set. Skipping LLM summaries.")
+            print("\n" + "=" * 60)
+            print("API KEY REQUIRED FOR LLM SUMMARIES")
+            print("=" * 60)
+            print("Set one of the following environment variables:\n")
+            print("  PowerShell:  $env:OPENAI_API_KEY = 'sk-...'")
+            print("  Bash/Zsh:    export OPENAI_API_KEY='sk-...'")
+            print("\nGet your API key at: https://platform.openai.com/api-keys")
+            print("=" * 60 + "\n")
         else:
             try:
                 progress.step(f"Generating LLM summary with {args.llm_model}")

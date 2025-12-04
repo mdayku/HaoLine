@@ -74,6 +74,45 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             padding: 32px 24px;
             overflow-y: auto;
             backdrop-filter: blur(20px);
+            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+            position: relative;
+        }}
+        
+        .sidebar.collapsed {{
+            width: 0;
+            padding: 0;
+            overflow: hidden;
+            border-right: none;
+        }}
+        
+        .sidebar-toggle {{
+            position: fixed;
+            top: 12px;
+            left: 248px;
+            width: 28px;
+            height: 28px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }}
+        
+        .sidebar-toggle:hover {{
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }}
+        
+        .sidebar.collapsed + .main .sidebar-toggle,
+        .sidebar.collapsed ~ .sidebar-toggle {{
+            left: 8px;
         }}
 
         .sidebar h1 {{
@@ -235,6 +274,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             dominant-baseline: middle;
             pointer-events: none;
             text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }}
+        
+        /* Show labels on hover */
+        .node:hover .node-label {{
+            opacity: 1;
+        }}
+        
+        /* Always show labels for large/important nodes */
+        .node.show-label .node-label {{
+            opacity: 1;
         }}
 
         .node-sublabel {{
@@ -242,6 +293,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             fill: rgba(255,255,255,0.5);
             text-anchor: middle;
             pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }}
+        
+        .node:hover .node-sublabel {{
+            opacity: 1;
         }}
 
         .edge {{
@@ -436,7 +493,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
     <div class="container">
-        <aside class="sidebar">
+        <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Toggle sidebar (more graph space)">◀</button>
+        <aside class="sidebar" id="graphSidebar">
             <h1>{title}</h1>
 
             <h2>Overview</h2>
@@ -474,8 +532,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
             <h2>Visualization</h2>
             <div class="controls">
-                <button class="btn" id="heatmap-btn" onclick="toggleHeatMap()">FLOPs Heat Map</button>
-                <button class="btn" id="timing-btn" onclick="toggleTimingHeatMap()" style="margin-top:6px;">Timing Heat Map</button>
+                <button class="btn" id="labels-btn" onclick="toggleAllLabels()">Show All Labels</button>
+                <button class="btn" id="heatmap-btn" onclick="toggleHeatMap()" style="margin-top:6px;">FLOPs Heat Map</button>
             </div>
 
             <h2>Op Types <span style="font-size:0.6rem;color:var(--text-tertiary)">(click to filter)</span></h2>
@@ -546,32 +604,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="legend-item">
                     <div class="legend-dot" style="background: #FF453A; box-shadow: 0 0 8px #FF453A;"></div>
                     <span>Compute hotspot</span>
-                </div>
-            </div>
-            <div class="legend" id="timing-legend" style="display: none;">
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #30D158; box-shadow: 0 0 8px #30D158;"></div>
-                    <span>Fast (&lt;10%)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #64D2FF; box-shadow: 0 0 8px #64D2FF;"></div>
-                    <span>Light (10-30%)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #BF5AF2; box-shadow: 0 0 8px #BF5AF2;"></div>
-                    <span>Medium (30-50%)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #FF9F0A; box-shadow: 0 0 8px #FF9F0A;"></div>
-                    <span>Slow (50-70%)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #FF6482; box-shadow: 0 0 8px #FF6482;"></div>
-                    <span>Very slow (70-90%)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-dot" style="background: #FF453A; box-shadow: 0 0 8px #FF453A;"></div>
-                    <span>Bottleneck (&gt;90%)</span>
                 </div>
             </div>
             <div class="legend" id="optype-legend-note">
@@ -661,43 +693,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }}
 
         // Get node size based on type and compute
+        // Track max FLOPs for scaling (computed once during render)
+        let globalMaxFlops = 1;
+        
         function getNodeSize(node) {{
-            const base = node.node_type === 'model' ? 50 :
-                         node.node_type === 'layer' ? 40 :
-                         node.node_type === 'block' ? 35 : 24;
-            // Scale up slightly for high-compute nodes
-            if (node.total_flops > 1e9) return base * 1.3;
-            if (node.total_flops > 1e6) return base * 1.1;
+            // Scale by FLOPs - expensive ops are visually bigger
+            const flops = node.total_flops || 0;
+            
+            if (flops > 0 && globalMaxFlops > 1) {{
+                // Log scale: 12px min, 45px max based on FLOPs
+                const logFlops = Math.log10(flops + 1);
+                const logMax = Math.log10(globalMaxFlops + 1);
+                const ratio = logFlops / logMax;
+                return 12 + ratio * 33;
+            }}
+            
+            // Fallback for nodes without FLOPs data - use hierarchy
+            const base = node.node_type === 'model' ? 40 :
+                         node.node_type === 'layer' ? 30 :
+                         node.node_type === 'block' ? 25 : 15;
             return base;
         }}
 
-        // Heat map mode toggles
+        // Heat map mode toggle
         let heatMapMode = false;
-        let timingHeatMapMode = false;
-
-        // Layer timing data (from profiling)
-        const layerTiming = graphData.layer_timing || {{}};
-        const hasTimingData = Object.keys(layerTiming).length > 0;
-
-        // Get max timing for scaling
-        function getMaxTiming() {{
-            const times = Object.values(layerTiming);
-            return times.length > 0 ? Math.max(...times) : 1;
-        }}
-
-        // Get timing for a node (check various name formats)
-        function getNodeTiming(node) {{
-            // Try exact match first
-            if (layerTiming[node.name]) return layerTiming[node.name];
-            // Try with op_type prefix
-            const key = node.op_type + '_' + node.name;
-            if (layerTiming[key]) return layerTiming[key];
-            // Search for partial match
-            for (const [k, v] of Object.entries(layerTiming)) {{
-                if (k.includes(node.name) || node.name.includes(k)) return v;
-            }}
-            return null;
-        }}
 
         // Get heat map color based on compute intensity
         function getHeatColor(flops, maxFlops) {{
@@ -710,19 +729,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (intensity < 0.8) return '#FFD60A';
             if (intensity < 0.9) return '#FF9F0A';
             return '#FF453A';
-        }}
-
-        // Get timing heat map color
-        function getTimingHeatColor(timing, maxTiming) {{
-            if (!timing || timing === 0) return null;
-            const intensity = timing / maxTiming;
-            // Similar scale but with different hue for distinction
-            if (intensity < 0.1) return '#30D158';  // Green - fast
-            if (intensity < 0.3) return '#64D2FF';  // Cyan
-            if (intensity < 0.5) return '#BF5AF2';  // Purple
-            if (intensity < 0.7) return '#FF9F0A';  // Orange
-            if (intensity < 0.9) return '#FF6482';  // Pink
-            return '#FF453A';  // Red - slowest (bottleneck)
         }}
 
         // Initialize visualization
@@ -851,9 +857,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         // Improved grid layout with depth calculation attempt
         // Falls back to clean grid if depth calc fails
         function layoutNodes(nodes) {{
-            const width = window.innerWidth - 320;
+            // Check if sidebar is collapsed for width calculation
+            const sidebar = document.getElementById('graphSidebar');
+            const sidebarWidth = sidebar && sidebar.classList.contains('collapsed') ? 0 : 280;
+            const width = window.innerWidth - sidebarWidth - 40;
             const height = window.innerHeight;
-            const padding = 50;
+            const padding = 40;
 
             // Try to calculate depths based on inputs/outputs
             const outputToNode = {{}};
@@ -898,14 +907,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 byDepth[d].push(node);
             }});
 
-            // If we got meaningful depths, use column layout
+            // If we got meaningful depths, use horizontal flow layout
             if (maxDepth > 0) {{
+                // Prefer horizontal spread - use full width
                 const colWidth = (width - padding * 2) / (maxDepth + 1);
+                const availableHeight = height - padding * 2;
 
                 for (let d = 0; d <= maxDepth; d++) {{
                     const nodesAtDepth = byDepth[d] || [];
                     const x = padding + d * colWidth + colWidth / 2;
-                    const rowH = (height - padding * 2) / Math.max(nodesAtDepth.length, 1);
+                    
+                    // Distribute vertically within available height
+                    const rowH = availableHeight / Math.max(nodesAtDepth.length, 1);
 
                     nodesAtDepth.forEach((node, i) => {{
                         node.x = x;
@@ -914,10 +927,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     }});
                 }}
             }} else {{
-                // Fallback: simple grid
-                const cols = Math.ceil(Math.sqrt(nodes.length * 1.5));
+                // Fallback: horizontal-biased grid (more columns than rows)
+                const cols = Math.ceil(Math.sqrt(nodes.length * 2.5));
+                const rows = Math.ceil(nodes.length / cols);
                 const cellW = (width - padding * 2) / cols;
-                const cellH = (height - padding * 2) / Math.ceil(nodes.length / cols);
+                const cellH = (height - padding * 2) / rows;
 
                 nodes.forEach((node, i) => {{
                     node.x = padding + (i % cols) * cellW + cellW / 2;
@@ -954,6 +968,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     .sort((a, b) => (b.total_flops || 0) - (a.total_flops || 0))
                     .slice(0, 1000);
             }}
+
+            // Compute max FLOPs for size scaling (expensive ops = bigger nodes)
+            globalMaxFlops = Math.max(1, ...visibleNodes.map(n => n.total_flops || 0));
 
             // Layout
             layoutNodes(visibleNodes);
@@ -1034,7 +1051,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 .data(visibleNodes)
                 .enter()
                 .append('g')
-                .attr('class', 'node')
+                .attr('class', d => {{
+                    // Show labels for important nodes: model, layers, blocks
+                    const isImportant = d.node_type === 'model' || 
+                                       d.node_type === 'layer' || 
+                                       d.node_type === 'block' ||
+                                       d.r > 35;
+                    return 'node' + (isImportant ? ' show-label' : '');
+                }})
                 .attr('transform', d => `translate(${{d.x}}, ${{d.y}})`)
                 .on('mouseover', showTooltip)
                 .on('mouseout', hideTooltip)
@@ -1045,20 +1069,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     }}
                 }});
 
-            // Calculate max FLOPs and timing for heat maps
+            // Calculate max FLOPs for heat map
             const maxFlops = getMaxFlops(visibleNodes);
-            const maxTiming = getMaxTiming();
 
             // Circle nodes - use heat map or category colors
             nodeGroups.append('circle')
                 .attr('class', 'node-circle')
                 .attr('r', d => d.r)
                 .attr('fill', d => {{
-                    // Timing heat map takes priority (more actionable)
-                    if (timingHeatMapMode && hasTimingData) {{
-                        const timing = getNodeTiming(d);
-                        if (timing) return getTimingHeatColor(timing, maxTiming);
-                    }}
                     if (heatMapMode && d.total_flops > 0) {{
                         return getHeatColor(d.total_flops, maxFlops);
                     }}
@@ -1126,6 +1144,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             document.getElementById('model-size').textContent = formatBytes(graphData.model_size_bytes || 0);
         }}
 
+        // Sidebar toggle for more graph space
+        function toggleSidebar() {{
+            const sidebar = document.getElementById('graphSidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const isCollapsed = sidebar.classList.toggle('collapsed');
+            toggleBtn.textContent = isCollapsed ? '▶' : '◀';
+            toggleBtn.style.left = isCollapsed ? '8px' : '248px';
+            // Re-fit graph after sidebar toggle
+            setTimeout(fitToScreen, 350);
+        }}
+
         function zoomIn() {{
             svg.transition().duration(300).call(zoom.scaleBy, 1.3);
         }}
@@ -1135,49 +1164,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }}
 
         let activeFilter = 'all';
+        let showAllLabels = false;
+
+        function toggleAllLabels() {{
+            showAllLabels = !showAllLabels;
+            const btn = document.getElementById('labels-btn');
+            btn.style.background = showAllLabels ? 'var(--accent)' : '';
+            btn.style.color = showAllLabels ? 'white' : '';
+            btn.textContent = showAllLabels ? 'Hide Labels' : 'Show All Labels';
+            
+            // Toggle show-label class on all nodes
+            container.selectAll('.node').classed('show-label', showAllLabels);
+        }}
 
         function toggleHeatMap() {{
             heatMapMode = !heatMapMode;
-            // Turn off timing heat map if turning on FLOPs heat map
-            if (heatMapMode) timingHeatMapMode = false;
 
             const btn = document.getElementById('heatmap-btn');
             btn.style.background = heatMapMode ? 'var(--accent)' : '';
             btn.style.color = heatMapMode ? 'white' : '';
 
-            const timingBtn = document.getElementById('timing-btn');
-            timingBtn.style.background = '';
-            timingBtn.style.color = '';
-
             // Toggle legend visibility
             document.getElementById('heatmap-legend').style.display = heatMapMode ? 'block' : 'none';
-            document.getElementById('timing-legend').style.display = 'none';
-            document.getElementById('optype-legend-note').style.display = (heatMapMode || timingHeatMapMode) ? 'none' : 'block';
-
-            render();
-        }}
-
-        function toggleTimingHeatMap() {{
-            if (!hasTimingData) {{
-                alert('No timing data available. Run with profiling enabled.');
-                return;
-            }}
-            timingHeatMapMode = !timingHeatMapMode;
-            // Turn off FLOPs heat map if turning on timing heat map
-            if (timingHeatMapMode) heatMapMode = false;
-
-            const btn = document.getElementById('timing-btn');
-            btn.style.background = timingHeatMapMode ? '#FF453A' : '';
-            btn.style.color = timingHeatMapMode ? 'white' : '';
-
-            const flopsBtn = document.getElementById('heatmap-btn');
-            flopsBtn.style.background = '';
-            flopsBtn.style.color = '';
-
-            // Toggle legend visibility
-            document.getElementById('timing-legend').style.display = timingHeatMapMode ? 'block' : 'none';
-            document.getElementById('heatmap-legend').style.display = 'none';
-            document.getElementById('optype-legend-note').style.display = (heatMapMode || timingHeatMapMode) ? 'none' : 'block';
+            document.getElementById('optype-legend-note').style.display = heatMapMode ? 'none' : 'block';
 
             render();
         }}
@@ -1432,9 +1441,25 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         buildSearchIndex();
         checkPerformanceMode();
 
+        // Check if embedded in iframe (Streamlit) - auto-collapse sidebar for more space
+        const isEmbedded = window.self !== window.top;
+        if (isEmbedded) {{
+            // Start with sidebar collapsed in embedded mode
+            setTimeout(() => {{
+                const sidebar = document.getElementById('graphSidebar');
+                const toggleBtn = document.getElementById('sidebarToggle');
+                if (sidebar && toggleBtn) {{
+                    sidebar.classList.add('collapsed');
+                    toggleBtn.textContent = '▶';
+                    toggleBtn.style.left = '8px';
+                }}
+            }}, 50);
+        }}
+
         // Initial render
         render();
-        setTimeout(fitToScreen, 100);
+        // Auto-fit after a short delay to ensure everything is laid out
+        setTimeout(fitToScreen, isEmbedded ? 200 : 100);
     </script>
 </body>
 </html>
