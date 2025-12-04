@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -24,6 +25,11 @@ def get_streamlit_app_path() -> Path:
     """Get the path to the bundled streamlit app."""
     # The app is bundled within the package
     return Path(__file__).parent / "streamlit_app.py"
+
+
+def get_config_dir() -> Path:
+    """Get the path to the bundled .streamlit config directory."""
+    return Path(__file__).parent / ".streamlit"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -87,8 +93,14 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Starting HaoLine Web UI at http://{args.host}:{args.port}")
     print("Press Ctrl+C to stop.\n")
 
+    # Set up environment with config directory for dark theme
+    env = os.environ.copy()
+    config_dir = get_config_dir()
+    if config_dir.exists():
+        env["STREAMLIT_CONFIG_DIR"] = str(config_dir)
+
     try:
-        return subprocess.call(cmd)
+        return subprocess.call(cmd, env=env)
     except KeyboardInterrupt:
         print("\nShutting down...")
         return 0

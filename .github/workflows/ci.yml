@@ -226,6 +226,7 @@ jobs:
           RUN pip install --no-cache-dir "haoline[web]>=0.2.4"
 
           COPY app.py .
+          COPY .streamlit/config.toml .streamlit/config.toml
 
           EXPOSE 7860
 
@@ -237,6 +238,20 @@ jobs:
           """HaoLine - Universal Model Inspector"""
           from haoline.streamlit_app import main
           main()
+          EOF
+
+          # Create Streamlit config for dark theme
+          mkdir -p hf_space/.streamlit
+          cat > hf_space/.streamlit/config.toml << 'EOF'
+          [theme]
+          base = "dark"
+          primaryColor = "#10b981"
+          backgroundColor = "#0d0d0d"
+          secondaryBackgroundColor = "#161616"
+          textColor = "#f5f5f5"
+
+          [server]
+          maxUploadSize = 500
           EOF
 
           # Create README

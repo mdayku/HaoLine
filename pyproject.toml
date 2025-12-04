@@ -116,6 +116,16 @@ Changelog = "https://github.com/mdayku/HaoLine/blob/main/CHANGELOG.md"
 [tool.hatch.build.targets.wheel]
 packages = ["src/haoline"]
 
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+
+# Include .streamlit config for dark theme
+[tool.hatch.build]
+include = [
+    "src/haoline/**/*.py",
+    "src/haoline/.streamlit/**/*",
+]
+
 [tool.black]
 line-length = 100
 target-version = ["py310", "py311", "py312"]
