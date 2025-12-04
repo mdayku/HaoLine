@@ -644,6 +644,14 @@ HaoLine/
 |   +-- hierarchical_graph.py # Collapsible graph structure
 |   +-- edge_analysis.py     # Tensor flow analysis
 |   |
+|   +-- formats/             # Multi-format readers (Epics 19-24)
+|   |   +-- __init__.py      # detect_format(), reader exports
+|   |   +-- gguf.py          # GGUF reader (llama.cpp, pure Python)
+|   |   +-- safetensors.py   # SafeTensors reader (HuggingFace)
+|   |   +-- tflite.py        # TFLite reader (mobile/edge)
+|   |   +-- coreml.py        # CoreML reader (Apple)
+|   |   +-- openvino.py      # OpenVINO reader (Intel)
+|   |
 |   +-- tests/               # 229 unit tests
 |   |   +-- conftest.py
 |   |   +-- test_*.py
@@ -907,7 +915,55 @@ def check_my_new_risk(self, graph_info: GraphInfo, blocks: list[Block]) -> RiskS
     return None
 ```
 
-#### 6.5.5 Key Integration Files
+#### 6.5.5 Adding New Format Readers
+
+To add a new model format in `formats/`:
+
+```python
+# In formats/myformat.py
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+from pathlib import Path
+
+@dataclass
+class MyFormatInfo:
+    """Metadata extracted from MyFormat files."""
+    total_params: int
+    total_size_bytes: int
+    tensors: List[MyFormatTensorInfo]
+    # Format-specific fields...
+
+class MyFormatReader:
+    """Reader for MyFormat model files."""
+
+    def read(self, path: Path) -> MyFormatInfo:
+        """Read and parse the model file."""
+        pass
+
+    def read_header_only(self, path: Path) -> MyFormatInfo:
+        """Read metadata without loading weights (for large files)."""
+        pass
+
+def is_myformat_file(path: Path) -> bool:
+    """Check if file is a MyFormat file by extension/magic bytes."""
+    return path.suffix.lower() == ".myformat"
+
+def is_available() -> bool:
+    """Check if required dependencies are installed."""
+    try:
+        import myformat_lib
+        return True
+    except ImportError:
+        return False
+```
+
+Then register in `formats/__init__.py`:
+
+```python
+from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_available as myformat_available
+```
+
+#### 6.5.6 Key Integration Files
 
 | File | Extension Point |
 |------|-----------------|
@@ -918,6 +974,7 @@ def check_my_new_risk(self, graph_info: GraphInfo, blocks: list[Block]) -> RiskS
 | `report.py` | New output sections, report formats |
 | `visualizations.py` | New chart types, themes |
 | `llm_summarizer.py` | New LLM providers, prompt templates |
+| `formats/*.py` | New model format readers |
 
 ---
 

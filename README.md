@@ -274,8 +274,12 @@ report.to_html("report.html")
 | PyTorch (.pt, .pth) | ✅ Full | Auto-converts to ONNX |
 | TensorFlow SavedModel | ✅ Full | Requires tf2onnx |
 | Keras (.h5, .keras) | ✅ Full | Requires tf2onnx |
-| TensorRT Engine | 🔜 Coming | Planned |
-| SafeTensors | 🔜 Coming | Planned |
+| GGUF (.gguf) | ✅ Read | llama.cpp LLMs (`pip install haoline`) |
+| SafeTensors (.safetensors) | ✅ Read | HuggingFace weights (`pip install haoline[formats]`) |
+| TFLite (.tflite) | ✅ Read | Mobile/edge (`pip install haoline[formats]`) |
+| CoreML (.mlmodel, .mlpackage) | ✅ Read | Apple devices (`pip install haoline[coreml]`) |
+| OpenVINO (.xml) | ✅ Read | Intel inference (`pip install haoline[openvino]`) |
+| TensorRT Engine | 🔜 Coming | NVIDIA optimized engines |
 
 ---
 

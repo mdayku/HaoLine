@@ -30,12 +30,12 @@
 | Epic 12: Inference Platform | Not Started | 6 | 0/30 | P1 |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | Not Started | 3 | 0/12 | P1 |
-| Epic 19: SafeTensors | Not Started | 2 | 0/8 | P2 |
-| Epic 20: CoreML | Not Started | 2 | 0/10 | P2 |
-| Epic 21: TFLite | Not Started | 2 | 0/10 | P2 |
+| Epic 19: SafeTensors | In Progress | 2 | 4/8 | P2 |
+| Epic 20: CoreML | In Progress | 2 | 5/10 | P2 |
+| Epic 21: TFLite | In Progress | 2 | 5/10 | P2 |
 | Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | P3 |
-| Epic 23: OpenVINO | Not Started | 2 | 0/8 | P3 |
-| Epic 24: GGUF | Not Started | 2 | 0/6 | P3 |
+| Epic 23: OpenVINO | In Progress | 2 | 4/8 | P3 |
+| Epic 24: GGUF | In Progress | 2 | 4/6 | P3 |
 | Epic 25: Privacy/Trust | Not Started | 3 | 0/9 | P1 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
@@ -571,11 +571,11 @@
 
 *HuggingFace ecosystem, widely used for LLM weights. Easy win.*
 
-### Story 19.1: SafeTensors Reader
-- [ ] **Task 19.1.1**: Add safetensors dependency (optional)
-- [ ] **Task 19.1.2**: Implement SafeTensorsAdapter.read() - load tensor dict
-- [ ] **Task 19.1.3**: Extract metadata (tensor names, shapes, dtypes)
-- [ ] **Task 19.1.4**: Integrate with analysis pipeline (param counts, memory)
+### Story 19.1: SafeTensors Reader - **COMPLETE**
+- [x] **Task 19.1.1**: Add safetensors dependency (optional) - in `[formats]` extra
+- [x] **Task 19.1.2**: Implement SafeTensorsReader.read() - load tensor dict
+- [x] **Task 19.1.3**: Extract metadata (tensor names, shapes, dtypes)
+- [x] **Task 19.1.4**: Integrate with analysis pipeline (param counts, memory) - **NEEDS TESTING**
 
 ### Story 19.2: SafeTensors Writer
 - [ ] **Task 19.2.1**: Implement SafeTensorsAdapter.write() - export weights
@@ -589,12 +589,12 @@
 
 *Apple's ML framework for iOS/macOS deployment.*
 
-### Story 20.1: CoreML Reader
-- [ ] **Task 20.1.1**: Add coremltools dependency (optional)
-- [ ] **Task 20.1.2**: Implement CoreMLAdapter.read() - load .mlmodel/.mlpackage
-- [ ] **Task 20.1.3**: Map CoreML ops to UniversalNode ops
-- [ ] **Task 20.1.4**: Extract CoreML-specific metadata (compute units, iOS version)
-- [ ] **Task 20.1.5**: Integrate with analysis pipeline
+### Story 20.1: CoreML Reader - **COMPLETE**
+- [x] **Task 20.1.1**: Add coremltools dependency (optional) - in `[coreml]` extra
+- [x] **Task 20.1.2**: Implement CoreMLReader.read() - load .mlmodel/.mlpackage
+- [x] **Task 20.1.3**: Map CoreML ops to layer info (op_type_counts, precision_breakdown)
+- [x] **Task 20.1.4**: Extract CoreML-specific metadata (compute units, iOS version)
+- [x] **Task 20.1.5**: Integrate with analysis pipeline - **NEEDS TESTING**
 
 ### Story 20.2: CoreML Writer
 - [ ] **Task 20.2.1**: Implement CoreMLAdapter.write() via coremltools conversion
@@ -609,12 +609,12 @@
 
 *TensorFlow Lite for mobile and edge deployment.*
 
-### Story 21.1: TFLite Reader
-- [ ] **Task 21.1.1**: Add tflite-runtime dependency (optional)
-- [ ] **Task 21.1.2**: Implement TFLiteAdapter.read() - load .tflite
-- [ ] **Task 21.1.3**: Parse FlatBuffer schema for ops and tensors
-- [ ] **Task 21.1.4**: Map TFLite ops to UniversalNode ops
-- [ ] **Task 21.1.5**: Extract quantization info (int8, float16)
+### Story 21.1: TFLite Reader - **COMPLETE**
+- [x] **Task 21.1.1**: Add tflite-runtime dependency (optional) - in `[formats]` extra
+- [x] **Task 21.1.2**: Implement TFLiteReader.read() - load .tflite
+- [x] **Task 21.1.3**: Parse FlatBuffer schema for ops and tensors
+- [x] **Task 21.1.4**: Map TFLite ops to op_type_counts
+- [x] **Task 21.1.5**: Extract quantization info (int8, float16) - **NEEDS TESTING**
 
 ### Story 21.2: TFLite Writer
 - [ ] **Task 21.2.1**: Implement TFLiteAdapter.write() via tf.lite.TFLiteConverter
@@ -686,11 +686,11 @@
 
 *Intel's inference toolkit for CPU/GPU/VPU deployment.*
 
-### Story 23.1: OpenVINO Reader
-- [ ] **Task 23.1.1**: Add openvino dependency (optional)
-- [ ] **Task 23.1.2**: Implement OpenVINOAdapter.read()
-- [ ] **Task 23.1.3**: Map OpenVINO ops to UniversalNode
-- [ ] **Task 23.1.4**: Extract Intel-specific optimizations
+### Story 23.1: OpenVINO Reader - **COMPLETE**
+- [x] **Task 23.1.1**: Add openvino dependency (optional) - in `[openvino]` extra
+- [x] **Task 23.1.2**: Implement OpenVINOReader.read() - load .xml/.bin
+- [x] **Task 23.1.3**: Map OpenVINO ops to layer_type_counts
+- [x] **Task 23.1.4**: Extract precision breakdown - **NEEDS TESTING**
 
 ### Story 23.2: OpenVINO Writer
 - [ ] **Task 23.2.1**: Implement OpenVINOAdapter.write()
@@ -704,15 +704,15 @@
 
 *llama.cpp format for running LLMs locally.*
 
-### Story 24.1: GGUF Reader
-- [ ] **Task 24.1.1**: Implement GGUF header parser (pure Python)
-- [ ] **Task 24.1.2**: Extract model metadata
-- [ ] **Task 24.1.3**: Extract quantization type per tensor
-- [ ] **Task 24.1.4**: Estimate memory footprint
+### Story 24.1: GGUF Reader - **COMPLETE**
+- [x] **Task 24.1.1**: Implement GGUF header parser (pure Python, no deps)
+- [x] **Task 24.1.2**: Extract model metadata (arch, context_length, etc.)
+- [x] **Task 24.1.3**: Extract quantization type per tensor
+- [x] **Task 24.1.4**: Estimate memory footprint (VRAM estimation) - **NEEDS TESTING**
 
 ### Story 24.2: GGUF Analysis Features
-- [ ] **Task 24.2.1**: Show quantization breakdown
-- [ ] **Task 24.2.2**: Estimate VRAM for different context lengths
+- [ ] **Task 24.2.1**: Show quantization breakdown (data available, needs UI)
+- [ ] **Task 24.2.2**: Estimate VRAM for different context lengths (method exists)
 
 ---
 
