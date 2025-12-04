@@ -15,9 +15,9 @@ class Metadata(BaseModel):
     path: Annotated[str, Field(description="Path to the ONNX model file")]
     ir_version: Annotated[int, Field(description="ONNX IR version", ge=1)]
     producer_name: Annotated[str, Field(description="Name of the tool that produced the model")]
-    producer_version: Annotated[
-        str | None, Field(description="Version of the producer tool")
-    ] = None
+    producer_version: Annotated[str | None, Field(description="Version of the producer tool")] = (
+        None
+    )
     domain: Annotated[str | None, Field(description="Model domain")] = None
     model_version: Annotated[int | None, Field(description="Model version number")] = None
     doc_string: Annotated[str | None, Field(description="Model documentation string")] = None
@@ -25,9 +25,9 @@ class Metadata(BaseModel):
 
 
 class GraphSummary(BaseModel):
-    num_nodes: Annotated[
-        int | None, Field(description="Total number of nodes in graph", ge=0)
-    ] = None
+    num_nodes: Annotated[int | None, Field(description="Total number of nodes in graph", ge=0)] = (
+        None
+    )
     num_inputs: Annotated[int | None, Field(description="Number of graph inputs", ge=0)] = None
     num_outputs: Annotated[int | None, Field(description="Number of graph outputs", ge=0)] = None
     num_initializers: Annotated[
@@ -88,12 +88,12 @@ class Hotspot(BaseModel):
 
 class FlopCounts(BaseModel):
     total: Annotated[int | None, Field(description="Total estimated FLOPs", ge=0)] = None
-    by_node_type: Annotated[
-        dict[str, int] | None, Field(description="FLOPs by operator type")
-    ] = None
-    hotspots: Annotated[
-        list[Hotspot] | None, Field(description="Top compute-intensive nodes")
-    ] = None
+    by_node_type: Annotated[dict[str, int] | None, Field(description="FLOPs by operator type")] = (
+        None
+    )
+    hotspots: Annotated[list[Hotspot] | None, Field(description="Top compute-intensive nodes")] = (
+        None
+    )
 
 
 class KvCacheConfig(BaseModel):
@@ -109,9 +109,7 @@ class Breakdown(BaseModel):
 
 
 class MemoryEstimates(BaseModel):
-    model_size_bytes: Annotated[int | None, Field(description="Model size in bytes", ge=0)] = (
-        None
-    )
+    model_size_bytes: Annotated[int | None, Field(description="Model size in bytes", ge=0)] = None
     peak_activation_bytes: Annotated[
         int | None, Field(description="Peak activation memory in bytes", ge=0)
     ] = None
@@ -124,9 +122,9 @@ class MemoryEstimates(BaseModel):
     kv_cache_config: Annotated[
         KvCacheConfig | None, Field(description="KV cache configuration")
     ] = None
-    breakdown: Annotated[
-        Breakdown | None, Field(description="Memory breakdown by component")
-    ] = None
+    breakdown: Annotated[Breakdown | None, Field(description="Memory breakdown by component")] = (
+        None
+    )
 
 
 class DetectedBlock(BaseModel):
@@ -135,9 +133,9 @@ class DetectedBlock(BaseModel):
     nodes: Annotated[list[str] | None, Field(description="Node names in this block")] = None
     start_node: str | None = None
     end_node: str | None = None
-    attributes: Annotated[
-        dict[str, Any] | None, Field(description="Block-specific attributes")
-    ] = None
+    attributes: Annotated[dict[str, Any] | None, Field(description="Block-specific attributes")] = (
+        None
+    )
 
 
 class ArchitectureType(Enum):
@@ -213,12 +211,12 @@ class HaolineInspectionReport(BaseModel):
     graph_summary: Annotated[
         GraphSummary | None, Field(description="Summary statistics about the ONNX graph")
     ] = None
-    param_counts: Annotated[
-        ParamCounts | None, Field(description="Parameter count statistics")
-    ] = None
-    flop_counts: Annotated[
-        FlopCounts | None, Field(description="FLOP estimation statistics")
-    ] = None
+    param_counts: Annotated[ParamCounts | None, Field(description="Parameter count statistics")] = (
+        None
+    )
+    flop_counts: Annotated[FlopCounts | None, Field(description="FLOP estimation statistics")] = (
+        None
+    )
     memory_estimates: Annotated[
         MemoryEstimates | None, Field(description="Memory usage estimates")
     ] = None
@@ -228,9 +226,9 @@ class HaolineInspectionReport(BaseModel):
     architecture_type: Annotated[
         ArchitectureType | None, Field(description="Detected architecture type")
     ] = None
-    risk_signals: Annotated[
-        list[RiskSignal] | None, Field(description="Detected risk signals")
-    ] = None
+    risk_signals: Annotated[list[RiskSignal] | None, Field(description="Detected risk signals")] = (
+        None
+    )
     hardware_profile: Annotated[
         HardwareProfile | None, Field(description="Target hardware profile")
     ] = None
