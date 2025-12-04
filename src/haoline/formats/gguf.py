@@ -168,12 +168,12 @@ class GGUFInfo:
     @property
     def architecture(self) -> str:
         """Model architecture (e.g., 'llama', 'mistral')."""
-        return self.metadata.get("general.architecture", "unknown")
+        return str(self.metadata.get("general.architecture", "unknown"))
 
     @property
     def model_name(self) -> str:
         """Model name from metadata."""
-        return self.metadata.get("general.name", self.path.stem)
+        return str(self.metadata.get("general.name", self.path.stem))
 
     @property
     def context_length(self) -> int | None:
@@ -475,8 +475,9 @@ def is_gguf_file(path: str | Path) -> bool:
 
 def format_size(size_bytes: int) -> str:
     """Format bytes as human-readable string."""
+    size_float = float(size_bytes)
     for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if size_bytes < 1024:
-            return f"{size_bytes:.2f} {unit}"
-        size_bytes /= 1024
-    return f"{size_bytes:.2f} PB"
+        if size_float < 1024:
+            return f"{size_float:.2f} {unit}"
+        size_float /= 1024
+    return f"{size_float:.2f} PB"

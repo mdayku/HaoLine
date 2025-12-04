@@ -333,7 +333,8 @@ class OperationalProfiler:
             # Generate appropriate dummy data
             if is_text:
                 # Token IDs: random integers in typical vocab range
-                dummy = np.random.randint(0, 30000, size=resolved_shape, dtype=np_dtype)
+                # numpy stubs are overly strict about randint dtype
+                dummy: np.ndarray = np.random.randint(0, 30000, size=resolved_shape, dtype=np_dtype)  # type: ignore[arg-type]
             elif np_dtype == np.bool_:
                 # Boolean masks
                 dummy = np.ones(resolved_shape, dtype=np_dtype)
@@ -522,7 +523,7 @@ class OperationalProfiler:
                     # Generate appropriate dummy data
                     if is_text:
                         # Token IDs: random integers in vocab range
-                        dummy = np.random.randint(0, 30000, size=shape, dtype=np_dtype)
+                        dummy: np.ndarray = np.random.randint(0, 30000, size=shape, dtype=np_dtype)  # type: ignore[arg-type]
                     else:
                         # Vision/continuous: random floats
                         dummy = np.random.randn(*shape).astype(np_dtype)

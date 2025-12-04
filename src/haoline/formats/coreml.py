@@ -59,7 +59,7 @@ class CoreMLInfo:
     @property
     def model_type(self) -> str:
         """Detected model type."""
-        return self.metadata.get("model_type", "unknown")
+        return str(self.metadata.get("model_type", "unknown"))
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""

@@ -34,12 +34,30 @@ def analyze_model(
 Before ANY commit:
 1. Run `black src/haoline/` to format Python code
 2. Run `ruff check src/haoline/ --fix` to fix linting issues
-3. Verify with `black --check src/haoline/` and `ruff check src/haoline/`
+3. Run `mypy src/haoline/` to check types (config in pyproject.toml)
+4. Verify all three pass before committing
 
 Quick command:
 ```bash
-black src/haoline/ && ruff check src/haoline/ --fix
+black src/haoline/ && ruff check src/haoline/ --fix && mypy src/haoline/
 ```
+
+### Common mypy Fixes
+
+- **no-any-return**: Add explicit type cast or fix return type
+  ```python
+  # Bad: return some_dict.get("key")  # Returns Any
+  # Good: return cast(str, some_dict.get("key"))
+  # Or: result: str = some_dict.get("key", "")
+  ```
+
+- **assignment type mismatch**: Use correct types
+  ```python
+  # Bad: count: int = 1.5
+  # Good: count: int = int(1.5)
+  ```
+
+- **numpy dtype issues**: Use `np.dtype` or `Any` for complex dtype expressions
 
 ## Git Workflow
 

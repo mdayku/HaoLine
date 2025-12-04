@@ -57,7 +57,7 @@ def init_session_state():
         st.session_state.current_mode = "analyze"  # "analyze" or "compare"
 
 
-def add_to_history(name: str, report: Any, file_size: int):
+def add_to_history(name: str, report: Any, file_size: int) -> AnalysisResult:
     """Add an analysis result to session history."""
     result = AnalysisResult(
         name=name,

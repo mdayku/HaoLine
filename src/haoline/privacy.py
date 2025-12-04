@@ -151,7 +151,10 @@ def redact_dict(
     Returns:
         New dictionary with names replaced.
     """
-    return _redact_recursive(data, mapping)
+    result = _redact_recursive(data, mapping)
+    # _redact_recursive always returns a dict when given a dict
+    assert isinstance(result, dict)
+    return result
 
 
 def _redact_recursive(obj: Any, mapping: dict[str, str]) -> Any:
