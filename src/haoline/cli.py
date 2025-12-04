@@ -517,6 +517,21 @@ Examples:
         "Disables LLM summaries and other features requiring internet.",
     )
 
+    # Privacy controls
+    privacy_group = parser.add_argument_group("Privacy Options")
+    privacy_group.add_argument(
+        "--redact-names",
+        action="store_true",
+        help="Anonymize layer and tensor names in output (e.g., layer_001, tensor_042). "
+        "Useful for sharing reports without revealing proprietary architecture details.",
+    )
+    privacy_group.add_argument(
+        "--summary-only",
+        action="store_true",
+        help="Output only aggregate statistics (params, FLOPs, memory). "
+        "Omit per-layer details and graph structure for maximum privacy.",
+    )
+
     return parser.parse_args()
 
 
@@ -2044,6 +2059,22 @@ def run_inspect():
         # Add to report dict for JSON output
         report._llm_summary = llm_summary  # type: ignore
 
+    # Apply privacy transformations if requested
+    report_dict = report.to_dict()
+    if args.summary_only:
+        from .privacy import create_summary_only_dict
+
+        logger.info("Applying summary-only mode (omitting per-layer details)")
+        report_dict = create_summary_only_dict(report_dict)
+    elif args.redact_names:
+        from .privacy import collect_names_from_dict, create_name_mapping, redact_dict
+
+        logger.info("Applying name redaction")
+        names = collect_names_from_dict(report_dict)
+        mapping = create_name_mapping(names)
+        report_dict = redact_dict(report_dict, mapping)
+        logger.debug(f"Redacted {len(mapping)} names")
+
     # Output results
     has_output = (
         args.out_json
@@ -2058,8 +2089,10 @@ def run_inspect():
 
     if args.out_json:
         try:
+            import json
+
             args.out_json.parent.mkdir(parents=True, exist_ok=True)
-            args.out_json.write_text(report.to_json(), encoding="utf-8")
+            args.out_json.write_text(json.dumps(report_dict, indent=2), encoding="utf-8")
             logger.info(f"JSON report written to: {args.out_json}")
         except Exception as e:
             logger.error(f"Failed to write JSON report: {e}")

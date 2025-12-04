@@ -36,7 +36,7 @@
 | Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | P3 |
 | Epic 23: OpenVINO | In Progress | 2 | 4/10 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 4/8 | P3 |
-| Epic 25: Privacy/Trust | In Progress | 3 | 2/9 | P1 |
+| Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
 | Epic 27: Attention Variants | Not Started | 4 | 0/19 | P3 |
@@ -764,12 +764,12 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [x] **Task 25.1.1**: Document "model never leaves your machine" guarantee - see [PRIVACY.md](PRIVACY.md)
 - [x] **Task 25.1.2**: Audit code for any network calls or telemetry - only LLM (optional) and test downloads
 - [x] **Task 25.1.3**: Add `--offline` CLI flag (skips LLM features)
-- [ ] **Task 25.1.4**: Create architecture diagram showing data flow
+- [x] **Task 25.1.4**: Create architecture diagram showing data flow - ASCII diagram in PRIVACY.md
 
 ### Story 25.2: Output Controls
-- [ ] **Task 25.2.1**: Add `--redact-names` flag (anonymize layer/tensor names)
-- [ ] **Task 25.2.2**: Add `--summary-only` flag (stats only, no graph structure)
-- [ ] **Task 25.2.3**: Document what information each output format reveals
+- [x] **Task 25.2.1**: Add `--redact-names` flag (anonymize layer/tensor names) - `src/haoline/privacy.py`
+- [x] **Task 25.2.2**: Add `--summary-only` flag (stats only, no graph structure) - `src/haoline/privacy.py`
+- [x] **Task 25.2.3**: Document what information each output format reveals - table in PRIVACY.md
 
 ### Story 25.3: Enterprise Trust Documentation
 - [x] **Task 25.3.1**: Write Privacy Policy / Data Handling document - expanded in [PRIVACY.md](PRIVACY.md)

@@ -1,5 +1,65 @@
 # HaoLine Privacy & Security
 
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           YOUR MACHINE (Local)                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐    ┌────────────────────────────────────────────────┐    │
+│  │  Your Model  │───▶│              HaoLine CLI                       │    │
+│  │  (.onnx, .pt │    │                                                │    │
+│  │  .safetensors)    │  ┌─────────────┐  ┌─────────────┐            │    │
+│  └──────────────┘    │  │  Analyzer   │  │  Estimator  │            │    │
+│                      │  │  (params,   │  │  (FLOPs,    │            │    │
+│                      │  │   layers,   │  │   memory,   │            │    │
+│                      │  │   shapes)   │  │   latency)  │            │    │
+│                      │  └─────────────┘  └─────────────┘            │    │
+│                      │                                                │    │
+│                      │  ┌─────────────┐  ┌─────────────┐            │    │
+│                      │  │  Patterns   │  │  Risk       │            │    │
+│                      │  │  (blocks,   │  │  Signals    │            │    │
+│                      │  │   arch)     │  │  (warnings) │            │    │
+│                      │  └─────────────┘  └─────────────┘            │    │
+│                      └────────────────────────────────────────────────┘    │
+│                                       │                                     │
+│                                       ▼                                     │
+│  ┌────────────────────────────────────────────────────────────────────┐    │
+│  │                         Local Output Files                         │    │
+│  │  report.json  │  report.html  │  report.md  │  graph.html         │    │
+│  └────────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                       │
+                                       │ OPTIONAL (user-initiated)
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           INTERNET (Optional)                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────┐     Only if --llm-summary is used:                   │
+│  │  OpenAI API      │◀────Text summaries sent (NOT model weights)          │
+│  │  (LLM Summaries) │     Use --offline to block this                      │
+│  └──────────────────┘                                                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow Summary
+
+| Step | Data | Stays Local? |
+|------|------|--------------|
+| 1. Load model | Model file (weights, graph) | YES |
+| 2. Analyze | Parameters, shapes, ops | YES |
+| 3. Estimate | FLOPs, memory, latency | YES |
+| 4. Generate report | JSON, HTML, Markdown | YES |
+| 5. LLM summary (optional) | Text description only | NO (sent to API) |
+
+**Key Guarantee:** Your model weights and architecture graph NEVER leave your machine. The optional LLM summary only sends a text description of the model (e.g., "45M param ResNet-50 with 4 bottleneck blocks").
+
+---
+
 ## Core Guarantee
 
 **Your models never leave your machine.**
