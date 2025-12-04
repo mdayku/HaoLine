@@ -58,6 +58,7 @@ llm = [
     "openai>=1.0.0",
     "anthropic>=0.20.0",
     "google-generativeai>=0.3.0",
+    "python-dotenv>=1.0.0",
 ]
 pdf = [
     "playwright>=1.40.0",
@@ -81,6 +82,8 @@ dev = [
 
 [project.scripts]
 haoline = "haoline.cli:run_inspect"
+haoline-compare = "haoline.compare:main"
+haoline-web = "haoline.web:main"
 
 [project.urls]
 Homepage = "https://github.com/mdayku/HaoLine"
@@ -116,6 +119,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # CLI has availability check imports that look unused
 "src/haoline/cli.py" = ["F401", "F841"]
+# Streamlit requires page config before imports
+"src/haoline/streamlit_app.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.10"

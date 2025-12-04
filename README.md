@@ -84,20 +84,20 @@ This generates `report.html` containing:
 
 ---
 
-## Web Interface (No Installation Required)
+## Web Interface
 
-Try HaoLine instantly with our Streamlit web app:
+Launch the HaoLine web UI with a single command:
 
 ```bash
-# Run locally
-pip install haoline streamlit
-streamlit run streamlit_app.py
+pip install haoline[web]
+haoline-web
 ```
 
-**Features:**
+This opens an interactive dashboard at `http://localhost:8501` with:
 - Drag-and-drop model upload (ONNX, PyTorch)
 - Hardware selection with 50+ GPU profiles (searchable)
 - Full interactive D3.js neural network graph
+- Model comparison mode (side-by-side analysis)
 - AI-powered summaries (bring your own API key)
 - Export to PDF, HTML, JSON, Markdown
 
@@ -151,12 +151,15 @@ haoline model.onnx --out-json report.json
 Compare different quantizations or architectures side-by-side:
 
 ```bash
-haoline compare \
+haoline-compare \
   --models resnet_fp32.onnx resnet_fp16.onnx resnet_int8.onnx \
+  --eval-metrics eval_fp32.json eval_fp16.json eval_int8.json \
   --baseline-precision fp32 \
   --out-html comparison.html \
   --with-charts
 ```
+
+Or use the web UI's comparison mode for an interactive experience.
 
 ---
 
