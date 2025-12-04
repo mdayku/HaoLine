@@ -235,7 +235,8 @@ jobs:
           # Create app.py
           cat > hf_space/app.py << 'EOF'
           """HaoLine - Universal Model Inspector"""
-          from haoline.streamlit_app import *
+          from haoline.streamlit_app import main
+          main()
           EOF
 
           # Create README
