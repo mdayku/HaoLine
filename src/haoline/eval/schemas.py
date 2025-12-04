@@ -351,6 +351,179 @@ class SegmentationEvalResult(EvalResult):
         )
 
 
+@dataclass
+class GenericEvalResult(EvalResult):
+    """
+    Generic evaluation results with user-defined metrics.
+
+    Use this when no task-specific schema fits, or for custom evaluation tasks.
+    The user provides metric definitions explicitly.
+    """
+
+    task_type: str = "generic"
+
+    # User can specify what metrics mean
+    metric_definitions: dict[str, str] = field(default_factory=dict)
+    # e.g., {"custom_score": "Higher values indicate better model performance"}
+
+    @classmethod
+    def create(
+        cls,
+        model_id: str,
+        dataset: str = "",
+        metrics: dict[str, float] | None = None,
+        metric_definitions: dict[str, str] | None = None,
+        higher_is_better: dict[str, bool] | None = None,
+        **kwargs,
+    ) -> "GenericEvalResult":
+        """
+        Convenience constructor for generic metrics.
+
+        Args:
+            model_id: Model identifier.
+            dataset: Dataset name.
+            metrics: Dict of metric_name -> value.
+            metric_definitions: Dict of metric_name -> description.
+            higher_is_better: Dict of metric_name -> bool (default True).
+        """
+        metric_list = []
+        higher_map = higher_is_better or {}
+
+        for name, value in (metrics or {}).items():
+            metric_list.append(
+                EvalMetric(
+                    name=name,
+                    value=value,
+                    higher_is_better=higher_map.get(name, True),
+                    category="custom",
+                )
+            )
+
+        return cls(
+            model_id=model_id,
+            dataset=dataset,
+            metrics=metric_list,
+            metric_definitions=metric_definitions or {},
+            **kwargs,
+        )
+
+
+# =============================================================================
+# Combined Report (Architecture + Eval)
+# =============================================================================
+
+
+@dataclass
+class CombinedReport:
+    """
+    Combines architecture analysis with evaluation results.
+
+    Links an InspectionReport (model structure, FLOPs, params) with
+    EvalResult (accuracy, speed benchmarks) for unified comparison.
+    """
+
+    model_id: str
+    model_path: str = ""
+
+    # Architecture analysis (from haoline inspect)
+    architecture: dict[str, Any] = field(default_factory=dict)
+    # Keys: params_total, flops_total, memory_bytes, architecture_type, etc.
+
+    # Evaluation results (from external tools)
+    eval_results: list[EvalResult] = field(default_factory=list)
+
+    # Computed summaries
+    primary_accuracy_metric: str = ""  # e.g., "mAP@50" or "top1_accuracy"
+    primary_accuracy_value: float = 0.0
+
+    # Hardware estimates (from haoline)
+    hardware_profile: str = ""
+    latency_ms: float = 0.0
+    throughput_fps: float = 0.0
+
+    # Deployment cost (if calculated)
+    cost_per_day_usd: float = 0.0
+    cost_per_month_usd: float = 0.0
+
+    def add_eval_result(self, result: EvalResult) -> None:
+        """Add an evaluation result."""
+        self.eval_results.append(result)
+
+    def get_eval_by_task(self, task_type: str) -> EvalResult | None:
+        """Get eval result by task type."""
+        for r in self.eval_results:
+            if r.task_type == task_type:
+                return r
+        return None
+
+    def get_all_metrics(self) -> list[EvalMetric]:
+        """Get all metrics from all eval results."""
+        metrics = []
+        for r in self.eval_results:
+            metrics.extend(r.metrics)
+        return metrics
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "model_id": self.model_id,
+            "model_path": self.model_path,
+            "architecture": self.architecture,
+            "eval_results": [r.to_dict() for r in self.eval_results],
+            "primary_accuracy_metric": self.primary_accuracy_metric,
+            "primary_accuracy_value": self.primary_accuracy_value,
+            "hardware_profile": self.hardware_profile,
+            "latency_ms": self.latency_ms,
+            "throughput_fps": self.throughput_fps,
+            "cost_per_day_usd": self.cost_per_day_usd,
+            "cost_per_month_usd": self.cost_per_month_usd,
+        }
+
+    def to_json(self, indent: int = 2) -> str:
+        """Serialize to JSON string."""
+        return json.dumps(self.to_dict(), indent=indent)
+
+    @classmethod
+    def from_inspection_report(
+        cls,
+        report: Any,  # InspectionReport
+        model_path: str = "",
+    ) -> "CombinedReport":
+        """
+        Create from an InspectionReport.
+
+        Args:
+            report: InspectionReport from haoline.
+            model_path: Path to the model file.
+        """
+        # Extract key architecture metrics
+        arch_summary = {
+            "params_total": (report.param_counts.total if report.param_counts else 0),
+            "flops_total": (report.flop_counts.total if report.flop_counts else 0),
+            "memory_bytes": (report.memory_estimates.total_bytes if report.memory_estimates else 0),
+            "architecture_type": report.architecture_type,
+            "num_nodes": (report.graph_summary.num_nodes if report.graph_summary else 0),
+        }
+
+        # Hardware estimates if available
+        hw_profile = ""
+        latency = 0.0
+        throughput = 0.0
+        if report.hardware_estimates:
+            hw_profile = report.hardware_profile.name if report.hardware_profile else ""
+            latency = report.hardware_estimates.latency_ms
+            throughput = report.hardware_estimates.throughput_samples_per_sec
+
+        return cls(
+            model_id=report.metadata.name if report.metadata else "",
+            model_path=model_path,
+            architecture=arch_summary,
+            hardware_profile=hw_profile,
+            latency_ms=latency,
+            throughput_fps=throughput,
+        )
+
+
 # =============================================================================
 # JSON Schema for Validation
 # =============================================================================
@@ -364,7 +537,7 @@ EVAL_RESULT_SCHEMA = {
         "model_id": {"type": "string", "description": "Model identifier"},
         "task_type": {
             "type": "string",
-            "enum": ["detection", "classification", "nlp", "llm", "segmentation"],
+            "enum": ["detection", "classification", "nlp", "llm", "segmentation", "generic"],
         },
         "timestamp": {"type": "string", "format": "date-time"},
         "dataset": {"type": "string"},
@@ -403,6 +576,7 @@ def validate_eval_result(data: dict[str, Any]) -> bool:
         "nlp",
         "llm",
         "segmentation",
+        "generic",
     ]:
         return False
     return True

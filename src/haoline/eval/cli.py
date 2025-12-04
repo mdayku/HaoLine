@@ -125,10 +125,13 @@ Examples:
 
 def import_from_ultralytics(path: Path) -> EvalResult | None:
     """Import eval results from Ultralytics YOLO validation output."""
-    # TODO: Implement Ultralytics adapter (Task 12.3.1)
-    print(f"[TODO] Ultralytics adapter not yet implemented: {path}")
-    print("This will parse YOLO val results and return DetectionEvalResult.")
-    return None
+    try:
+        from .adapters import load_ultralytics_json
+
+        return load_ultralytics_json(path)
+    except Exception as e:
+        print(f"Error parsing Ultralytics results from {path}: {e}")
+        return None
 
 
 def import_from_hf_evaluate(path: Path) -> EvalResult | None:
@@ -146,8 +149,16 @@ def import_from_lm_eval(path: Path) -> EvalResult | None:
 
 
 def import_from_json(path: Path) -> EvalResult | None:
-    """Import eval results from generic JSON (must match schema)."""
+    """Import eval results from generic JSON (auto-detect or schema-compliant)."""
     try:
+        from .adapters import detect_and_parse
+
+        # Try auto-detect first
+        result = detect_and_parse(path)
+        if result:
+            return result
+
+        # Fall back to schema-compliant parsing
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
@@ -225,9 +236,28 @@ def main() -> int:
     elif args.from_json:
         result = import_from_json(args.from_json)
     elif args.from_csv:
-        # TODO: Implement CSV adapter (Task 12.3.5)
-        print(f"[TODO] CSV adapter not yet implemented: {args.from_csv}")
-        return 1
+        try:
+            from .adapters import load_generic_csv
+
+            # Parse column mappings if provided
+            column_mapping: dict[str, str] = {}
+            if args.map_column:
+                for mapping in args.map_column:
+                    if "=" in mapping:
+                        metric, column = mapping.split("=", 1)
+                        column_mapping[column] = metric
+
+            results = load_generic_csv(args.from_csv)
+            if results:
+                result = results[0]  # Return first row for single result
+                if not args.quiet and len(results) > 1:
+                    print(f"Note: CSV contains {len(results)} rows, returning first.")
+            else:
+                print(f"No valid rows found in {args.from_csv}")
+                return 1
+        except Exception as e:
+            print(f"Error parsing CSV: {e}")
+            return 1
 
     if result is None:
         print("Failed to import eval results.")
