@@ -5,10 +5,10 @@ Task-agnostic and task-specific schemas for importing evaluation results
 from external tools like Ultralytics, HuggingFace evaluate, lm-eval, etc.
 """
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-from datetime import datetime
 import json
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
 
 
 @dataclass
@@ -21,7 +21,7 @@ class EvalMetric:
     higher_is_better: bool = True  # For ranking/comparison
     category: str = ""  # e.g., "accuracy", "speed", "size"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "value": self.value,
@@ -31,7 +31,7 @@ class EvalMetric:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "EvalMetric":
+    def from_dict(cls, data: dict[str, Any]) -> "EvalMetric":
         return cls(
             name=data["name"],
             value=data["value"],
@@ -53,14 +53,14 @@ class EvalResult:
     task_type: str  # "detection", "classification", "nlp", "llm", "segmentation"
     timestamp: str = ""  # ISO format timestamp of eval run
     dataset: str = ""  # Dataset used for evaluation (e.g., "coco_val2017")
-    metrics: List[EvalMetric] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)  # Tool-specific extras
+    metrics: list[EvalMetric] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)  # Tool-specific extras
 
     def __post_init__(self):
         if not self.timestamp:
             self.timestamp = datetime.now().isoformat()
 
-    def get_metric(self, name: str) -> Optional[EvalMetric]:
+    def get_metric(self, name: str) -> EvalMetric | None:
         """Get a metric by name."""
         for m in self.metrics:
             if m.name == name:
@@ -72,7 +72,7 @@ class EvalResult:
         m = self.get_metric(name)
         return m.value if m else default
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "model_id": self.model_id,
             "task_type": self.task_type,
@@ -86,7 +86,7 @@ class EvalResult:
         return json.dumps(self.to_dict(), indent=indent)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "EvalResult":
+    def from_dict(cls, data: dict[str, Any]) -> "EvalResult":
         return cls(
             model_id=data["model_id"],
             task_type=data["task_type"],
@@ -118,11 +118,11 @@ class DetectionEvalResult(EvalResult):
     task_type: str = "detection"
 
     # Per-class metrics
-    class_metrics: Dict[str, Dict[str, float]] = field(default_factory=dict)
+    class_metrics: dict[str, dict[str, float]] = field(default_factory=dict)
     # e.g., {"person": {"precision": 0.92, "recall": 0.88, "f1": 0.90, "ap50": 0.91}}
 
     # IoU thresholds used
-    iou_thresholds: List[float] = field(default_factory=lambda: [0.5, 0.75])
+    iou_thresholds: list[float] = field(default_factory=lambda: [0.5, 0.75])
 
     # Confidence threshold
     confidence_threshold: float = 0.5
@@ -137,7 +137,7 @@ class DetectionEvalResult(EvalResult):
         precision: float,
         recall: float,
         f1: float,
-        class_metrics: Optional[Dict[str, Dict[str, float]]] = None,
+        class_metrics: dict[str, dict[str, float]] | None = None,
         **kwargs,
     ) -> "DetectionEvalResult":
         """Convenience constructor with standard detection metrics."""
@@ -169,11 +169,11 @@ class ClassificationEvalResult(EvalResult):
     task_type: str = "classification"
 
     # Per-class accuracy
-    class_accuracy: Dict[str, float] = field(default_factory=dict)
+    class_accuracy: dict[str, float] = field(default_factory=dict)
 
     # Confusion matrix (optional)
-    confusion_matrix: Optional[List[List[int]]] = None
-    class_names: List[str] = field(default_factory=list)
+    confusion_matrix: list[list[int]] | None = None
+    class_names: list[str] = field(default_factory=list)
 
     @classmethod
     def create(
@@ -182,7 +182,7 @@ class ClassificationEvalResult(EvalResult):
         dataset: str,
         top1_accuracy: float,
         top5_accuracy: float,
-        class_accuracy: Optional[Dict[str, float]] = None,
+        class_accuracy: dict[str, float] | None = None,
         **kwargs,
     ) -> "ClassificationEvalResult":
         """Convenience constructor with standard classification metrics."""
@@ -219,11 +219,11 @@ class NLPEvalResult(EvalResult):
         model_id: str,
         dataset: str,
         nlp_task: str,
-        accuracy: Optional[float] = None,
-        f1: Optional[float] = None,
-        exact_match: Optional[float] = None,
-        bleu: Optional[float] = None,
-        rouge_l: Optional[float] = None,
+        accuracy: float | None = None,
+        f1: float | None = None,
+        exact_match: float | None = None,
+        bleu: float | None = None,
+        rouge_l: float | None = None,
         **kwargs,
     ) -> "NLPEvalResult":
         """Convenience constructor with standard NLP metrics."""
@@ -233,9 +233,7 @@ class NLPEvalResult(EvalResult):
         if f1 is not None:
             metrics.append(EvalMetric("f1", f1, "%", True, "accuracy"))
         if exact_match is not None:
-            metrics.append(
-                EvalMetric("exact_match", exact_match, "%", True, "accuracy")
-            )
+            metrics.append(EvalMetric("exact_match", exact_match, "%", True, "accuracy"))
         if bleu is not None:
             metrics.append(EvalMetric("bleu", bleu, "", True, "accuracy"))
         if rouge_l is not None:
@@ -262,19 +260,19 @@ class LLMEvalResult(EvalResult):
     task_type: str = "llm"
 
     # Benchmark scores (0-100 or 0-1 depending on benchmark)
-    benchmark_scores: Dict[str, float] = field(default_factory=dict)
+    benchmark_scores: dict[str, float] = field(default_factory=dict)
     # e.g., {"mmlu": 0.72, "hellaswag": 0.81, "truthfulqa": 0.45}
 
     @classmethod
     def create(
         cls,
         model_id: str,
-        perplexity: Optional[float] = None,
-        mmlu: Optional[float] = None,
-        hellaswag: Optional[float] = None,
-        truthfulqa: Optional[float] = None,
-        arc_challenge: Optional[float] = None,
-        winogrande: Optional[float] = None,
+        perplexity: float | None = None,
+        mmlu: float | None = None,
+        hellaswag: float | None = None,
+        truthfulqa: float | None = None,
+        arc_challenge: float | None = None,
+        winogrande: float | None = None,
         **kwargs,
     ) -> "LLMEvalResult":
         """Convenience constructor with standard LLM benchmarks."""
@@ -320,7 +318,7 @@ class SegmentationEvalResult(EvalResult):
     task_type: str = "segmentation"
 
     # Per-class IoU
-    class_iou: Dict[str, float] = field(default_factory=dict)
+    class_iou: dict[str, float] = field(default_factory=dict)
 
     # Segmentation type
     segmentation_type: str = "semantic"  # "semantic", "instance", "panoptic"
@@ -331,8 +329,8 @@ class SegmentationEvalResult(EvalResult):
         model_id: str,
         dataset: str,
         miou: float,
-        dice: Optional[float] = None,
-        class_iou: Optional[Dict[str, float]] = None,
+        dice: float | None = None,
+        class_iou: dict[str, float] | None = None,
         segmentation_type: str = "semantic",
         **kwargs,
     ) -> "SegmentationEvalResult":
@@ -389,7 +387,7 @@ EVAL_RESULT_SCHEMA = {
 }
 
 
-def validate_eval_result(data: Dict[str, Any]) -> bool:
+def validate_eval_result(data: dict[str, Any]) -> bool:
     """
     Basic validation of eval result data.
 
@@ -408,4 +406,3 @@ def validate_eval_result(data: Dict[str, Any]) -> bool:
     ]:
         return False
     return True
-

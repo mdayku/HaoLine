@@ -6,12 +6,12 @@ and combine with architecture analysis.
 """
 
 from .schemas import (
+    ClassificationEvalResult,
+    DetectionEvalResult,
     EvalMetric,
     EvalResult,
-    DetectionEvalResult,
-    ClassificationEvalResult,
-    NLPEvalResult,
     LLMEvalResult,
+    NLPEvalResult,
     SegmentationEvalResult,
 )
 
@@ -24,4 +24,3 @@ __all__ = [
     "LLMEvalResult",
     "SegmentationEvalResult",
 ]
-
