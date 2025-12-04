@@ -474,6 +474,11 @@
 
 ### Story 11.3: Deployment
 - [ ] **Task 11.3.1**: Deploy to Hugging Face Spaces (free, GPU available)
+  - [ ] **11.3.1a**: Create HF Space at huggingface.co/new-space (SDK: Streamlit)
+  - [ ] **11.3.1b**: Get HF token from huggingface.co/settings/tokens (write access)
+  - [ ] **11.3.1c**: Add `HF_TOKEN` secret in GitHub repo settings
+  - [ ] **11.3.1d**: Update `HF_SPACE_NAME` in `.github/workflows/deploy-hf-spaces.yml`
+  - [ ] **11.3.1e**: Trigger workflow and verify deployment works
 - [ ] **Task 11.3.2**: Add Streamlit Cloud deployment option
 - [x] **Task 11.3.3**: Create deployment documentation - see [DEPLOYMENT.md](DEPLOYMENT.md)
 - [x] **Task 11.3.4**: Set up CI/CD for auto-deploy on push - `.github/workflows/deploy-hf-spaces.yml`
