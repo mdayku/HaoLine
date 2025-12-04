@@ -4,6 +4,7 @@
 """
 Unit tests for the report module (ModelInspector, InspectionReport).
 """
+
 from __future__ import annotations
 
 import json

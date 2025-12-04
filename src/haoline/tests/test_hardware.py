@@ -4,6 +4,7 @@
 """
 Unit tests for the hardware module (profiles, detection, estimation).
 """
+
 from __future__ import annotations
 
 import sys

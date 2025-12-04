@@ -4,6 +4,7 @@
 """
 Unit tests for the patterns module (block detection, architecture classification).
 """
+
 from __future__ import annotations
 
 import sys
@@ -670,9 +671,9 @@ class TestLLMPatterns:
 
             # Should detect attention pattern
             attention_blocks = [b for b in blocks if "Attention" in b.block_type]
-            assert (
-                len(attention_blocks) >= 1
-            ), f"Expected attention blocks, got: {[b.block_type for b in blocks]}"
+            assert len(attention_blocks) >= 1, (
+                f"Expected attention blocks, got: {[b.block_type for b in blocks]}"
+            )
         finally:
             model_path.unlink()
 
@@ -693,9 +694,9 @@ class TestLLMPatterns:
 
             # Should detect MLP pattern
             mlp_blocks = [b for b in blocks if b.block_type == "MLPBlock"]
-            assert (
-                len(mlp_blocks) >= 1
-            ), f"Expected MLP blocks, got: {[b.block_type for b in blocks]}"
+            assert len(mlp_blocks) >= 1, (
+                f"Expected MLP blocks, got: {[b.block_type for b in blocks]}"
+            )
         finally:
             model_path.unlink()
 
@@ -762,9 +763,9 @@ class TestLLMPatterns:
             arch_type = analyzer.classify_architecture(graph_info, blocks)
 
             # Should classify as transformer
-            assert (
-                "transformer" in arch_type or arch_type == "mlp"
-            ), f"Expected transformer, got: {arch_type}"
+            assert "transformer" in arch_type or arch_type == "mlp", (
+                f"Expected transformer, got: {arch_type}"
+            )
         finally:
             model_path.unlink()
 

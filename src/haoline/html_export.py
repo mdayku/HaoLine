@@ -7,6 +7,7 @@ Interactive HTML Export for graph visualization.
 Task 5.8: Creates standalone HTML files with embedded visualization
 that can be opened in any browser without a server.
 """
+
 from __future__ import annotations
 
 import json

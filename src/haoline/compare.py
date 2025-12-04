@@ -582,7 +582,7 @@ def _build_markdown_summary(
     lines.append(f"# Quantization Impact: {model_family_id}")
     lines.append("")
     lines.append(
-        f"Baseline precision: **{baseline_precision}**  " "(deltas are relative to this variant)."
+        f"Baseline precision: **{baseline_precision}**  (deltas are relative to this variant)."
     )
     lines.append("")
 
@@ -675,8 +675,7 @@ def _build_markdown_summary(
                 delta_acc = f"{d_acc:+.4f}" if d_acc is not None else "-"
 
             lines.append(
-                f"| {precision} | {lat_str} | {tput_str} | {acc_str} | "
-                f"{delta_lat} | {delta_acc} |"
+                f"| {precision} | {lat_str} | {tput_str} | {acc_str} | {delta_lat} | {delta_acc} |"
             )
 
         lines.append("")

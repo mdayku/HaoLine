@@ -11,6 +11,7 @@ This module provides:
 - System requirements generation (Minimum, Recommended, Optimal)
 - Batch size scaling analysis
 """
+
 from __future__ import annotations
 
 import logging

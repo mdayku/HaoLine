@@ -9,6 +9,7 @@ This module provides:
 - MetricsEngine: Compute parameters, FLOPs, and memory estimates
 - GraphInfo: Internal representation of the parsed graph
 """
+
 from __future__ import annotations
 
 import logging

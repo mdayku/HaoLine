@@ -4,6 +4,7 @@
 """
 Unit tests for the schema module (JSON schema validation).
 """
+
 from __future__ import annotations
 
 import sys

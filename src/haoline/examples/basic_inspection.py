@@ -33,9 +33,9 @@ def main():
     report = inspector.inspect(model_path)
 
     # Print summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Model: {model_path.name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Basic stats
     if report.graph_summary:

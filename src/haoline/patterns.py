@@ -10,6 +10,7 @@ Detects common architectural patterns in ONNX graphs:
 - Transformer blocks (attention + MLP)
 - Embedding layers
 """
+
 from __future__ import annotations
 
 import logging

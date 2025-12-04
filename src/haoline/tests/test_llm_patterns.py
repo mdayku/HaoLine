@@ -9,6 +9,7 @@ Task 5.4.8: Tests with BERT, GPT-2, LLaMA patterns.
 These tests verify that our pattern detection works on real transformer
 architectures. Models are downloaded from ONNX Model Zoo or HuggingFace.
 """
+
 from __future__ import annotations
 
 import os
@@ -326,9 +327,9 @@ class TestMiniBERT:
             block_types = {b.block_type for b in blocks}
 
             # Should have attention-related blocks
-            assert any(
-                "Attention" in bt or "MatMul" in bt for bt in block_types
-            ), f"Expected attention patterns, got: {block_types}"
+            assert any("Attention" in bt or "MatMul" in bt for bt in block_types), (
+                f"Expected attention patterns, got: {block_types}"
+            )
 
             # Architecture should be transformer
             assert arch_type == "transformer", f"Expected transformer, got {arch_type}"
@@ -357,9 +358,9 @@ class TestMiniBERT:
 
             # Verify we have MatMul ops in the graph (FFN uses MatMul)
             matmul_ops = [n for n in graph_info.nodes if n.op_type == "MatMul"]
-            assert (
-                len(matmul_ops) >= 4
-            ), f"Expected multiple MatMul ops (Q,K,V,O projections + FFN), got {len(matmul_ops)}"
+            assert len(matmul_ops) >= 4, (
+                f"Expected multiple MatMul ops (Q,K,V,O projections + FFN), got {len(matmul_ops)}"
+            )
 
         finally:
             model_path.unlink()
@@ -383,9 +384,9 @@ class TestMiniBERT:
             residual_blocks = [b for b in blocks if "Residual" in b.block_type]
 
             # BERT has 2 residual connections per layer
-            assert (
-                len(residual_blocks) >= 1
-            ), f"Expected residual connections, got {len(residual_blocks)}"
+            assert len(residual_blocks) >= 1, (
+                f"Expected residual connections, got {len(residual_blocks)}"
+            )
 
         finally:
             model_path.unlink()

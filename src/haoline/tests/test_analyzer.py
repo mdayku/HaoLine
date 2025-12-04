@@ -7,6 +7,7 @@ Unit tests for the analyzer module (parameter counting, FLOP estimation, memory 
 These tests use programmatically-created tiny ONNX models to ensure deterministic,
 reproducible test results without external dependencies.
 """
+
 from __future__ import annotations
 
 # Import the modules under test

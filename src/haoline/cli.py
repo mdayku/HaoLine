@@ -6,6 +6,7 @@ HaoLine CLI - Universal Model Inspector.
 
 Entry point for the `haoline` command-line tool.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -692,8 +693,7 @@ def _convert_pytorch_to_onnx(
     # Parse input shape
     if not input_shape_str:
         logger.error(
-            "--input-shape is required for PyTorch conversion. "
-            "Example: --input-shape 1,3,224,224"
+            "--input-shape is required for PyTorch conversion. Example: --input-shape 1,3,224,224"
         )
         return None, None
 
@@ -1312,9 +1312,7 @@ def _convert_jax_to_onnx(
             import tensorflow as tf
             from jax.experimental import jax2tf
         except ImportError:
-            logger.error(
-                "jax2tf or TensorFlow not available. Install with: " "pip install tensorflow"
-            )
+            logger.error("jax2tf or TensorFlow not available. Install with: pip install tensorflow")
             return None, None
 
         # Create a concrete function
@@ -1982,8 +1980,7 @@ def run_inspect():
             )
             if res_benchmark:
                 logger.info(
-                    f"Resolution benchmark complete. "
-                    f"Optimal: {res_benchmark.optimal_resolution}"
+                    f"Resolution benchmark complete. Optimal: {res_benchmark.optimal_resolution}"
                 )
                 report.extra_data = report.extra_data or {}
                 report.extra_data["resolution_benchmark"] = res_benchmark.to_dict()

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 """Tests for edge-centric analysis."""
+
 from __future__ import annotations
 
 import tempfile

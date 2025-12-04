@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 """Tests for per-layer summary table (Story 5.8)."""
+
 from __future__ import annotations
 
 import csv

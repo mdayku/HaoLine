@@ -41,9 +41,9 @@ def main():
     inspector = ModelInspector()
     report = inspector.inspect(model_path)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Hardware Performance Estimates: {model_path.name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Test on a few hardware profiles
     test_profiles = ["rtx4090", "rtx3080", "a100_40gb", "t4", "jetson_orin"]

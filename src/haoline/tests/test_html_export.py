@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 """Tests for HTML export."""
+
 from __future__ import annotations
 
 import tempfile

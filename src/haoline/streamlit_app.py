@@ -910,7 +910,7 @@ def main():
                     st.markdown(
                         f"""
                     <div style="font-size: 0.85rem; color: #f5f5f5; margin-bottom: 0.1rem;">
-                        {result.name[:20]}{'...' if len(result.name) > 20 else ''}
+                        {result.name[:20]}{"..." if len(result.name) > 20 else ""}
                     </div>
                     <div style="font-size: 0.7rem; color: #737373;">
                         {result.summary} · {time_str}
@@ -1020,7 +1020,7 @@ def main():
                             {profile.name}
                         </div>
                         <div style="font-size: 0.75rem; color: #737373; margin-top: 0.25rem; font-family: 'SF Mono', monospace;">
-                            {profile.vram_bytes // (1024**3)} GB VRAM · {profile.peak_fp16_tflops or '—'} TF
+                            {profile.vram_bytes // (1024**3)} GB VRAM · {profile.peak_fp16_tflops or "—"} TF
                         </div>
                     </div>
                     """,
@@ -1305,8 +1305,8 @@ def main():
                         |----------|-------|
                         | **Model** | `{uploaded_file.name}` |
                         | **IR Version** | {report.metadata.ir_version} |
-                        | **Producer** | {report.metadata.producer_name or 'Unknown'} |
-                        | **Opset** | {list(report.metadata.opsets.values())[0] if report.metadata.opsets else 'Unknown'} |
+                        | **Producer** | {report.metadata.producer_name or "Unknown"} |
+                        | **Opset** | {list(report.metadata.opsets.values())[0] if report.metadata.opsets else "Unknown"} |
                         """
                         )
 

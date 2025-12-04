@@ -4,6 +4,7 @@
 """
 Pytest configuration and shared fixtures for HaoLine tests.
 """
+
 from __future__ import annotations
 
 import logging

@@ -7,6 +7,7 @@ Per-Layer Summary Table for HaoLine.
 Story 5.8: Creates sortable, filterable tables showing per-layer metrics
 (params, FLOPs, latency estimate, memory).
 """
+
 from __future__ import annotations
 
 import csv
@@ -346,28 +347,28 @@ def generate_html_table(summary: LayerSummary, include_js: bool = True) -> str:
     def format_number(n: int | float) -> str:
         if isinstance(n, float):
             if n >= 1e9:
-                return f"{n/1e9:.2f}B"
+                return f"{n / 1e9:.2f}B"
             if n >= 1e6:
-                return f"{n/1e6:.2f}M"
+                return f"{n / 1e6:.2f}M"
             if n >= 1e3:
-                return f"{n/1e3:.2f}K"
+                return f"{n / 1e3:.2f}K"
             return f"{n:.2f}"
         else:
             if n >= 1e9:
-                return f"{n/1e9:.2f}B"
+                return f"{n / 1e9:.2f}B"
             if n >= 1e6:
-                return f"{n/1e6:.2f}M"
+                return f"{n / 1e6:.2f}M"
             if n >= 1e3:
-                return f"{n/1e3:.2f}K"
+                return f"{n / 1e3:.2f}K"
             return str(n)
 
     def format_bytes(b: int) -> str:
         if b >= 1e9:
-            return f"{b/1e9:.2f} GB"
+            return f"{b / 1e9:.2f} GB"
         if b >= 1e6:
-            return f"{b/1e6:.2f} MB"
+            return f"{b / 1e6:.2f} MB"
         if b >= 1e3:
-            return f"{b/1e3:.2f} KB"
+            return f"{b / 1e3:.2f} KB"
         return f"{b} B"
 
     html_parts = []
@@ -733,19 +734,19 @@ def generate_markdown_table(summary: LayerSummary, max_rows: int = 50) -> str:
     def format_number(n: int | float) -> str:
         if isinstance(n, float):
             if n >= 1e9:
-                return f"{n/1e9:.1f}B"
+                return f"{n / 1e9:.1f}B"
             if n >= 1e6:
-                return f"{n/1e6:.1f}M"
+                return f"{n / 1e6:.1f}M"
             if n >= 1e3:
-                return f"{n/1e3:.1f}K"
+                return f"{n / 1e3:.1f}K"
             return f"{n:.2f}"
         else:
             if n >= 1e9:
-                return f"{n/1e9:.1f}B"
+                return f"{n / 1e9:.1f}B"
             if n >= 1e6:
-                return f"{n/1e6:.1f}M"
+                return f"{n / 1e6:.1f}M"
             if n >= 1e3:
-                return f"{n/1e3:.1f}K"
+                return f"{n / 1e3:.1f}K"
             return str(n)
 
     lines = []

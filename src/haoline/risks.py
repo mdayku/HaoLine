@@ -11,6 +11,7 @@ Applies heuristics to detect potentially problematic patterns:
 - Missing normalization
 - Unusual activation patterns
 """
+
 from __future__ import annotations
 
 import logging

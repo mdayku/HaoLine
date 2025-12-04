@@ -7,6 +7,7 @@ Unit tests for the LLM summarizer module.
 Tests API client, prompt templates, and graceful error handling.
 Note: Most tests mock the OpenAI API to avoid actual API calls.
 """
+
 from __future__ import annotations
 
 import os

@@ -7,6 +7,7 @@ Hierarchical Graph View for visualization.
 Task 5.7: Creates collapsible, multi-level graph representations
 for LLM-scale models where flat visualization would be unreadable.
 """
+
 from __future__ import annotations
 
 import json

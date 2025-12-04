@@ -53,9 +53,9 @@ def main():
         reports.append((path.name, report))
 
     # Print comparison table
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("MODEL COMPARISON")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     # Header
     print(f"\n{'Metric':<25}", end="")
@@ -96,9 +96,9 @@ def main():
     baseline_name, baseline_report = reports[0]
     baseline_size = model_paths[0].stat().st_size
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"DELTAS vs {baseline_name} (baseline)")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     for _i, (path, (name, report)) in enumerate(zip(model_paths[1:], reports[1:], strict=True)):
         size = path.stat().st_size

@@ -12,6 +12,7 @@ Generates matplotlib-based charts for model architecture analysis:
 
 All charts use a consistent dark theme suitable for technical documentation.
 """
+
 from __future__ import annotations
 
 import logging

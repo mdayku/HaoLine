@@ -13,6 +13,7 @@ The Pydantic models in pydantic_models.py were auto-generated from the original
 JSON Schema using datamodel-code-generator. Validation is now done via Pydantic
 for better error messages and type safety.
 """
+
 from __future__ import annotations
 
 import warnings

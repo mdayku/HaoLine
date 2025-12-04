@@ -4,6 +4,7 @@
 """
 Unit tests for the risks module (risk signal detection).
 """
+
 from __future__ import annotations
 
 import sys

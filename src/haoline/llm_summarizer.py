@@ -15,6 +15,7 @@ Usage:
     print(result.short_summary)
     print(result.detailed_summary)
 """
+
 from __future__ import annotations
 
 import json

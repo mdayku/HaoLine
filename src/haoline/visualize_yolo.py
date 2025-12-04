@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Visualize a YOLO model."""
+
 import sys
 from pathlib import Path
 

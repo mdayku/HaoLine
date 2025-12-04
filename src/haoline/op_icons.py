@@ -7,6 +7,7 @@ Op Type Icon System for graph visualization.
 Task 5.5: Maps 180+ ONNX operators to visual categories with icons,
 colors, and size scaling based on computational intensity.
 """
+
 from __future__ import annotations
 
 import math

@@ -7,6 +7,7 @@ PDF generation for HaoLine using Playwright.
 This module provides PDF generation from HTML reports using Playwright,
 which renders the HTML with a real browser engine for high-quality output.
 """
+
 from __future__ import annotations
 
 import asyncio

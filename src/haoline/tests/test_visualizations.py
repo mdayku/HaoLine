@@ -6,6 +6,7 @@ Unit tests for the visualization module.
 
 Tests chart generation, theming, and graceful fallback behavior.
 """
+
 from __future__ import annotations
 
 import tempfile

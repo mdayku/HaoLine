@@ -9,6 +9,7 @@ This module implements:
 - System requirements generation (Steam-style min/rec/optimal)
 - Resolution impact analysis (future)
 """
+
 from __future__ import annotations
 
 import logging
@@ -581,7 +582,7 @@ class OperationalProfiler:
                 optimal_bs = bs
 
             self.logger.info(
-                f"  Batch {bs}: latency={p50_latency:.2f}ms, " f"throughput={throughput:.1f} inf/s"
+                f"  Batch {bs}: latency={p50_latency:.2f}ms, throughput={throughput:.1f} inf/s"
             )
 
         return BatchSizeSweep(

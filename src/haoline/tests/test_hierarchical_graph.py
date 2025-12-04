@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 """Tests for hierarchical graph view."""
+
 from __future__ import annotations
 
 import json
