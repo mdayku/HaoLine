@@ -1204,17 +1204,26 @@ def main():
 
         # LLM Summary
         st.markdown("### AI Summary")
-        enable_llm = st.checkbox("Generate AI Summary", value=False, help="Requires OpenAI API key")
+        enable_llm = st.checkbox(
+            "Generate AI Summary",
+            value=st.session_state.get("enable_llm", False),
+            help="Requires OpenAI API key",
+            key="enable_llm_checkbox",
+        )
+        # Store in session state for persistence across reruns
+        st.session_state["enable_llm"] = enable_llm
 
-        openai_api_key = None
         if enable_llm:
-            openai_api_key = st.text_input(
+            api_key_input = st.text_input(
                 "OpenAI API Key",
                 type="password",
+                value=st.session_state.get("openai_api_key_value", ""),
                 help="Used once per analysis, never stored",
-                key="openai_api_key",
+                key="openai_api_key_input",
             )
-            if not openai_api_key:
+            # Store in session state
+            st.session_state["openai_api_key_value"] = api_key_input
+            if not api_key_input:
                 st.warning("Enter your OpenAI API key to generate AI summaries.")
             st.caption("For maximum security, run `haoline` locally instead.")
 
@@ -1596,13 +1605,15 @@ def main():
                         )
 
                     # AI Summary (if enabled and API key provided)
-                    if enable_llm and openai_api_key:
+                    llm_enabled = st.session_state.get("enable_llm", False)
+                    llm_api_key = st.session_state.get("openai_api_key_value", "")
+                    if llm_enabled and llm_api_key:
                         st.markdown("### AI Analysis")
                         with st.spinner("Generating AI summary..."):
                             try:
                                 from haoline.llm_summarizer import LLMSummarizer
 
-                                summarizer = LLMSummarizer(api_key=openai_api_key)
+                                summarizer = LLMSummarizer(api_key=llm_api_key)
                                 llm_result = summarizer.summarize(report)
 
                                 if llm_result and llm_result.success:
