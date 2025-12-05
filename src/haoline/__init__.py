@@ -23,7 +23,7 @@ Example usage:
     print(report.to_json())
 """
 
-__version__ = "0.2.5"
+__version__ = "0.2.8"
 
 from .analyzer import MetricsEngine, ONNXGraphLoader
 from .compare_visualizations import (
@@ -103,6 +103,15 @@ from .schema import (
     validate_report,
     validate_report_strict,
 )
+from .universal_ir import (
+    DataType,
+    GraphMetadata,
+    SourceFormat,
+    TensorOrigin,
+    UniversalGraph,
+    UniversalNode,
+    UniversalTensor,
+)
 from .visualizations import (
     THEME,
     ChartTheme,
@@ -112,6 +121,15 @@ from .visualizations import (
 from .visualizations import is_available as is_visualization_available
 
 __all__ = [
+    # Universal IR (Epic 18)
+    "DataType",
+    "GraphMetadata",
+    "SourceFormat",
+    "TensorOrigin",
+    "UniversalGraph",
+    "UniversalNode",
+    "UniversalTensor",
+    # Core
     "HARDWARE_PROFILES",
     "INSPECTION_REPORT_SCHEMA",
     "THEME",
