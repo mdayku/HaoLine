@@ -1630,6 +1630,14 @@ def main():
                     llm_enabled = st.session_state.get("enable_llm", False)
                     llm_api_key = st.session_state.get("openai_api_key_value", "")
 
+                    # DEBUG: Always show LLM status
+                    st.markdown("---")
+                    st.markdown("**LLM Debug Status:**")
+                    st.write(f"- `enable_llm` in session_state: `{llm_enabled}`")
+                    st.write(f"- `openai_api_key_value` length: `{len(llm_api_key) if llm_api_key else 0}`")
+                    st.write(f"- Session state keys: `{list(st.session_state.keys())}`")
+                    st.markdown("---")
+
                     if llm_enabled:
                         st.markdown("### AI Analysis")
 
