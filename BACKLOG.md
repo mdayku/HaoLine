@@ -29,7 +29,7 @@
 | Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| Epic 18: Universal IR | **COMPLETE** | 5 | 19/19 | Done |
+| Epic 18: Universal IR | In Progress | 6 | 19/25 | P1 |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
 | Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
 | Epic 21: TFLite | In Progress | 2 | 5/12 | P2 |
@@ -641,6 +641,21 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [x] **Task 18.5.2**: Graph visualization utility — `to_dot()`, `to_networkx()`, `save_dot()`, `save_png()` methods. Color-coded by op type, max_nodes limit for large graphs, optional clustering. — `src/haoline/universal_ir.py`
 
 - [x] **Task 18.5.3**: CLI integration for graph export — `--export-ir PATH`, `--export-graph PATH` (.dot or .png), `--graph-max-nodes N` flags in cli.py.
+
+### Story 18.6: IR Integration with Main Pipeline
+*Integrate UniversalGraph into InspectionReport and downstream systems.*
+
+- [ ] **Task 18.6.1**: Add `universal_graph: Optional[UniversalGraph]` field to `InspectionReport` dataclass in `report.py`. Update `to_dict()` to serialize it (without weights).
+
+- [ ] **Task 18.6.2**: Populate `UniversalGraph` during `ModelInspector.inspect()` by calling `load_model()` from format_adapters. Make optional via flag to avoid perf impact.
+
+- [ ] **Task 18.6.3**: Add `to_hierarchical()` method to `UniversalGraph` that outputs the same structure as `HierarchicalGraph` for D3.js compatibility.
+
+- [ ] **Task 18.6.4**: Update Streamlit app to show IR summary (`graph.summary()`) when `universal_graph` is available. Add toggle for "IR View".
+
+- [ ] **Task 18.6.5**: Enable IR-based comparison in compare mode — use `is_structurally_equal()` and `diff()` for FP32 vs FP16 analysis.
+
+- [ ] **Task 18.6.6**: Test integration end-to-end: CLI → InspectionReport → Streamlit with UniversalGraph populated.
 
 ---
 
