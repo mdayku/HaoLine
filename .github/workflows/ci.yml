@@ -212,7 +212,7 @@ jobs:
         run: |
           mkdir -p hf_space
 
-          # Create Dockerfile
+          # Create Dockerfile - install from GitHub for latest code
           cat > hf_space/Dockerfile << 'EOF'
           FROM python:3.11-slim
 
@@ -223,7 +223,11 @@ jobs:
               git \
               && rm -rf /var/lib/apt/lists/*
 
+          # Install haoline with web and llm extras from PyPI for dependencies
           RUN pip install --no-cache-dir "haoline[web,llm]>=0.2.4"
+
+          # Copy local streamlit_app.py to override PyPI version (for faster iteration)
+          COPY streamlit_app.py /usr/local/lib/python3.11/site-packages/haoline/streamlit_app.py
 
           COPY app.py .
           COPY .streamlit/config.toml .streamlit/config.toml
@@ -232,6 +236,9 @@ jobs:
 
           CMD ["python", "-m", "streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0", "--server.headless=true", "--server.enableXsrfProtection=false", "--server.enableCORS=false", "--server.maxUploadSize=500"]
           EOF
+
+          # Copy the latest streamlit_app.py from repo
+          cp src/haoline/streamlit_app.py hf_space/streamlit_app.py
 
           # Create app.py
           cat > hf_space/app.py << 'EOF'
