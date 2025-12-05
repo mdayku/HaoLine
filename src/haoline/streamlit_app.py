@@ -1156,10 +1156,16 @@ def main():
         st.markdown("### AI Summary")
         enable_llm = st.checkbox("Generate AI Summary", value=False, help="Requires OpenAI API key")
 
+        openai_api_key = None
         if enable_llm:
-            st.text_input(
-                "OpenAI API Key", type="password", help="Used once per analysis, never stored"
+            openai_api_key = st.text_input(
+                "OpenAI API Key",
+                type="password",
+                help="Used once per analysis, never stored",
+                key="openai_api_key",
             )
+            if not openai_api_key:
+                st.warning("Enter your OpenAI API key to generate AI summaries.")
             st.caption("For maximum security, run `haoline` locally instead.")
 
         # Privacy notice
@@ -1538,6 +1544,47 @@ def main():
                         | **Model Size** | {format_bytes(model_size)} |
                         """
                         )
+
+                    # AI Summary (if enabled and API key provided)
+                    if enable_llm and openai_api_key:
+                        st.markdown("### AI Analysis")
+                        with st.spinner("Generating AI summary..."):
+                            try:
+                                from haoline.llm_summarizer import LLMSummarizer
+
+                                summarizer = LLMSummarizer(api_key=openai_api_key)
+                                llm_result = summarizer.summarize(report)
+
+                                if llm_result and llm_result.summary:
+                                    st.markdown(
+                                        f"""<div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+                                        border-left: 4px solid #10b981; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                                        <p style="font-weight: 600; color: #10b981; margin-bottom: 0.5rem;">AI Summary</p>
+                                        <p style="color: #e5e5e5; line-height: 1.6;">{llm_result.summary}</p>
+                                        </div>""",
+                                        unsafe_allow_html=True,
+                                    )
+
+                                    # Show recommendations if available
+                                    if llm_result.recommendations:
+                                        with st.expander("Recommendations", expanded=True):
+                                            for rec in llm_result.recommendations:
+                                                st.markdown(f"- {rec}")
+
+                                    # Show key findings if available
+                                    if llm_result.key_findings:
+                                        with st.expander("Key Findings"):
+                                            for finding in llm_result.key_findings:
+                                                st.markdown(f"- {finding}")
+                                else:
+                                    st.warning("AI summary generation returned empty result.")
+
+                            except ImportError:
+                                st.error(
+                                    "LLM module not available. Install with: `pip install haoline[llm]`"
+                                )
+                            except Exception as e:
+                                st.error(f"AI summary generation failed: {e}")
 
                     # Operator distribution
                     if report.graph_summary.op_type_counts:
