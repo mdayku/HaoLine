@@ -223,7 +223,7 @@ jobs:
               git \
               && rm -rf /var/lib/apt/lists/*
 
-          RUN pip install --no-cache-dir "haoline[web]>=0.2.4"
+          RUN pip install --no-cache-dir "haoline[web,llm]>=0.2.4"
 
           COPY app.py .
           COPY .streamlit/config.toml .streamlit/config.toml
