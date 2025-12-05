@@ -556,7 +556,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [x] **Task 12.5.1**: Multi-model comparison table - `comparison.py`: `compare_models()`, CSV/JSON/MD export
 - [ ] **Task 12.5.2**: Accuracy vs Speed scatter plot (Pareto frontier) — *defer*
 - [ ] **Task 12.5.3**: Per-class metric comparison (radar chart or grouped bars) — *defer*
-- [ ] **Task 12.5.4**: Add eval metrics to existing HTML/PDF reports — **PRIORITY**
+- [x] **Task 12.5.4**: Add eval metrics to HTML/PDF - `generate_eval_metrics_html()`, updated `to_html()`
 - [x] **Task 12.5.5**: Export comparison as CSV/JSON - `to_csv()`, `to_json()`, `to_markdown()`
 
 ### Story 12.7: YOLO Quantization Demo (Reference Implementation)
