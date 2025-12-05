@@ -78,3 +78,36 @@ ruff format src/haoline/; ruff check src/haoline/ --fix; mypy src/haoline/
 - Eval import: `src/haoline/eval/`
 - Docs: `README.md`, `PRD.md`, `BACKLOG.md`, `Architecture.md`, `DEPLOYMENT.md`, `PRIVACY.md`
 
+## Version Compatibility (IMPORTANT)
+
+**HuggingFace Spaces Deployment:**
+- `streamlit_app.py` is copied directly from GitHub to HF Spaces
+- BUT `haoline` package is installed from PyPI (may be older version)
+- This means `streamlit_app.py` code may run against older `InspectionReport`, etc.
+
+**Rule:** When accessing NEW attributes on core classes in `streamlit_app.py`:
+```python
+# BAD - will crash if attribute doesn't exist in PyPI version:
+if report.universal_graph:
+    ...
+
+# GOOD - safe access with fallback:
+if hasattr(report, "universal_graph") and report.universal_graph:
+    ...
+
+# Or:
+universal_graph = getattr(report, "universal_graph", None)
+if universal_graph:
+    ...
+```
+
+**Core classes that may have version mismatches:**
+- `InspectionReport`
+- `ModelMetadata`
+- `GraphSummary`
+- Any dataclass in `report.py`, `schema.py`
+
+**When to use safe access:**
+- In `streamlit_app.py` for any attribute added after v0.2.4
+- When the attribute was added in a commit but not yet published to PyPI
+
