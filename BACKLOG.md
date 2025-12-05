@@ -29,7 +29,7 @@
 | Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| Epic 18: Universal IR | In Progress | 5 | 5/19 | P1 |
+| Epic 18: Universal IR | In Progress | 5 | 10/19 | P1 |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
 | Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
 | Epic 21: TFLite | In Progress | 2 | 5/12 | P2 |
@@ -602,18 +602,18 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 - [x] **Task 18.1.5**: Document IR design decisions in Architecture.md — Explain UniversalGraph/Node/Tensor interaction, design rationale (citing OpenVINO IR, TVM Relay), how IR enables format-agnostic analysis, JSON serialization approach, and extensibility for new ops/formats. — **Section 7 in Architecture.md**
 
-### Story 18.2: Format Adapter Interface
+### Story 18.2: Format Adapter Interface - **COMPLETE**
 *Plugin system for model format readers/writers.*
 
-- [ ] **Task 18.2.1**: Define `FormatAdapter` protocol — Abstract interface with methods: `can_read(path) -> bool`, `read(path) -> UniversalGraph`, `can_write(format) -> bool`, `write(path, graph) -> None`. Standardizes how new formats are plugged in.
+- [x] **Task 18.2.1**: Define `FormatAdapter` protocol — Abstract interface with methods: `can_read(path) -> bool`, `read(path) -> UniversalGraph`, `can_write(format) -> bool`, `write(path, graph) -> None`. — `src/haoline/format_adapters.py`
 
-- [ ] **Task 18.2.2**: Implement adapter registry and auto-detection — Mapping of file extension (or magic numbers) to FormatAdapter class. Factory function in ModelInspector to auto-detect format. Extensible for future adapters. Handle ambiguous cases with clear errors.
+- [x] **Task 18.2.2**: Implement adapter registry and auto-detection — Mapping of file extension to FormatAdapter class. `get_adapter()`, `list_adapters()`, `@register_adapter` decorator. — `src/haoline/format_adapters.py`
 
-- [ ] **Task 18.2.3**: Refactor ONNX loader into `OnnxFormatAdapter` — Implement the interface using onnx Python API. `read()` constructs UniversalGraph from ONNX nodes/initializers. Capture ONNX-specific attributes in IR. Update ModelInspector to use adapter registry. Verify existing analysis (param counting, FLOPs) works with IR.
+- [x] **Task 18.2.3**: Refactor ONNX loader into `OnnxFormatAdapter` — Implements read/write using onnx Python API. Maps ONNX ops to Universal ops. Supports full round-trip. — `OnnxAdapter` class
 
-- [ ] **Task 18.2.4**: Refactor PyTorch loader into `PyTorchFormatAdapter` — Handle .pt/.pth files via the interface. Initial approach: internally use torch.onnx.export → OnnxAdapter (reuse Epic 4B conversion). Collect PyTorch-specific metadata (class names, input shapes). Future: direct FX tracing.
+- [x] **Task 18.2.4**: Refactor PyTorch loader into `PyTorchFormatAdapter` — Handles .pt/.pth via ONNX export. Supports Ultralytics YOLO models and state_dicts. — `PyTorchAdapter` class
 
-- [ ] **Task 18.2.5**: Unit tests for adapter selection and loading — Test ONNX adapter returns valid UniversalGraph with correct node count. Test PyTorch adapter (with small model). Test unsupported format yields informative error. Verify registry extensibility.
+- [x] **Task 18.2.5**: Unit tests for adapter selection and loading — 33 tests covering registry, adapters, op mapping, graph creation, comparison, diff, serialization. — `src/haoline/tests/test_format_adapters.py`
 
 ### Story 18.3: Conversion Matrix
 *Track and expose conversion capabilities between formats.*
