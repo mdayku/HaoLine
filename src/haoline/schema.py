@@ -484,7 +484,8 @@ def get_schema() -> dict[str, Any]:
     Otherwise, returns the manually-defined schema.
     """
     if PYDANTIC_AVAILABLE:
-        return HaolineInspectionReport.model_json_schema()
+        schema: dict[str, Any] = HaolineInspectionReport.model_json_schema()
+        return schema
     return INSPECTION_REPORT_SCHEMA.copy()
 
 
@@ -510,7 +511,8 @@ def validate_with_pydantic(report_dict: dict[str, Any]) -> HaolineInspectionRepo
         return None
 
     try:
-        return HaolineInspectionReport.model_validate(report_dict)
+        result: HaolineInspectionReport = HaolineInspectionReport.model_validate(report_dict)
+        return result
     except PydanticValidationError as e:
         error_messages = [
             f"{' -> '.join(str(x) for x in err['loc'])}: {err['msg']}" for err in e.errors()

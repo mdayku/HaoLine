@@ -218,7 +218,8 @@ def import_from_json(path: Path) -> EvalResult | None:
             print(f"Error: Invalid eval result schema in {path}")
             return None
 
-        return EvalResult.model_validate(data)
+        validated: EvalResult = EvalResult.model_validate(data)
+        return validated
     except Exception as e:
         print(f"Error reading {path}: {e}")
         return None

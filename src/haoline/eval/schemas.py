@@ -80,12 +80,14 @@ class EvalResult(BaseModel):
 
     def to_json(self, indent: int = 2) -> str:
         """Serialize to JSON string."""
-        return self.model_dump_json(indent=indent)
+        result: str = self.model_dump_json(indent=indent)
+        return result
 
     @classmethod
     def from_json(cls, json_str: str) -> EvalResult:
         """Deserialize from JSON string."""
-        return cls.model_validate_json(json_str)
+        result: EvalResult = cls.model_validate_json(json_str)
+        return result
 
 
 # =============================================================================
@@ -567,7 +569,8 @@ class CombinedReport(BaseModel):
 
     def to_json(self, indent: int = 2) -> str:
         """Serialize to JSON string."""
-        return self.model_dump_json(indent=indent)
+        result: str = self.model_dump_json(indent=indent)
+        return result
 
     @classmethod
     def from_inspection_report(
@@ -802,12 +805,14 @@ def create_combined_report(
 
 def get_eval_schema() -> dict[str, Any]:
     """Get JSON Schema for EvalResult."""
-    return EvalResult.model_json_schema()
+    schema: dict[str, Any] = EvalResult.model_json_schema()
+    return schema
 
 
 def get_combined_report_schema() -> dict[str, Any]:
     """Get JSON Schema for CombinedReport."""
-    return CombinedReport.model_json_schema()
+    schema: dict[str, Any] = CombinedReport.model_json_schema()
+    return schema
 
 
 def validate_eval_result(data: dict[str, Any]) -> bool:
