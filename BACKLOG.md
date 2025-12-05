@@ -29,7 +29,7 @@
 | Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| Epic 18: Universal IR | Not Started | 3 | 0/12 | P1 |
+| Epic 18: Universal IR | Not Started | 5 | 0/19 | P1 |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
 | Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
 | Epic 21: TFLite | In Progress | 2 | 5/12 | P2 |
@@ -587,23 +587,60 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 *Foundation for format-agnostic analysis. Must be built before other format adapters.*
 
+**Inspiration:** OpenVINO IR (graph+weights separation), TVM Relay, MLIR typed IR patterns.
+
 ### Story 18.1: Universal Graph IR
-- [ ] **Task 18.1.1**: Design `UniversalGraph` dataclass (nodes, edges, weights, metadata)
-- [ ] **Task 18.1.2**: Design `UniversalNode` with op-type abstraction (not tied to ONNX ops)
-- [ ] **Task 18.1.3**: Design `UniversalTensor` for weights/activations
-- [ ] **Task 18.1.4**: Add source_format tracking and round-trip metadata
-- [ ] **Task 18.1.5**: Document IR design decisions in Architecture.md
+*Core data structures for backend-neutral model representation.*
+
+- [ ] **Task 18.1.1**: Design `UniversalGraph` dataclass — Container for entire model graph. Fields: `nodes` (list of UniversalNode), `edges` (connections or inferred from node I/O), `tensors` (dict of weight name → UniversalTensor), `metadata` (model name, inputs/outputs, source info). Use Pydantic BaseModel for validation and serialization.
+
+- [ ] **Task 18.1.2**: Design `UniversalNode` abstraction — Represents a single operation. Fields: `id` (unique name), `op_type` (high-level category like "Conv2D", "Relu", "MatMul" — NOT tied to ONNX names), `inputs` (list of tensor names), `outputs` (list of tensor names), `attributes` (dict for op-specific params), `dtype` (precision), `output_shapes`. Design for cross-format compatibility.
+
+- [ ] **Task 18.1.3**: Design `UniversalTensor` class — Represents weights/activations. Fields: `name`, `shape`, `dtype` (fp32/fp16/int8), `origin` (WEIGHT/INPUT/ACTIVATION), `data` (lazy-load for large tensors or reference). Edges between nodes are abstracted via tensor names.
+
+- [ ] **Task 18.1.4**: Add source format tracking and round-trip info — Fields like `source_format` ("ONNX", "PyTorch", etc.), original opset/version, per-node metadata for round-trip conversion (original op name/domain, PyTorch module names). Ensures we don't lose info needed for export.
+
+- [ ] **Task 18.1.5**: Document IR design decisions in Architecture.md — Explain UniversalGraph/Node/Tensor interaction, design rationale (citing OpenVINO IR, TVM Relay), how IR enables format-agnostic analysis, JSON serialization approach, and extensibility for new ops/formats.
 
 ### Story 18.2: Format Adapter Interface
-- [ ] **Task 18.2.1**: Define `FormatAdapter` protocol (can_read, read, can_write, write)
-- [ ] **Task 18.2.2**: Implement adapter registry and auto-detection by file extension
-- [ ] **Task 18.2.3**: Refactor ONNX loader to use FormatAdapter interface
-- [ ] **Task 18.2.4**: Refactor PyTorch loader to use FormatAdapter interface
+*Plugin system for model format readers/writers.*
+
+- [ ] **Task 18.2.1**: Define `FormatAdapter` protocol — Abstract interface with methods: `can_read(path) -> bool`, `read(path) -> UniversalGraph`, `can_write(format) -> bool`, `write(path, graph) -> None`. Standardizes how new formats are plugged in.
+
+- [ ] **Task 18.2.2**: Implement adapter registry and auto-detection — Mapping of file extension (or magic numbers) to FormatAdapter class. Factory function in ModelInspector to auto-detect format. Extensible for future adapters. Handle ambiguous cases with clear errors.
+
+- [ ] **Task 18.2.3**: Refactor ONNX loader into `OnnxFormatAdapter` — Implement the interface using onnx Python API. `read()` constructs UniversalGraph from ONNX nodes/initializers. Capture ONNX-specific attributes in IR. Update ModelInspector to use adapter registry. Verify existing analysis (param counting, FLOPs) works with IR.
+
+- [ ] **Task 18.2.4**: Refactor PyTorch loader into `PyTorchFormatAdapter` — Handle .pt/.pth files via the interface. Initial approach: internally use torch.onnx.export → OnnxAdapter (reuse Epic 4B conversion). Collect PyTorch-specific metadata (class names, input shapes). Future: direct FX tracing.
+
+- [ ] **Task 18.2.5**: Unit tests for adapter selection and loading — Test ONNX adapter returns valid UniversalGraph with correct node count. Test PyTorch adapter (with small model). Test unsupported format yields informative error. Verify registry extensibility.
 
 ### Story 18.3: Conversion Matrix
-- [ ] **Task 18.3.1**: Define conversion capability enum (FULL, LOSSY, PARTIAL, NONE)
-- [ ] **Task 18.3.2**: Implement conversion matrix lookup
-- [ ] **Task 18.3.3**: Add CLI flag `--convert-to <format>` for format conversion
+*Track and expose conversion capabilities between formats.*
+
+- [ ] **Task 18.3.1**: Define conversion capability enum — `ConversionLevel.FULL` (lossless), `PARTIAL` (limitations or multi-step), `LOSSY` (info loss), `NONE` (no path). Document what each level means.
+
+- [ ] **Task 18.3.2**: Implement conversion matrix lookup — Table mapping (source_format, target_format) → ConversionLevel. Initial entries: ONNX→TensorRT (FULL/PARTIAL), ONNX→TFLite (FULL), ONNX→CoreML (FULL), PyTorch→ONNX (FULL), PyTorch→TFLite (PARTIAL, via ONNX). Mark multi-hop conversions.
+
+- [ ] **Task 18.3.3**: Add `--convert-to <format>` CLI flag — Invoke target adapter's `write()` with UniversalGraph. Handle PyTorch→CoreML via ONNX intermediate. Clear error if matrix says NONE. Future: add format-specific params (FP16 for TRT, image inputs for CoreML).
+
+### Story 18.4: IR Structural Comparison Tools
+*Compare model architectures at the IR level.*
+
+- [ ] **Task 18.4.1**: Implement graph structure equality check — `UniversalGraph.compare_structure(other) -> bool`. Returns True if same nodes, connections, arrangement. Ignores weight values and precision differences. FP32 vs FP16 = structurally equal. Basis for optimization verification.
+
+- [ ] **Task 18.4.2**: Implement detailed IR diff reporting — Generate structured diff: nodes present in one graph not other, mismatched attributes, dtype/shape differences for corresponding nodes. Output as dict/JSON. Example: FP32→FP16 diff lists all nodes with precision change. Integrate with compare CLI.
+
+- [ ] **Task 18.4.3**: Validate with variant models — Test with FP32 vs FP16 pair (structure equal, diff shows dtype changes). Test with pruned model (diff flags missing nodes). Test ONNX vs TensorRT engine comparison. Groundwork for Epic 22's ONNX↔TRT diff view.
+
+### Story 18.5: IR Serialization & Visualization
+*Export IR for debugging and visualization.*
+
+- [ ] **Task 18.5.1**: IR to JSON serialization — `UniversalGraph.to_dict()` / `to_json()` traversing nodes/tensors. Include: node list with op_types/attributes, connectivity, tensor metadata (shapes, dtypes), global metadata. Human-readable schema. Use Pydantic `.model_dump()` for easy serialization.
+
+- [ ] **Task 18.5.2**: Graph visualization utility — Export UniversalGraph to Graphviz DOT or NetworkX. Nodes labeled with op_type/name, edges follow connectivity. Handle large graphs (20k+ nodes) with clustering or filtering. Render to image or interactive plot.
+
+- [ ] **Task 18.5.3**: CLI integration for graph export — `--export-graph graph.dot` or `--export-graph graph.png`. Invoke visualization utility. Document in help and README.
 
 ---
 
