@@ -393,6 +393,112 @@ def compare_models(
     return table
 
 
+def generate_eval_metrics_html(
+    eval_results: list[Any],  # List of EvalResult
+    cost_estimate: DeploymentCostEstimate | None = None,
+) -> str:
+    """
+    Generate HTML section for eval metrics to embed in reports.
+
+    Args:
+        eval_results: List of EvalResult objects.
+        cost_estimate: Optional deployment cost estimate.
+
+    Returns:
+        HTML string for the eval metrics section.
+    """
+    if not eval_results and not cost_estimate:
+        return ""
+
+    html_parts = ['<section class="eval-metrics">']
+    html_parts.append("<h2>Evaluation Metrics</h2>")
+
+    # Metrics cards
+    if eval_results:
+        html_parts.append('<div class="metrics-cards">')
+        for result in eval_results:
+            if not result.metrics:
+                continue
+
+            # Find primary metric (first accuracy-type metric)
+            primary = None
+            for m in result.metrics:
+                if m.higher_is_better and m.category in ("accuracy", ""):
+                    primary = m
+                    break
+            if not primary and result.metrics:
+                primary = result.metrics[0]
+
+            if primary:
+                html_parts.append(
+                    f"""
+                <div class="card">
+                    <div class="card-value">{primary.value:.1f}{primary.unit}</div>
+                    <div class="card-label">{primary.name}</div>
+                </div>
+                """
+                )
+
+            # Show task type
+            html_parts.append(
+                f"""
+            <div class="card">
+                <div class="card-value">{result.task_type}</div>
+                <div class="card-label">Task Type</div>
+            </div>
+            """
+            )
+        html_parts.append("</div>")
+
+        # Detailed metrics table
+        html_parts.append("<h3>All Metrics</h3>")
+        html_parts.append("<table>")
+        html_parts.append("<tr><th>Metric</th><th>Value</th><th>Category</th></tr>")
+        for result in eval_results:
+            for m in result.metrics:
+                arrow = "↑" if m.higher_is_better else "↓"
+                html_parts.append(
+                    f"<tr><td>{m.name} {arrow}</td><td>{m.value:.4f}{m.unit}</td>"
+                    f"<td>{m.category}</td></tr>"
+                )
+        html_parts.append("</table>")
+
+    # Deployment cost section
+    if cost_estimate:
+        html_parts.append("<h3>Deployment Cost Estimate</h3>")
+        html_parts.append('<div class="metrics-cards">')
+        html_parts.append(
+            f"""
+        <div class="card">
+            <div class="card-value">${cost_estimate.cost_per_month_usd:.0f}</div>
+            <div class="card-label">$/Month</div>
+        </div>
+        <div class="card">
+            <div class="card-value">${cost_estimate.cost_per_1k_inferences_usd:.4f}</div>
+            <div class="card-label">$/1K Inferences</div>
+        </div>
+        <div class="card">
+            <div class="card-value">{cost_estimate.hardware_tier.name}</div>
+            <div class="card-label">Hardware</div>
+        </div>
+        <div class="card">
+            <div class="card-value">{cost_estimate.estimated_latency_ms:.1f}ms</div>
+            <div class="card-label">Latency</div>
+        </div>
+        """
+        )
+        html_parts.append("</div>")
+
+        if cost_estimate.warnings:
+            html_parts.append('<div class="warnings">')
+            for warning in cost_estimate.warnings:
+                html_parts.append(f"<p>⚠️ {warning}</p>")
+            html_parts.append("</div>")
+
+    html_parts.append("</section>")
+    return "\n".join(html_parts)
+
+
 def compare_models_from_paths(
     model_paths: list[str | Path],
     eval_paths: list[str | Path] | None = None,

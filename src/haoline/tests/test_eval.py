@@ -12,6 +12,7 @@ from haoline.eval.comparison import (
     ModelComparisonRow,
     ModelComparisonTable,
     compare_models,
+    generate_eval_metrics_html,
 )
 from haoline.eval.deployment import (
     HARDWARE_TIERS,
@@ -562,3 +563,44 @@ class TestModelComparison:
 
         assert "Console Test" in console_output
         assert "console_test" in console_output
+
+    def test_generate_eval_metrics_html(self) -> None:
+        """Test HTML generation for eval metrics."""
+        eval_result = EvalResult(
+            model_id="test",
+            task_type="classification",
+            metrics=[
+                EvalMetric(
+                    name="accuracy",
+                    value=95.5,
+                    unit="%",
+                    higher_is_better=True,
+                    category="accuracy",
+                ),
+                EvalMetric(
+                    name="f1",
+                    value=0.93,
+                    unit="",
+                    higher_is_better=True,
+                    category="accuracy",
+                ),
+            ],
+        )
+
+        html = generate_eval_metrics_html([eval_result])
+
+        assert '<section class="eval-metrics">' in html
+        assert "accuracy" in html
+        assert "95.5%" in html
+        assert "classification" in html
+
+    def test_generate_eval_metrics_html_with_cost(self) -> None:
+        """Test HTML generation includes cost estimate."""
+        scenario = DeploymentScenario(target_fps=30.0)
+        cost_estimate = calculate_deployment_cost(1_000_000_000, scenario)
+
+        html = generate_eval_metrics_html([], cost_estimate)
+
+        assert "Deployment Cost Estimate" in html
+        assert "$/Month" in html
+        assert cost_estimate.hardware_tier.name in html
