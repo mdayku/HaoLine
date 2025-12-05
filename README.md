@@ -86,7 +86,9 @@ This generates `report.html` containing:
 
 ## Web Interface
 
-Launch the HaoLine web UI with a single command:
+**Try it now:** [huggingface.co/spaces/mdayku/haoline](https://huggingface.co/spaces/mdayku/haoline) — no installation required!
+
+Or run locally with a single command:
 
 ```bash
 pip install haoline[web]
@@ -95,7 +97,7 @@ haoline-web
 
 This opens an interactive dashboard at `http://localhost:8501` with:
 
-> **Want to deploy publicly?** See [DEPLOYMENT.md](DEPLOYMENT.md) for HuggingFace Spaces, Streamlit Cloud, Docker, and self-hosted options.
+> **Want to deploy your own?** See [DEPLOYMENT.md](DEPLOYMENT.md) for HuggingFace Spaces, Docker, and self-hosted options.
 - Drag-and-drop model upload (ONNX, PyTorch)
 - Hardware selection with 50+ GPU profiles (searchable)
 - Full interactive D3.js neural network graph

@@ -3,6 +3,8 @@
 
 """
 Unit tests for the schema module (JSON schema validation).
+
+Tests cover both Pydantic validation (preferred) and jsonschema fallback.
 """
 
 from __future__ import annotations
@@ -19,13 +21,15 @@ from onnx import TensorProto, helper
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from ..report import ModelInspector
 from ..schema import (
+    PYDANTIC_AVAILABLE,
     ValidationError,
     get_schema,
     validate_report,
     validate_report_strict,
+    validate_with_pydantic,
 )
 
-# Check if jsonschema is available
+# Check if jsonschema is available (fallback)
 try:
     from jsonschema import Draft7Validator  # noqa: F401
 
@@ -100,9 +104,12 @@ class TestSchemaDefinition:
             assert section in props, f"Missing schema section: {section}"
 
 
-@pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema not installed")
+@pytest.mark.skipif(
+    not PYDANTIC_AVAILABLE and not JSONSCHEMA_AVAILABLE,
+    reason="Neither pydantic nor jsonschema installed",
+)
 class TestSchemaValidation:
-    """Tests for JSON schema validation (requires jsonschema)."""
+    """Tests for schema validation (Pydantic preferred, jsonschema fallback)."""
 
     def test_valid_report_passes_validation(self):
         """A properly generated report should pass validation."""
@@ -246,6 +253,154 @@ class TestSchemaValidation:
         is_valid, errors = validate_report(valid_report)
         assert not is_valid
         assert any("severity" in e for e in errors)
+
+
+@pytest.mark.skipif(not PYDANTIC_AVAILABLE, reason="pydantic not installed")
+class TestPydanticValidation:
+    """Tests specific to Pydantic validation."""
+
+    def test_validate_with_pydantic_returns_model(self):
+        """validate_with_pydantic should return a Pydantic model instance."""
+        model = create_simple_model()
+
+        with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as f:
+            onnx.save(model, f.name)
+            model_path = Path(f.name)
+
+        try:
+            inspector = ModelInspector()
+            report = inspector.inspect(model_path)
+            report_dict = report.to_dict()
+
+            pydantic_model = validate_with_pydantic(report_dict)
+            assert pydantic_model is not None
+            assert hasattr(pydantic_model, "metadata")
+            assert hasattr(pydantic_model, "generated_at")
+            assert hasattr(pydantic_model, "autodoc_version")
+        finally:
+            model_path.unlink()
+
+    def test_validate_with_pydantic_invalid_raises(self):
+        """validate_with_pydantic should raise ValidationError on invalid input."""
+        invalid_report = {"not_valid": True}
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_with_pydantic(invalid_report)
+
+        assert len(exc_info.value.errors) > 0
+
+    def test_pydantic_model_has_correct_types(self):
+        """Pydantic model should have correct field types after parsing."""
+        model = create_simple_model()
+
+        with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as f:
+            onnx.save(model, f.name)
+            model_path = Path(f.name)
+
+        try:
+            inspector = ModelInspector()
+            report = inspector.inspect(model_path)
+            report_dict = report.to_dict()
+
+            pydantic_model = validate_with_pydantic(report_dict)
+            assert pydantic_model is not None
+
+            # Check metadata structure
+            assert pydantic_model.metadata is not None
+            assert isinstance(pydantic_model.metadata.path, str)
+            assert isinstance(pydantic_model.metadata.ir_version, int)
+
+            # Check autodoc_version is a string
+            assert isinstance(pydantic_model.autodoc_version, str)
+        finally:
+            model_path.unlink()
+
+    def test_pydantic_schema_matches_structure(self):
+        """Pydantic-generated schema should have expected structure."""
+        schema = get_schema()
+
+        # Pydantic schema should have these elements
+        assert "properties" in schema
+        assert "required" in schema
+
+        # Check key properties exist
+        props = schema["properties"]
+        assert "metadata" in props
+        assert "generated_at" in props
+        assert "autodoc_version" in props
+
+    def test_pydantic_validation_error_messages_are_readable(self):
+        """Pydantic validation errors should be human-readable."""
+        invalid_report = {
+            "metadata": {
+                "path": "/test/model.onnx",
+                "ir_version": "invalid",  # Should be int
+                "producer_name": "test",
+                "opsets": {"": 17},
+            },
+            "generated_at": "2025-01-01T00:00:00Z",
+            "autodoc_version": "0.1.0",
+        }
+
+        is_valid, errors = validate_report(invalid_report)
+        assert not is_valid
+        assert len(errors) > 0
+        # Error message should contain the field path
+        error_str = " ".join(errors)
+        assert "ir_version" in error_str.lower()
+
+    def test_pydantic_validates_nested_objects(self):
+        """Pydantic should validate nested objects correctly."""
+        # Valid nested structure
+        valid_report = {
+            "metadata": {
+                "path": "/test/model.onnx",
+                "ir_version": 9,
+                "producer_name": "test",
+                "producer_version": "",
+                "domain": "",
+                "model_version": 0,
+                "doc_string": "",
+                "opsets": {"": 17},
+            },
+            "generated_at": "2025-01-01T00:00:00Z",
+            "autodoc_version": "0.1.0",
+            "param_counts": {
+                "total": 1000,
+                "trainable": 1000,
+                "non_trainable": 0,
+                "by_op_type": {"Conv": 500, "MatMul": 500},
+            },
+        }
+
+        is_valid, errors = validate_report(valid_report)
+        assert is_valid, f"Validation failed: {errors}"
+
+    def test_pydantic_rejects_wrong_nested_types(self):
+        """Pydantic should reject wrong types in nested objects."""
+        invalid_report = {
+            "metadata": {
+                "path": "/test/model.onnx",
+                "ir_version": 9,
+                "producer_name": "test",
+                "producer_version": "",
+                "domain": "",
+                "model_version": 0,
+                "doc_string": "",
+                "opsets": {"": 17},
+            },
+            "generated_at": "2025-01-01T00:00:00Z",
+            "autodoc_version": "0.1.0",
+            "param_counts": {
+                "total": "not_a_number",  # Should be int
+                "trainable": 1000,
+            },
+        }
+
+        is_valid, errors = validate_report(invalid_report)
+        assert not is_valid
+        error_str = " ".join(errors)
+        assert "total" in error_str.lower() or "param_counts" in error_str.lower()
 
 
 class TestSchemaWithoutJsonschema:

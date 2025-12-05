@@ -26,7 +26,7 @@
 | Epic 9: Runtime Profiling | **COMPLETE** | 6 | 22/22 | P2 |
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
-| Epic 11: Streamlit Web UI | In Progress | 3 | 16/17 | P0 |
+| Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
 | Epic 12: Eval Import & Comparison | In Progress | 7 | 13/36 | P1 |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | Not Started | 3 | 0/12 | P1 |
@@ -48,7 +48,8 @@
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
 | Epic 33: QAT Linters | Not Started | 4 | 0/22 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
-| Epic 39: Pydantic Schema Migration | In Progress | 2 | 10/12 | P1 |
+| Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
+| Epic 40: Full Pydantic Dataclass Migration | Not Started | 4 | 0/20 | P2 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | P3 |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
@@ -473,16 +474,16 @@
 - [x] **Task 11.2.9**: Add session history (stores last 10 analyses, quick re-select)
 - ~~**Task 11.2.10**: Responsive layout for mobile~~ **CANCELLED** (not targeting mobile users)
 
-### Story 11.3: Deployment
-- [ ] **Task 11.3.1**: Deploy to Hugging Face Spaces (free, GPU available)
-  - [ ] **11.3.1a**: Create HF Space at huggingface.co/new-space (SDK: Streamlit)
-  - [ ] **11.3.1b**: Get HF token from huggingface.co/settings/tokens (write access)
-  - [ ] **11.3.1c**: Add `HF_TOKEN` secret in GitHub repo settings
-  - [ ] **11.3.1d**: Update `HF_SPACE_NAME` in `.github/workflows/deploy-hf-spaces.yml`
-  - [ ] **11.3.1e**: Trigger workflow and verify deployment works
+### Story 11.3: Deployment - **COMPLETE**
+- [x] **Task 11.3.1**: Deploy to Hugging Face Spaces - Live at [huggingface.co/spaces/mdayku/haoline](https://huggingface.co/spaces/mdayku/haoline)
+  - [x] **11.3.1a**: Create HF Space (Docker SDK)
+  - [x] **11.3.1b**: Configure HF token with write access
+  - [x] **11.3.1c**: Add `HF_TOKEN` secret in GitHub repo settings
+  - [x] **11.3.1d**: Configure workflow in `.github/workflows/ci.yml`
+  - [x] **11.3.1e**: Verified deployment works (dark theme, file upload, graph rendering)
 - [x] **Task 11.3.2**: ~~Add Streamlit Cloud deployment option~~ **CANCELLED** - HuggingFace Spaces is sufficient
 - [x] **Task 11.3.3**: Create deployment documentation - see [DEPLOYMENT.md](DEPLOYMENT.md)
-- [x] **Task 11.3.4**: Set up CI/CD for auto-deploy on push - `.github/workflows/deploy-hf-spaces.yml`
+- [x] **Task 11.3.4**: Set up CI/CD for auto-deploy on push - integrated into `.github/workflows/ci.yml`
 
 ---
 
@@ -1238,7 +1239,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 ---
 
-## Epic 39: Pydantic Schema Migration (P1)
+## Epic 39: Pydantic Schema Migration - **COMPLETE**
 
 *Replace manual JSON Schema with Pydantic models for better validation, type safety, and maintainability.*
 
@@ -1246,22 +1247,70 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 **Approach:** Used `datamodel-code-generator` to auto-generate Pydantic models from the existing JSON Schema, then integrated them into the validation flow. The original dataclasses remain for backwards compatibility; Pydantic models are used for validation.
 
-### Story 39.1: Core Model Migration
+### Story 39.1: Core Model Migration - **COMPLETE**
 - [x] **Task 39.1.1**: Add `pydantic>=2.0` to core dependencies
 - [x] **Task 39.1.2**: Auto-generate Pydantic models from JSON Schema using `datamodel-code-generator`
 - [x] **Task 39.1.3**: Fix Pydantic v2 compatibility (`regex=` → `pattern=`)
-- [ ] **Task 39.1.4**: (Future) Replace dataclasses with Pydantic models directly
-- [ ] **Task 39.1.5**: (Future) Update `to_dict()` / `to_json()` to use Pydantic methods
+- *Tasks 39.1.4-39.1.5 moved to Epic 40 (Full Pydantic Migration)*
 
-### Story 39.2: Schema Cleanup
+### Story 39.2: Schema Cleanup - **COMPLETE**
 - [x] **Task 39.2.1**: Update `validate_report()` to use Pydantic validation (with jsonschema fallback)
 - [x] **Task 39.2.2**: Update `get_schema()` to return Pydantic-generated schema
 - [x] **Task 39.2.3**: Add `validate_with_pydantic()` for direct model access
 - [x] **Task 39.2.4**: Export schema for external consumers (`haoline --schema`)
-- [ ] **Task 39.2.5**: Update tests to use Pydantic validation
+- [x] **Task 39.2.5**: Update tests to use Pydantic validation (added `TestPydanticValidation` test class)
 
-### Story 39.3: Eval Schema Migration
+### Story 39.3: Eval Schema Migration - **COMPLETE**
 - [x] **Task 39.3.1**: Convert `EvalMetric` to Pydantic model
 - [x] **Task 39.3.2**: Convert `EvalResult` and task-specific variants to Pydantic
 - [x] **Task 39.3.3**: Convert `CombinedReport` to Pydantic model
 - [x] **Task 39.3.4**: Adapters work with Pydantic models (no changes needed)
+
+---
+
+## Epic 40: Full Pydantic Dataclass Migration (P2)
+
+*Complete migration from Python dataclasses to Pydantic BaseModel across the entire codebase.*
+
+**Why:** Epic 39 established Pydantic for validation, but the actual data structures remain as dataclasses. Full migration enables:
+- Automatic JSON serialization via `model_dump()` / `model_dump_json()`
+- Built-in validation on construction
+- Better IDE autocomplete and type inference
+- Field validators and computed properties
+- Immutability options
+
+**Scope:** 12+ dataclasses across 5 modules:
+- `report.py`: `ModelMetadata`, `GraphSummary`, `DatasetInfo`, `InspectionReport`
+- `analyzer.py`: `ParamCounts`, `FlopCounts`, `MemoryEstimates`
+- `hardware.py`: `HardwareProfile`, `HardwareEstimates`
+- `patterns.py`: `Block` and related types
+- `risks.py`: `RiskSignal`
+- `operational_profiling.py`: `BatchSizeSweep`, `ResolutionSweep`, `SystemRequirements`
+
+### Story 40.1: Core Report Models
+- [ ] **Task 40.1.1**: Convert `ModelMetadata` to Pydantic `BaseModel`
+- [ ] **Task 40.1.2**: Convert `GraphSummary` to Pydantic `BaseModel`
+- [ ] **Task 40.1.3**: Convert `DatasetInfo` to Pydantic `BaseModel`
+- [ ] **Task 40.1.4**: Convert `InspectionReport` to Pydantic `BaseModel`
+- [ ] **Task 40.1.5**: Replace `to_dict()` with Pydantic `model_dump()`
+- [ ] **Task 40.1.6**: Replace `to_json()` with Pydantic `model_dump_json()`
+
+### Story 40.2: Analyzer Models
+- [ ] **Task 40.2.1**: Convert `ParamCounts` to Pydantic `BaseModel`
+- [ ] **Task 40.2.2**: Convert `FlopCounts` to Pydantic `BaseModel`
+- [ ] **Task 40.2.3**: Convert `MemoryEstimates` to Pydantic `BaseModel`
+- [ ] **Task 40.2.4**: Update `MetricsEngine` to return Pydantic models
+
+### Story 40.3: Hardware and Risk Models
+- [ ] **Task 40.3.1**: Convert `HardwareProfile` to Pydantic `BaseModel`
+- [ ] **Task 40.3.2**: Convert `HardwareEstimates` to Pydantic `BaseModel`
+- [ ] **Task 40.3.3**: Convert `RiskSignal` to Pydantic `BaseModel`
+- [ ] **Task 40.3.4**: Convert `Block` and pattern types to Pydantic
+
+### Story 40.4: Integration and Testing
+- [ ] **Task 40.4.1**: Update all imports across codebase
+- [ ] **Task 40.4.2**: Update CLI to work with Pydantic models
+- [ ] **Task 40.4.3**: Update Streamlit app to work with Pydantic models
+- [ ] **Task 40.4.4**: Update all unit tests for Pydantic models
+- [ ] **Task 40.4.5**: Remove old dataclass definitions (or keep as aliases)
+- [ ] **Task 40.4.6**: Performance testing (Pydantic overhead vs dataclass)
