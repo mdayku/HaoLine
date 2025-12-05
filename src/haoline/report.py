@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     )
     from .patterns import Block, PatternAnalyzer
     from .risks import RiskAnalyzer, RiskSignal
+    from .universal_ir import UniversalGraph
 
 
 @dataclass
@@ -254,6 +255,10 @@ class InspectionReport:
     # Extra data (profiling results, GPU metrics, etc.)
     extra_data: dict[str, Any] | None = None
 
+    # Universal IR (optional, format-agnostic graph representation)
+    # Enables cross-format comparison, structural diff, and advanced visualization
+    universal_graph: UniversalGraph | None = None
+
     def to_dict(self) -> dict[str, Any]:
         """Convert report to a JSON-serializable dictionary."""
         import numpy as np
@@ -281,9 +286,16 @@ class InspectionReport:
                 return obj.tolist()
             if isinstance(obj, (np.integer, np.floating)):
                 return obj.item()
+            # Handle UniversalGraph specially (Pydantic model with to_dict method)
+            if hasattr(obj, "to_dict") and hasattr(obj, "num_nodes"):
+                # This is a UniversalGraph - serialize without weights
+                return obj.to_dict(include_weights=False)
             # Handle dataclasses (but not by calling to_dict which would recurse)
             if hasattr(obj, "__dataclass_fields__"):
                 return {k: _serialize(getattr(obj, k), depth + 1) for k in obj.__dataclass_fields__}
+            # Handle Pydantic models
+            if hasattr(obj, "model_dump"):
+                return obj.model_dump()
             if isinstance(obj, list):
                 return [_serialize(item, depth + 1) for item in obj]
             if isinstance(obj, dict):
@@ -1849,6 +1861,20 @@ class ModelInspector:
                 f"Inferred {dataset_info.task} task with {dataset_info.num_classes} classes from output shape"
             )
 
+        # Load Universal IR representation (optional, for advanced analysis)
+        universal_graph = None
+        try:
+            from .format_adapters import load_model
+
+            self.logger.debug("Loading Universal IR representation...")
+            universal_graph = load_model(model_path)
+            self.logger.debug(
+                f"Universal IR loaded: {universal_graph.num_nodes} nodes, "
+                f"{universal_graph.total_parameters:,} params"
+            )
+        except Exception as e:
+            self.logger.debug(f"Universal IR loading skipped: {e}")
+
         report = InspectionReport(
             metadata=metadata,
             graph_summary=graph_summary,
@@ -1859,6 +1885,7 @@ class ModelInspector:
             architecture_type=architecture_type,
             risk_signals=risk_signals,
             dataset_info=dataset_info,
+            universal_graph=universal_graph,
         )
 
         self.logger.info(
