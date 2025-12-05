@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -15,7 +14,6 @@ from haoline.eval.comparison import (
     generate_eval_metrics_html,
 )
 from haoline.eval.deployment import (
-    HARDWARE_TIERS,
     DeploymentScenario,
     DeploymentTarget,
     calculate_deployment_cost,
