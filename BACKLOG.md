@@ -48,13 +48,13 @@
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
 | Epic 33: QAT Linters | Not Started | 4 | 0/22 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
-| Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
-| Epic 40: Full Pydantic Dataclass Migration | Not Started | 4 | 0/20 | P2 |
-| Epic 41: Standardized Reporting | Not Started | 3 | 0/15 | **P1** |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | P3 |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
 | Epic 38: Docker Distribution | Not Started | 1 | 0/5 | P3 |
+| Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
+| Epic 40: Full Pydantic Dataclass Migration | Not Started | 4 | 0/20 | P2 |
+| Epic 41: Standardized Reporting | Not Started | 3 | 0/15 | **P1** |
 
 ---
 
