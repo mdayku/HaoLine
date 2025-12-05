@@ -26,6 +26,21 @@ from .adapters import (
     parse_timm_benchmark,
     parse_ultralytics_val,
 )
+from .deployment import (
+    HARDWARE_TIERS,
+    CloudProvider,
+    DeploymentCostEstimate,
+    DeploymentScenario,
+    DeploymentTarget,
+    HardwareTier,
+    calculate_deployment_cost,
+    compare_deployment_costs,
+    estimate_cost_from_combined_report,
+    estimate_latency_from_flops,
+    get_hardware_tier,
+    list_hardware_tiers,
+    select_hardware_tier_for_latency,
+)
 from .schemas import (
     ClassificationEvalResult,
     CombinedReport,
@@ -67,6 +82,20 @@ __all__ = [
     "compute_model_hash",
     "link_eval_to_model",
     "create_combined_report",
+    # Deployment cost
+    "DeploymentScenario",
+    "DeploymentTarget",
+    "CloudProvider",
+    "HardwareTier",
+    "DeploymentCostEstimate",
+    "HARDWARE_TIERS",
+    "get_hardware_tier",
+    "list_hardware_tiers",
+    "calculate_deployment_cost",
+    "compare_deployment_costs",
+    "estimate_latency_from_flops",
+    "select_hardware_tier_for_latency",
+    "estimate_cost_from_combined_report",
     # Adapters - Ultralytics
     "parse_ultralytics_val",
     "load_ultralytics_json",

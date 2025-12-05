@@ -8,6 +8,16 @@ from pathlib import Path
 
 import pytest
 
+from haoline.eval.deployment import (
+    HARDWARE_TIERS,
+    DeploymentScenario,
+    DeploymentTarget,
+    calculate_deployment_cost,
+    estimate_latency_from_flops,
+    get_hardware_tier,
+    list_hardware_tiers,
+    select_hardware_tier_for_latency,
+)
 from haoline.eval.schemas import (
     CombinedReport,
     DetectionEvalResult,
@@ -245,3 +255,158 @@ class TestCombinedReport:
 
         missing = combined.get_eval_by_task("segmentation")
         assert missing is None
+
+
+# =============================================================================
+# Deployment Cost Calculator Tests
+# =============================================================================
+
+
+class TestDeploymentScenario:
+    """Tests for DeploymentScenario dataclass."""
+
+    def test_default_scenario(self) -> None:
+        """Test creating scenario with defaults."""
+        scenario = DeploymentScenario()
+        assert scenario.target_fps == 30.0
+        assert scenario.hours_per_day == 24.0
+        assert scenario.target == DeploymentTarget.CLOUD_GPU
+
+    def test_realtime_video_preset(self) -> None:
+        """Test realtime video preset."""
+        scenario = DeploymentScenario.realtime_video(fps=60.0)
+        assert scenario.target_fps == 60.0
+        assert scenario.max_latency_ms == pytest.approx(1000.0 / 60, rel=0.01)
+        assert scenario.name == "realtime_video"
+
+    def test_edge_device_preset(self) -> None:
+        """Test edge device preset."""
+        scenario = DeploymentScenario.edge_device(fps=10.0)
+        assert scenario.target == DeploymentTarget.EDGE_GPU
+        assert scenario.target_fps == 10.0
+
+    def test_serialization(self) -> None:
+        """Test to_dict and from_dict."""
+        original = DeploymentScenario(
+            target_fps=15.0,
+            hours_per_day=8.0,
+            precision="fp16",
+        )
+        data = original.to_dict()
+        restored = DeploymentScenario.from_dict(data)
+        assert restored.target_fps == 15.0
+        assert restored.hours_per_day == 8.0
+        assert restored.precision == "fp16"
+
+
+class TestHardwareTiers:
+    """Tests for hardware tier lookups."""
+
+    def test_get_hardware_tier(self) -> None:
+        """Test getting a tier by name."""
+        tier = get_hardware_tier("t4")
+        assert tier is not None
+        assert tier.name == "T4"
+        assert tier.cost_per_hour_usd > 0
+
+    def test_get_hardware_tier_case_insensitive(self) -> None:
+        """Test case-insensitive lookup."""
+        tier = get_hardware_tier("A10G")
+        assert tier is not None
+        assert tier.name == "A10G"
+
+    def test_get_unknown_tier(self) -> None:
+        """Test getting non-existent tier returns None."""
+        tier = get_hardware_tier("nonexistent")
+        assert tier is None
+
+    def test_list_hardware_tiers(self) -> None:
+        """Test listing all tiers."""
+        tiers = list_hardware_tiers()
+        assert len(tiers) > 0
+        # Should be sorted by cost
+        costs = [t.cost_per_hour_usd for t in tiers]
+        assert costs == sorted(costs)
+
+    def test_list_hardware_tiers_filtered(self) -> None:
+        """Test filtering by target."""
+        gpu_tiers = list_hardware_tiers(DeploymentTarget.CLOUD_GPU)
+        for tier in gpu_tiers:
+            assert tier.target == DeploymentTarget.CLOUD_GPU
+
+        edge_tiers = list_hardware_tiers(DeploymentTarget.EDGE_GPU)
+        for tier in edge_tiers:
+            assert tier.target == DeploymentTarget.EDGE_GPU
+
+
+class TestCostCalculation:
+    """Tests for deployment cost calculation."""
+
+    def test_estimate_latency_from_flops(self) -> None:
+        """Test latency estimation."""
+        tier = get_hardware_tier("t4")
+        assert tier is not None
+
+        # 1 GFLOP model
+        flops = 1_000_000_000
+        latency = estimate_latency_from_flops(flops, tier, "fp32")
+
+        # Should be a reasonable latency value
+        assert latency > 0
+        assert latency < 10000  # Less than 10 seconds
+
+    def test_select_hardware_for_latency(self) -> None:
+        """Test hardware selection based on latency SLA."""
+        flops = 10_000_000_000  # 10 GFLOP model
+
+        # Strict latency requirement - should pick faster hardware
+        tier = select_hardware_tier_for_latency(
+            flops,
+            target_latency_ms=10.0,
+            precision="fp16",
+        )
+        # May or may not find suitable tier
+        if tier:
+            assert tier.cost_per_hour_usd > 0
+
+    def test_calculate_deployment_cost(self) -> None:
+        """Test full cost calculation."""
+        scenario = DeploymentScenario(
+            target_fps=10.0,
+            hours_per_day=8.0,
+            days_per_month=22,  # Business days
+            target=DeploymentTarget.CLOUD_GPU,
+        )
+
+        flops = 5_000_000_000  # 5 GFLOP model
+        estimate = calculate_deployment_cost(flops, scenario)
+
+        # Check basic fields are populated
+        assert estimate.hardware_tier is not None
+        assert estimate.cost_per_hour_usd >= 0
+        assert estimate.cost_per_day_usd >= 0
+        assert estimate.cost_per_month_usd >= 0
+        assert estimate.estimated_latency_ms > 0
+
+        # Costs should scale correctly
+        assert estimate.cost_per_day_usd == pytest.approx(
+            estimate.cost_per_hour_usd * 8.0, rel=0.01
+        )
+        assert estimate.cost_per_month_usd == pytest.approx(
+            estimate.cost_per_day_usd * 22, rel=0.01
+        )
+
+    def test_cost_estimate_summary(self) -> None:
+        """Test human-readable summary generation."""
+        scenario = DeploymentScenario(
+            target_fps=30.0,
+            hours_per_day=24.0,
+            name="test_scenario",
+        )
+
+        estimate = calculate_deployment_cost(1_000_000_000, scenario)
+        summary = estimate.summary()
+
+        assert "test_scenario" in summary
+        assert "Per hour:" in summary
+        assert "Per month:" in summary
