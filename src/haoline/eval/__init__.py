@@ -11,6 +11,12 @@ Supported adapters:
 - Generic CSV/JSON
 """
 
+from .comparison import (
+    ModelComparisonRow,
+    ModelComparisonTable,
+    compare_models,
+    compare_models_from_paths,
+)
 from .adapters import (
     detect_and_parse,
     load_generic_csv,
@@ -96,6 +102,11 @@ __all__ = [
     "estimate_latency_from_flops",
     "select_hardware_tier_for_latency",
     "estimate_cost_from_combined_report",
+    # Model comparison
+    "ModelComparisonRow",
+    "ModelComparisonTable",
+    "compare_models",
+    "compare_models_from_paths",
     # Adapters - Ultralytics
     "parse_ultralytics_val",
     "load_ultralytics_json",

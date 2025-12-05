@@ -8,6 +8,11 @@ from pathlib import Path
 
 import pytest
 
+from haoline.eval.comparison import (
+    ModelComparisonRow,
+    ModelComparisonTable,
+    compare_models,
+)
 from haoline.eval.deployment import (
     HARDWARE_TIERS,
     DeploymentScenario,
@@ -410,3 +415,150 @@ class TestCostCalculation:
         assert "test_scenario" in summary
         assert "Per hour:" in summary
         assert "Per month:" in summary
+
+
+# =============================================================================
+# Model Comparison Tests
+# =============================================================================
+
+
+class TestModelComparison:
+    """Tests for multi-model comparison functionality."""
+
+    def test_create_comparison_row(self) -> None:
+        """Test creating a comparison row from combined report."""
+        report = CombinedReport(
+            model_id="yolov8n",
+            model_path="/path/to/yolov8n.onnx",
+            architecture={
+                "params_total": 3_000_000,
+                "flops_total": 8_000_000_000,
+                "model_size_bytes": 12 * 1024 * 1024,
+            },
+            primary_accuracy_metric="mAP@50",
+            primary_accuracy_value=65.0,
+        )
+
+        row = ModelComparisonRow.from_combined_report(report)
+
+        assert row.model_id == "yolov8n"
+        assert row.params_total == 3_000_000
+        assert row.flops_total == 8_000_000_000
+        assert row.model_size_mb == pytest.approx(12.0, rel=0.01)
+        assert row.primary_metric_value == 65.0
+
+    def test_comparison_table(self) -> None:
+        """Test creating and populating a comparison table."""
+        report1 = CombinedReport(
+            model_id="model_a",
+            architecture={"params_total": 1_000_000, "flops_total": 1e9},
+            primary_accuracy_metric="accuracy",
+            primary_accuracy_value=90.0,
+        )
+        report2 = CombinedReport(
+            model_id="model_b",
+            architecture={"params_total": 5_000_000, "flops_total": 5e9},
+            primary_accuracy_metric="accuracy",
+            primary_accuracy_value=95.0,
+        )
+
+        table = ModelComparisonTable(title="Test Comparison")
+        table.add_model(report1)
+        table.add_model(report2)
+
+        assert len(table.rows) == 2
+        assert table.rows[0].model_id == "model_a"
+        assert table.rows[1].model_id == "model_b"
+
+    def test_compare_models_function(self) -> None:
+        """Test the compare_models() convenience function."""
+        reports = [
+            CombinedReport(
+                model_id="small",
+                architecture={"params_total": 1_000_000},
+                primary_accuracy_value=80.0,
+            ),
+            CombinedReport(
+                model_id="medium",
+                architecture={"params_total": 10_000_000},
+                primary_accuracy_value=90.0,
+            ),
+            CombinedReport(
+                model_id="large",
+                architecture={"params_total": 100_000_000},
+                primary_accuracy_value=95.0,
+            ),
+        ]
+
+        table = compare_models(
+            reports,
+            sort_by="primary_metric_value",
+            sort_descending=True,
+        )
+
+        assert len(table.rows) == 3
+        # Should be sorted by accuracy descending
+        assert table.rows[0].model_id == "large"
+        assert table.rows[1].model_id == "medium"
+        assert table.rows[2].model_id == "small"
+
+    def test_table_to_csv(self) -> None:
+        """Test CSV export."""
+        report = CombinedReport(
+            model_id="test_model",
+            architecture={"params_total": 1_000_000},
+        )
+        table = ModelComparisonTable()
+        table.add_model(report)
+
+        csv_output = table.to_csv()
+        assert "model_id" in csv_output
+        assert "test_model" in csv_output
+
+    def test_table_to_json(self) -> None:
+        """Test JSON export."""
+        report = CombinedReport(
+            model_id="test_model",
+            architecture={"params_total": 1_000_000},
+        )
+        table = ModelComparisonTable(title="JSON Test")
+        table.add_model(report)
+
+        json_output = table.to_json()
+        data = json.loads(json_output)
+
+        assert data["title"] == "JSON Test"
+        assert len(data["rows"]) == 1
+        assert data["rows"][0]["model_id"] == "test_model"
+
+    def test_table_to_markdown(self) -> None:
+        """Test Markdown export."""
+        report = CombinedReport(
+            model_id="model_a",
+            architecture={"params_total": 3_000_000, "flops_total": 8e9},
+            primary_accuracy_value=75.5,
+        )
+        table = ModelComparisonTable(title="MD Test")
+        table.add_model(report)
+
+        md_output = table.to_markdown()
+
+        assert "## MD Test" in md_output
+        assert "| Model |" in md_output
+        assert "model_a" in md_output
+        assert "3.0M" in md_output
+        assert "75.5%" in md_output
+
+    def test_table_to_console(self) -> None:
+        """Test console table output."""
+        report = CombinedReport(
+            model_id="console_test",
+            architecture={"params_total": 2_000_000},
+        )
+        table = ModelComparisonTable(title="Console Test")
+        table.add_model(report)
+
+        console_output = table.to_console()
+
+        assert "Console Test" in console_output
+        assert "console_test" in console_output

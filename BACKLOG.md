@@ -537,16 +537,16 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 ### Story 12.4: Merge Eval + Architecture
 *Combine imported eval metrics with HaoLine's architecture analysis*
-- [ ] **Task 12.4.1**: Link eval results to model files (by path or hash) — **PRIORITY**
+- [x] **Task 12.4.1**: Link eval results to model files (by path or hash) - `link_eval_to_model()`, `compute_model_hash()`
 - [x] **Task 12.4.2**: Create `CombinedReport` dataclass (architecture + eval) - `schemas.py`
 - [ ] **Task 12.4.3**: Handle multiple eval runs per model (aggregate or select) — *defer*
 - [ ] **Task 12.4.4**: Validate eval task matches model type (warn if mismatch) — *defer*
 
 ### Story 12.6: Deployment Cost Calculator ← **MOVED UP**
 *Answer: "What does it cost to run this model at X fps?"*
-- [ ] **Task 12.6.1**: Define deployment scenario inputs (fps, hours/day, cloud vs edge) — **PRIORITY**
-- [ ] **Task 12.6.2**: Calculate required hardware tier for latency SLA — **PRIORITY**
-- [ ] **Task 12.6.3**: Estimate $/day and $/month for deployment — **PRIORITY**
+- [x] **Task 12.6.1**: Define deployment scenario inputs - `DeploymentScenario`, `DeploymentTarget`, `CloudProvider`
+- [x] **Task 12.6.2**: Calculate required hardware tier for latency SLA - `select_hardware_tier_for_latency()`
+- [x] **Task 12.6.3**: Estimate $/day and $/month for deployment - `calculate_deployment_cost()`, `DeploymentCostEstimate`
 - [ ] **Task 12.6.4**: Compare cost across precision variants (fp32 vs fp16 vs int8) — *defer*
 - [ ] **Task 12.6.5**: Generate "Deployment Recommendation" section in report — *defer*
 - [x] **Task 12.6.6**: Add `--deployment-fps` and `--deployment-hours` CLI flags
