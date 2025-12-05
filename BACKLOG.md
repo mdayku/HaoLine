@@ -499,6 +499,17 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 (Ultralytics, HF evaluate, lm-eval, timm, custom)
 ```
 
+### Demo-First Execution Order
+
+**Priority Path** (get YOLO demo working ASAP):
+```
+12.4.1 (link) → 12.6.1-3 (cost basics) → 12.5.1 (comparison table) → 12.5.4 (HTML) → 12.7 (demo)
+```
+
+**Defer until after demo:** 12.4.3, 12.4.4, 12.5.2, 12.5.3, 12.6.4, 12.6.5
+
+---
+
 ### Story 12.1: Base Eval Schema - **COMPLETE**
 *Task-agnostic fields all eval results share*
 - [x] **Task 12.1.1**: Define `EvalResult` base schema (model_id, task_type, timestamp, metrics dict)
@@ -526,35 +537,35 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 ### Story 12.4: Merge Eval + Architecture
 *Combine imported eval metrics with HaoLine's architecture analysis*
-- [ ] **Task 12.4.1**: Link eval results to model files (by path or hash)
+- [ ] **Task 12.4.1**: Link eval results to model files (by path or hash) — **PRIORITY**
 - [x] **Task 12.4.2**: Create `CombinedReport` dataclass (architecture + eval) - `schemas.py`
-- [ ] **Task 12.4.3**: Handle multiple eval runs per model (aggregate or select)
-- [ ] **Task 12.4.4**: Validate eval task matches model type (warn if mismatch)
+- [ ] **Task 12.4.3**: Handle multiple eval runs per model (aggregate or select) — *defer*
+- [ ] **Task 12.4.4**: Validate eval task matches model type (warn if mismatch) — *defer*
+
+### Story 12.6: Deployment Cost Calculator ← **MOVED UP**
+*Answer: "What does it cost to run this model at X fps?"*
+- [ ] **Task 12.6.1**: Define deployment scenario inputs (fps, hours/day, cloud vs edge) — **PRIORITY**
+- [ ] **Task 12.6.2**: Calculate required hardware tier for latency SLA — **PRIORITY**
+- [ ] **Task 12.6.3**: Estimate $/day and $/month for deployment — **PRIORITY**
+- [ ] **Task 12.6.4**: Compare cost across precision variants (fp32 vs fp16 vs int8) — *defer*
+- [ ] **Task 12.6.5**: Generate "Deployment Recommendation" section in report — *defer*
+- [x] **Task 12.6.6**: Add `--deployment-fps` and `--deployment-hours` CLI flags
 
 ### Story 12.5: Unified Comparison Report
 *Architecture + Eval + Hardware in one view*
-- [ ] **Task 12.5.1**: Multi-model comparison table (accuracy, speed, size, cost)
-- [ ] **Task 12.5.2**: Accuracy vs Speed scatter plot (Pareto frontier)
-- [ ] **Task 12.5.3**: Per-class metric comparison (radar chart or grouped bars)
-- [ ] **Task 12.5.4**: Add eval metrics to existing HTML/PDF reports
-- [ ] **Task 12.5.5**: Export comparison as CSV/JSON
-
-### Story 12.6: Deployment Cost Calculator
-*Answer: "What does it cost to run this model at X fps?"*
-- [ ] **Task 12.6.1**: Define deployment scenario inputs (fps, hours/day, cloud vs edge)
-- [ ] **Task 12.6.2**: Calculate required hardware tier for latency SLA
-- [ ] **Task 12.6.3**: Estimate $/day and $/month for deployment
-- [ ] **Task 12.6.4**: Compare cost across precision variants (fp32 vs fp16 vs int8)
-- [ ] **Task 12.6.5**: Generate "Deployment Recommendation" section in report
-- [x] **Task 12.6.6**: Add `--deployment-fps` and `--deployment-hours` CLI flags
+- [ ] **Task 12.5.1**: Multi-model comparison table (accuracy, speed, size, cost) — **PRIORITY**
+- [ ] **Task 12.5.2**: Accuracy vs Speed scatter plot (Pareto frontier) — *defer*
+- [ ] **Task 12.5.3**: Per-class metric comparison (radar chart or grouped bars) — *defer*
+- [ ] **Task 12.5.4**: Add eval metrics to existing HTML/PDF reports — **PRIORITY**
+- [ ] **Task 12.5.5**: Export comparison as CSV/JSON — **PRIORITY**
 
 ### Story 12.7: YOLO Quantization Demo (Reference Implementation)
 *End-to-end demo: fp32 → fp16 → int8, eval all, compare, deploy*
 - [x] **Task 12.7.1**: Document YOLO quantization workflow - `docs/YOLO_QUANTIZATION_WORKFLOW.md`
-- [ ] **Task 12.7.2**: Run batchtestv1.py on all 3 variants
-- [ ] **Task 12.7.3**: Import results with Ultralytics adapter
-- [ ] **Task 12.7.4**: Generate comparison report with deployment costs
-- [ ] **Task 12.7.5**: Create demo script/notebook for showcase
+- [ ] **Task 12.7.2**: Run batchtestv1.py on all 3 variants — **PRIORITY**
+- [ ] **Task 12.7.3**: Import results with Ultralytics adapter — **PRIORITY**
+- [ ] **Task 12.7.4**: Generate comparison report with deployment costs — **PRIORITY**
+- [ ] **Task 12.7.5**: Create demo script/notebook for showcase — **PRIORITY**
 
 ---
 
