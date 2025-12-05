@@ -138,6 +138,13 @@ Examples:
 
   # Convert PyTorch to ONNX and save
   python -m haoline --from-pytorch model.pt --input-shape 1,3,224,224 --convert-to onnx --convert-output model.onnx
+
+  # Export model as Universal IR (JSON)
+  python -m haoline model.onnx --export-ir model_ir.json
+
+  # Export graph visualization (DOT or PNG)
+  python -m haoline model.onnx --export-graph graph.dot
+  python -m haoline model.onnx --export-graph graph.png --graph-max-nodes 200
 """,
     )
 
@@ -568,6 +575,33 @@ Examples:
         "--list-conversions",
         action="store_true",
         help="List available format conversion paths and exit.",
+    )
+
+    # Universal IR export
+    ir_group = parser.add_argument_group("Universal IR Export Options")
+    ir_group.add_argument(
+        "--export-ir",
+        type=pathlib.Path,
+        default=None,
+        metavar="PATH",
+        help="Export model as Universal IR to JSON file. "
+        "Provides format-agnostic representation of the model graph.",
+    )
+    ir_group.add_argument(
+        "--export-graph",
+        type=pathlib.Path,
+        default=None,
+        metavar="PATH",
+        help="Export model graph visualization. Supports .dot (Graphviz) and .png formats. "
+        "Requires graphviz package for PNG: pip install graphviz",
+    )
+    ir_group.add_argument(
+        "--graph-max-nodes",
+        type=int,
+        default=500,
+        metavar="N",
+        help="Maximum nodes to include in graph visualization (default: 500). "
+        "Prevents huge graphs from crashing.",
     )
 
     return parser.parse_args()
@@ -1868,6 +1902,48 @@ def run_inspect():
 
         except Exception as e:
             logger.error(f"Conversion failed: {e}")
+            sys.exit(1)
+
+    # Handle --export-ir and --export-graph (Universal IR exports)
+    if args.export_ir or args.export_graph:
+        from .format_adapters import load_model
+
+        try:
+            logger.info(f"Loading {model_path} as Universal IR...")
+            ir_graph = load_model(model_path)
+
+            if args.export_ir:
+                logger.info(f"Exporting Universal IR to {args.export_ir}")
+                ir_graph.to_json(args.export_ir)
+                print(f"Exported IR: {args.export_ir}")
+                print(f"  Nodes: {ir_graph.num_nodes}")
+                print(f"  Parameters: {ir_graph.total_parameters:,}")
+
+            if args.export_graph:
+                export_path = args.export_graph
+                suffix = export_path.suffix.lower()
+
+                if suffix == ".dot":
+                    logger.info(f"Exporting graph to DOT: {export_path}")
+                    ir_graph.save_dot(export_path)
+                    print(f"Exported graph: {export_path}")
+                elif suffix == ".png":
+                    logger.info(f"Rendering graph to PNG: {export_path}")
+                    ir_graph.save_png(export_path, max_nodes=args.graph_max_nodes)
+                    print(f"Rendered graph: {export_path}")
+                else:
+                    logger.error(f"Unsupported graph format: {suffix}. Use .dot or .png")
+                    sys.exit(1)
+
+            # If no other outputs requested, exit after IR export
+            if not (args.out_json or args.out_md or args.out_html or args.out_pdf):
+                sys.exit(0)
+
+        except ImportError as e:
+            logger.error(f"Missing dependency: {e}")
+            sys.exit(1)
+        except Exception as e:
+            logger.error(f"IR export failed: {e}")
             sys.exit(1)
 
     # Determine hardware profile

@@ -267,6 +267,34 @@ report.to_html("report.html")
 | **Interactive Graph** | Zoomable D3.js neural network visualization |
 | **AI Summaries** | GPT-powered executive summaries of your architecture |
 | **Multiple Formats** | Export to HTML, Markdown, PDF, JSON, or CSV |
+| **Universal IR** | Format-agnostic intermediate representation for cross-format analysis |
+
+---
+
+## Universal IR (Internal Representation)
+
+HaoLine uses a Universal IR to represent models in a format-agnostic way, enabling:
+
+- **Cross-format comparison**: Compare PyTorch vs ONNX vs TensorFlow architectures
+- **Structural analysis**: Check if two models are architecturally identical
+- **Graph visualization**: Export to Graphviz DOT or PNG
+
+```bash
+# Export model as Universal IR (JSON)
+haoline model.onnx --export-ir model_ir.json
+
+# Export graph visualization
+haoline model.onnx --export-graph graph.dot
+haoline model.onnx --export-graph graph.png --graph-max-nodes 200
+
+# List available format conversions
+haoline --list-conversions
+```
+
+The Universal IR includes:
+- **UniversalGraph**: Container for nodes, tensors, and metadata
+- **UniversalNode**: Format-agnostic operation representation
+- **UniversalTensor**: Weight, input, output, and activation metadata
 
 ---
 

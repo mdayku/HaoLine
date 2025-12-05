@@ -548,3 +548,180 @@ class UniversalGraph(BaseModel):
             lines.append(f"    {op}: {count}")
 
         return "\n".join(lines)
+
+    # -------------------------------------------------------------------------
+    # Visualization (Task 18.5.2)
+    # -------------------------------------------------------------------------
+
+    def to_dot(self, max_nodes: int = 500, cluster_by_op: bool = False) -> str:
+        """Export graph to Graphviz DOT format.
+
+        Args:
+            max_nodes: Maximum nodes to include (for large graphs)
+            cluster_by_op: Group nodes by operation type in subgraphs
+
+        Returns:
+            DOT format string
+        """
+        lines = [
+            "digraph UniversalGraph {",
+            "  rankdir=TB;",
+            '  node [shape=box, style=filled, fontname="Arial"];',
+            '  edge [fontname="Arial", fontsize=10];',
+            "",
+        ]
+
+        # Add title
+        name = self.metadata.name or "model"
+        lines.append(
+            f'  label="{name} ({self.num_nodes} nodes, {self.total_parameters:,} params)";'
+        )
+        lines.append('  labelloc="t";')
+        lines.append("")
+
+        # Limit nodes for large graphs
+        nodes_to_render = self.nodes[:max_nodes]
+        if len(self.nodes) > max_nodes:
+            lines.append(f"  // Showing {max_nodes} of {len(self.nodes)} nodes")
+            lines.append("")
+
+        # Color mapping for op types
+        op_colors = {
+            "Conv2D": "#a8d5ba",  # Green for convolutions
+            "MatMul": "#f4a261",  # Orange for matrix ops
+            "Relu": "#e9c46a",  # Yellow for activations
+            "LeakyRelu": "#e9c46a",
+            "Sigmoid": "#e9c46a",
+            "Softmax": "#e9c46a",
+            "BatchNorm": "#b8c5d6",  # Blue-gray for normalization
+            "LayerNorm": "#b8c5d6",
+            "Add": "#d4a5a5",  # Pink for element-wise
+            "Concat": "#c8b6ff",  # Purple for structural
+            "Reshape": "#c8b6ff",
+            "MaxPool2D": "#95d5b2",  # Light green for pooling
+            "AvgPool2D": "#95d5b2",
+        }
+        default_color = "#ffffff"
+
+        if cluster_by_op:
+            # Group by op type
+            ops_to_nodes: dict[str, list[UniversalNode]] = {}
+            for node in nodes_to_render:
+                ops_to_nodes.setdefault(node.op_type, []).append(node)
+
+            for op_type, op_nodes in ops_to_nodes.items():
+                color = op_colors.get(op_type, default_color)
+                lines.append(f"  subgraph cluster_{op_type} {{")
+                lines.append(f'    label="{op_type}";')
+                lines.append("    style=filled;")
+                lines.append(f'    color="{color}";')
+                for node in op_nodes:
+                    label = f"{node.id}\\n{node.op_type}"
+                    lines.append(f'    "{node.id}" [label="{label}"];')
+                lines.append("  }")
+                lines.append("")
+        else:
+            # Flat node list
+            for node in nodes_to_render:
+                color = op_colors.get(node.op_type, default_color)
+                label = f"{node.id}\\n{node.op_type}"
+                lines.append(f'  "{node.id}" [label="{label}", fillcolor="{color}"];')
+
+        lines.append("")
+
+        # Add edges based on tensor connections
+        node_ids = {n.id for n in nodes_to_render}
+        tensor_to_producer: dict[str, str] = {}
+
+        # Map tensors to their producing nodes
+        for node in nodes_to_render:
+            for output in node.outputs:
+                tensor_to_producer[output] = node.id
+
+        # Create edges
+        for node in nodes_to_render:
+            for inp in node.inputs:
+                if inp in tensor_to_producer:
+                    producer = tensor_to_producer[inp]
+                    if producer in node_ids:
+                        lines.append(f'  "{producer}" -> "{node.id}";')
+
+        lines.append("}")
+        return "\n".join(lines)
+
+    def to_networkx(self) -> Any:
+        """Export graph to NetworkX DiGraph.
+
+        Returns:
+            networkx.DiGraph with nodes and edges
+
+        Raises:
+            ImportError: If networkx is not installed
+        """
+        try:
+            import networkx as nx
+        except ImportError as e:
+            raise ImportError(
+                "NetworkX is required for graph export. Install with: pip install networkx"
+            ) from e
+
+        G = nx.DiGraph()
+
+        # Add nodes with attributes
+        for node in self.nodes:
+            G.add_node(
+                node.id,
+                op_type=node.op_type,
+                inputs=node.inputs,
+                outputs=node.outputs,
+                attributes=node.attributes,
+            )
+
+        # Add edges based on tensor connections
+        tensor_to_producer: dict[str, str] = {}
+        for node in self.nodes:
+            for output in node.outputs:
+                tensor_to_producer[output] = node.id
+
+        for node in self.nodes:
+            for inp in node.inputs:
+                if inp in tensor_to_producer:
+                    G.add_edge(tensor_to_producer[inp], node.id, tensor=inp)
+
+        return G
+
+    def save_dot(self, path: str | Path) -> None:
+        """Save graph to DOT file.
+
+        Args:
+            path: Output file path (.dot)
+        """
+        dot_content = self.to_dot()
+        with open(path, "w") as f:
+            f.write(dot_content)
+
+    def save_png(self, path: str | Path, max_nodes: int = 500) -> None:
+        """Render graph to PNG using Graphviz.
+
+        Args:
+            path: Output file path (.png)
+            max_nodes: Maximum nodes to render
+
+        Raises:
+            ImportError: If graphviz is not installed
+        """
+        try:
+            import graphviz
+        except ImportError as e:
+            raise ImportError(
+                "Graphviz Python package is required. Install with: pip install graphviz\n"
+                "Also ensure Graphviz system package is installed."
+            ) from e
+
+        dot_content = self.to_dot(max_nodes=max_nodes)
+        source = graphviz.Source(dot_content)
+
+        # graphviz renders to path without extension, then adds it
+        path = Path(path)
+        output_path = path.with_suffix("")  # Remove .png
+        source.render(str(output_path), format="png", cleanup=True)
