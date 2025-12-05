@@ -27,7 +27,7 @@
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
 | Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
-| Epic 12: Eval Import & Comparison | In Progress | 7 | 13/36 | P1 |
+| Epic 12: Eval Import & Comparison | In Progress | 7 | 17/36 | P1 |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | Not Started | 3 | 0/12 | P1 |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
@@ -515,14 +515,14 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [x] **Task 12.2.5**: Segmentation schema (mIoU, dice, per-class IoU) - `SegmentationEvalResult`
 - [x] **Task 12.2.6**: Generic schema (user-defined metrics) - `GenericEvalResult` in schemas.py
 
-### Story 12.3: Import Adapters
+### Story 12.3: Import Adapters - **COMPLETE**
 *Parse output from popular eval tools*
 - [x] **Task 12.3.1**: Ultralytics adapter (parse YOLO val results) - `adapters.py`
-- [ ] **Task 12.3.2**: HuggingFace evaluate adapter (parse evaluate output)
-- [ ] **Task 12.3.3**: lm-eval-harness adapter (parse LLM benchmark results)
-- [ ] **Task 12.3.4**: timm adapter (parse timm benchmark output)
+- [x] **Task 12.3.2**: HuggingFace evaluate adapter - `parse_hf_evaluate()`, `load_hf_evaluate()`
+- [x] **Task 12.3.3**: lm-eval-harness adapter - `parse_lm_eval()`, `load_lm_eval()`
+- [x] **Task 12.3.4**: timm adapter - `parse_timm_benchmark()`, `load_timm_benchmark()`
 - [x] **Task 12.3.5**: Generic CSV/JSON adapter (user maps columns to schema) - `adapters.py`
-- [ ] **Task 12.3.6**: Auto-detect adapter from file format/contents
+- [x] **Task 12.3.6**: Auto-detect adapter - `detect_and_parse()` with heuristics for all formats
 
 ### Story 12.4: Merge Eval + Architecture
 *Combine imported eval metrics with HaoLine's architecture analysis*

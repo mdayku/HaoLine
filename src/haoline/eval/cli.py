@@ -28,8 +28,20 @@ Examples:
   # Import Ultralytics YOLO validation results
   haoline-import-eval --from-ultralytics results.json --model yolo.onnx
 
-  # Import HuggingFace evaluate results
-  haoline-import-eval --from-hf-evaluate eval_results.json --model bert.onnx
+  # Import HuggingFace evaluate results (classification)
+  haoline-import-eval --from-hf-evaluate eval_results.json --task classification
+
+  # Import HuggingFace evaluate results (NLP task like QA)
+  haoline-import-eval --from-hf-evaluate qa_results.json --task nlp
+
+  # Import lm-eval-harness LLM benchmark results
+  haoline-import-eval --from-lm-eval lm_eval_output.json --model llama.onnx
+
+  # Import timm benchmark results
+  haoline-import-eval --from-timm validate_results.json --model resnet50.onnx
+
+  # Auto-detect format and import
+  haoline-import-eval --auto results.json --out-json standardized.json
 
   # Import generic CSV with custom column mapping
   haoline-import-eval --from-csv results.csv --model model.onnx \\
@@ -67,10 +79,22 @@ Examples:
         help="Import from generic CSV file.",
     )
     input_group.add_argument(
+        "--from-timm",
+        type=Path,
+        metavar="PATH",
+        help="Import from timm benchmark output (JSON).",
+    )
+    input_group.add_argument(
         "--from-json",
         type=Path,
         metavar="PATH",
-        help="Import from generic JSON file (must match HaoLine schema).",
+        help="Import from generic JSON file (auto-detected or schema-compliant).",
+    )
+    input_group.add_argument(
+        "--auto",
+        type=Path,
+        metavar="PATH",
+        help="Auto-detect format and import (tries all adapters).",
     )
 
     # Model linking
@@ -134,18 +158,26 @@ def import_from_ultralytics(path: Path) -> EvalResult | None:
         return None
 
 
-def import_from_hf_evaluate(path: Path) -> EvalResult | None:
+def import_from_hf_evaluate(path: Path, task_type: str = "classification") -> EvalResult | None:
     """Import eval results from HuggingFace evaluate output."""
-    # TODO: Implement HF evaluate adapter (Task 12.3.2)
-    print(f"[TODO] HuggingFace evaluate adapter not yet implemented: {path}")
-    return None
+    try:
+        from .adapters import load_hf_evaluate
+
+        return load_hf_evaluate(path, task_type=task_type)
+    except Exception as e:
+        print(f"Error parsing HuggingFace evaluate results from {path}: {e}")
+        return None
 
 
 def import_from_lm_eval(path: Path) -> EvalResult | None:
     """Import eval results from lm-eval-harness output."""
-    # TODO: Implement lm-eval adapter (Task 12.3.3)
-    print(f"[TODO] lm-eval-harness adapter not yet implemented: {path}")
-    return None
+    try:
+        from .adapters import load_lm_eval
+
+        return load_lm_eval(path)
+    except Exception as e:
+        print(f"Error parsing lm-eval-harness results from {path}: {e}")
+        return None
 
 
 def import_from_json(path: Path) -> EvalResult | None:
@@ -210,8 +242,10 @@ def main() -> int:
         args.from_ultralytics,
         args.from_hf_evaluate,
         args.from_lm_eval,
+        args.from_timm,
         args.from_csv,
         args.from_json,
+        args.auto,
     ]
     active_sources = [s for s in input_sources if s is not None]
 
@@ -230,9 +264,20 @@ def main() -> int:
     if args.from_ultralytics:
         result = import_from_ultralytics(args.from_ultralytics)
     elif args.from_hf_evaluate:
-        result = import_from_hf_evaluate(args.from_hf_evaluate)
+        task = args.task if args.task in ("classification", "nlp") else "classification"
+        result = import_from_hf_evaluate(args.from_hf_evaluate, task_type=task)
     elif args.from_lm_eval:
         result = import_from_lm_eval(args.from_lm_eval)
+    elif args.from_timm:
+        try:
+            from .adapters import load_timm_benchmark
+
+            result = load_timm_benchmark(args.from_timm)
+        except Exception as e:
+            print(f"Error parsing timm results: {e}")
+            return 1
+    elif args.auto:
+        result = import_from_json(args.auto)  # Uses detect_and_parse
     elif args.from_json:
         result = import_from_json(args.from_json)
     elif args.from_csv:
