@@ -13,6 +13,7 @@ Run locally:
 Deploy to HuggingFace Spaces or Streamlit Cloud for public access.
 """
 
+import os
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -1204,6 +1205,10 @@ def main():
 
         # LLM Summary
         st.markdown("### AI Summary")
+
+        # Check for API key in environment variable first
+        env_api_key = os.environ.get("OPENAI_API_KEY", "")
+
         enable_llm = st.checkbox(
             "Generate AI Summary",
             value=st.session_state.get("enable_llm", False),
@@ -1214,18 +1219,35 @@ def main():
         st.session_state["enable_llm"] = enable_llm
 
         if enable_llm:
-            api_key_input = st.text_input(
-                "OpenAI API Key",
-                type="password",
-                value=st.session_state.get("openai_api_key_value", ""),
-                help="Used once per analysis, never stored",
-                key="openai_api_key_input",
-            )
-            # Store in session state
-            st.session_state["openai_api_key_value"] = api_key_input
-            if not api_key_input:
-                st.warning("Enter your OpenAI API key to generate AI summaries.")
-            st.caption("For maximum security, run `haoline` locally instead.")
+            if env_api_key:
+                # Environment variable takes precedence
+                st.session_state["openai_api_key_value"] = env_api_key
+                st.success("API key loaded from environment")
+            else:
+                # Manual entry
+                api_key_input = st.text_input(
+                    "OpenAI API Key",
+                    type="password",
+                    help="Starts with 'sk-'",
+                    key="openai_api_key_input",
+                )
+
+                # Update session state when key is entered
+                if api_key_input:
+                    st.session_state["openai_api_key_value"] = api_key_input
+
+            # Show current status
+            current_key = st.session_state.get("openai_api_key_value", "")
+            if current_key:
+                # Validate key format
+                if current_key.startswith("sk-"):
+                    st.success(f"API Key Set ({current_key[:7]}...{current_key[-4:]})")
+                else:
+                    st.error("Invalid key format (should start with 'sk-')")
+            else:
+                st.warning("No API key - enter above to enable AI summaries")
+
+            st.caption("Key is used once per analysis, never stored permanently.")
 
         # Privacy notice
         st.markdown("---")
@@ -1607,48 +1629,61 @@ def main():
                     # AI Summary (if enabled and API key provided)
                     llm_enabled = st.session_state.get("enable_llm", False)
                     llm_api_key = st.session_state.get("openai_api_key_value", "")
-                    if llm_enabled and llm_api_key:
+
+                    if llm_enabled:
                         st.markdown("### AI Analysis")
-                        with st.spinner("Generating AI summary..."):
-                            try:
-                                from haoline.llm_summarizer import LLMSummarizer
 
-                                summarizer = LLMSummarizer(api_key=llm_api_key)
-                                llm_result = summarizer.summarize(report)
+                        if not llm_api_key:
+                            st.warning(
+                                "AI Summary is enabled but no API key is set. "
+                                "Enter your OpenAI API key in the sidebar."
+                            )
+                        elif not llm_api_key.startswith("sk-"):
+                            st.error(
+                                f"Invalid API key format. Keys should start with 'sk-'. "
+                                f"Got: {llm_api_key[:10]}..."
+                            )
+                        else:
+                            with st.spinner("Generating AI summary..."):
+                                try:
+                                    from haoline.llm_summarizer import LLMSummarizer
 
-                                if llm_result and llm_result.success:
-                                    # Short summary
-                                    if llm_result.short_summary:
-                                        st.markdown(
-                                            f"""<div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
-                                            border-left: 4px solid #10b981; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
-                                            <p style="font-weight: 600; color: #10b981; margin-bottom: 0.5rem;">AI Summary</p>
-                                            <p style="color: #e5e5e5; line-height: 1.6;">{llm_result.short_summary}</p>
-                                            </div>""",
-                                            unsafe_allow_html=True,
+                                    summarizer = LLMSummarizer(api_key=llm_api_key)
+                                    llm_result = summarizer.summarize(report)
+
+                                    if llm_result and llm_result.success:
+                                        # Short summary
+                                        if llm_result.short_summary:
+                                            st.markdown(
+                                                f"""<div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+                                                border-left: 4px solid #10b981; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                                                <p style="font-weight: 600; color: #10b981; margin-bottom: 0.5rem;">AI Summary</p>
+                                                <p style="color: #e5e5e5; line-height: 1.6;">{llm_result.short_summary}</p>
+                                                </div>""",
+                                                unsafe_allow_html=True,
+                                            )
+
+                                        # Detailed analysis
+                                        if llm_result.detailed_summary:
+                                            with st.expander("Detailed Analysis", expanded=True):
+                                                st.markdown(llm_result.detailed_summary)
+
+                                        # Show model/tokens info
+                                        st.caption(
+                                            f"Generated by {llm_result.model_used} "
+                                            f"({llm_result.tokens_used} tokens)"
                                         )
+                                    elif llm_result and llm_result.error_message:
+                                        st.error(f"AI summary failed: {llm_result.error_message}")
+                                    else:
+                                        st.warning("AI summary generation returned empty result.")
 
-                                    # Detailed analysis
-                                    if llm_result.detailed_summary:
-                                        with st.expander("Detailed Analysis", expanded=True):
-                                            st.markdown(llm_result.detailed_summary)
-
-                                    # Show model/tokens info
-                                    st.caption(
-                                        f"Generated by {llm_result.model_used} "
-                                        f"({llm_result.tokens_used} tokens)"
+                                except ImportError:
+                                    st.error(
+                                        "LLM module not available. Install with: `pip install haoline[llm]`"
                                     )
-                                elif llm_result and llm_result.error_message:
-                                    st.error(f"AI summary failed: {llm_result.error_message}")
-                                else:
-                                    st.warning("AI summary generation returned empty result.")
-
-                            except ImportError:
-                                st.error(
-                                    "LLM module not available. Install with: `pip install haoline[llm]`"
-                                )
-                            except Exception as e:
-                                st.error(f"AI summary generation failed: {e}")
+                                except Exception as e:
+                                    st.error(f"AI summary generation failed: {e}")
 
                     # Universal IR Summary (if available)
                     if report.universal_graph:
