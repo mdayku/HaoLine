@@ -263,18 +263,46 @@ class NLPEvalResult(EvalResult):
         metrics = []
         if accuracy is not None:
             metrics.append(
-                EvalMetric(name="accuracy", value=accuracy, unit="%", category="accuracy")
+                EvalMetric(
+                    name="accuracy",
+                    value=accuracy,
+                    unit="%",
+                    higher_is_better=True,
+                    category="accuracy",
+                )
             )
         if f1 is not None:
-            metrics.append(EvalMetric(name="f1", value=f1, unit="%", category="accuracy"))
+            metrics.append(
+                EvalMetric(
+                    name="f1", value=f1, unit="%", higher_is_better=True, category="accuracy"
+                )
+            )
         if exact_match is not None:
             metrics.append(
-                EvalMetric(name="exact_match", value=exact_match, unit="%", category="accuracy")
+                EvalMetric(
+                    name="exact_match",
+                    value=exact_match,
+                    unit="%",
+                    higher_is_better=True,
+                    category="accuracy",
+                )
             )
         if bleu is not None:
-            metrics.append(EvalMetric(name="bleu", value=bleu, category="accuracy"))
+            metrics.append(
+                EvalMetric(
+                    name="bleu", value=bleu, unit="", higher_is_better=True, category="accuracy"
+                )
+            )
         if rouge_l is not None:
-            metrics.append(EvalMetric(name="rouge_l", value=rouge_l, category="accuracy"))
+            metrics.append(
+                EvalMetric(
+                    name="rouge_l",
+                    value=rouge_l,
+                    unit="",
+                    higher_is_better=True,
+                    category="accuracy",
+                )
+            )
 
         return cls(
             model_id=model_id,
@@ -323,7 +351,11 @@ class LLMEvalResult(EvalResult):
         if perplexity is not None:
             metrics.append(
                 EvalMetric(
-                    name="perplexity", value=perplexity, higher_is_better=False, category="accuracy"
+                    name="perplexity",
+                    value=perplexity,
+                    unit="",
+                    higher_is_better=False,
+                    category="accuracy",
                 )
             )
 
@@ -337,7 +369,11 @@ class LLMEvalResult(EvalResult):
 
         for name, value in benchmarks.items():
             if value is not None:
-                metrics.append(EvalMetric(name=name, value=value, unit="%", category="accuracy"))
+                metrics.append(
+                    EvalMetric(
+                        name=name, value=value, unit="%", higher_is_better=True, category="accuracy"
+                    )
+                )
                 benchmark_scores[name] = value
 
         return cls(
@@ -384,10 +420,16 @@ class SegmentationEvalResult(EvalResult):
     ) -> SegmentationEvalResult:
         """Convenience constructor with standard segmentation metrics."""
         metrics = [
-            EvalMetric(name="mIoU", value=miou, unit="%", category="accuracy"),
+            EvalMetric(
+                name="mIoU", value=miou, unit="%", higher_is_better=True, category="accuracy"
+            ),
         ]
         if dice is not None:
-            metrics.append(EvalMetric(name="dice", value=dice, unit="%", category="accuracy"))
+            metrics.append(
+                EvalMetric(
+                    name="dice", value=dice, unit="%", higher_is_better=True, category="accuracy"
+                )
+            )
 
         return cls(
             model_id=model_id,
@@ -436,6 +478,7 @@ class GenericEvalResult(EvalResult):
                 EvalMetric(
                     name=name,
                     value=value,
+                    unit="",
                     higher_is_better=higher_map.get(name, True),
                     category="custom",
                 )
@@ -531,6 +574,7 @@ class CombinedReport(BaseModel):
         cls,
         report: Any,  # InspectionReport
         model_path: str = "",
+        eval_results: list[EvalResult] | None = None,
     ) -> CombinedReport:
         """
         Create from an InspectionReport.
@@ -538,12 +582,28 @@ class CombinedReport(BaseModel):
         Args:
             report: InspectionReport from haoline.
             model_path: Path to the model file.
+            eval_results: Optional list of eval results to attach.
         """
+        from pathlib import Path
+
         # Extract key architecture metrics
+        mem_bytes = 0
+        if report.memory_estimates:
+            mem_bytes = (
+                report.memory_estimates.model_size_bytes
+                + report.memory_estimates.peak_activation_bytes
+            )
+
         arch_summary = {
             "params_total": (report.param_counts.total if report.param_counts else 0),
             "flops_total": (report.flop_counts.total if report.flop_counts else 0),
-            "memory_bytes": (report.memory_estimates.total_bytes if report.memory_estimates else 0),
+            "memory_bytes": mem_bytes,
+            "model_size_bytes": (
+                report.memory_estimates.model_size_bytes if report.memory_estimates else 0
+            ),
+            "peak_activation_bytes": (
+                report.memory_estimates.peak_activation_bytes if report.memory_estimates else 0
+            ),
             "architecture_type": report.architecture_type,
             "num_nodes": (report.graph_summary.num_nodes if report.graph_summary else 0),
         }
@@ -554,16 +614,184 @@ class CombinedReport(BaseModel):
         throughput = 0.0
         if report.hardware_estimates:
             hw_profile = report.hardware_profile.name if report.hardware_profile else ""
-            latency = report.hardware_estimates.latency_ms
-            throughput = report.hardware_estimates.throughput_samples_per_sec
+            latency = getattr(report.hardware_estimates, "latency_ms", 0.0)
+            throughput = getattr(report.hardware_estimates, "throughput_samples_per_sec", 0.0)
+
+        # Model ID: use filename stem or path
+        model_id = ""
+        if model_path:
+            model_id = Path(model_path).stem
+        elif report.metadata:
+            model_id = Path(report.metadata.path).stem if report.metadata.path else ""
+
+        # Set primary accuracy from first eval result
+        primary_metric = ""
+        primary_value = 0.0
+        evals = eval_results or []
+        if evals and evals[0].metrics:
+            # Use first accuracy-type metric as primary
+            for m in evals[0].metrics:
+                if m.higher_is_better and m.category in ("accuracy", ""):
+                    primary_metric = m.name
+                    primary_value = m.value
+                    break
 
         return cls(
-            model_id=report.metadata.name if report.metadata else "",
-            model_path=model_path,
+            model_id=model_id,
+            model_path=model_path or (report.metadata.path if report.metadata else ""),
             architecture=arch_summary,
+            eval_results=evals,
+            primary_accuracy_metric=primary_metric,
+            primary_accuracy_value=primary_value,
             hardware_profile=hw_profile,
             latency_ms=latency,
             throughput_fps=throughput,
+        )
+
+
+# =============================================================================
+# Model Linking Utilities (Task 12.4.1)
+# =============================================================================
+
+
+def compute_model_hash(model_path: str, algorithm: str = "sha256") -> str:
+    """
+    Compute a hash of a model file for unique identification.
+
+    Args:
+        model_path: Path to the model file.
+        algorithm: Hash algorithm ("sha256", "md5", "sha1").
+
+    Returns:
+        Hex digest of the file hash.
+
+    Example:
+        >>> hash_id = compute_model_hash("model.onnx")
+        >>> print(hash_id[:12])  # First 12 chars as short ID
+        'a1b2c3d4e5f6'
+    """
+    import hashlib
+    from pathlib import Path
+
+    path = Path(model_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Model file not found: {model_path}")
+
+    hash_func = hashlib.new(algorithm)
+
+    # Read in chunks to handle large files
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            hash_func.update(chunk)
+
+    return hash_func.hexdigest()
+
+
+def link_eval_to_model(
+    model_path: str,
+    eval_result: EvalResult,
+    use_hash: bool = False,
+) -> EvalResult:
+    """
+    Link an evaluation result to a model file.
+
+    Updates the eval_result's model_id to match the model file identifier
+    (either path or hash).
+
+    Args:
+        model_path: Path to the model file.
+        eval_result: EvalResult to link.
+        use_hash: If True, use file hash as model_id. If False, use filename.
+
+    Returns:
+        Updated EvalResult with linked model_id.
+
+    Example:
+        >>> eval_result = parse_ultralytics_val(data)
+        >>> linked = link_eval_to_model("yolov8n.onnx", eval_result)
+        >>> print(linked.model_id)  # 'yolov8n'
+    """
+    from pathlib import Path
+
+    if use_hash:
+        model_id = compute_model_hash(model_path)[:12]  # Short hash
+    else:
+        model_id = Path(model_path).stem
+
+    # Update the eval result's model_id
+    eval_result.model_id = model_id
+    eval_result.metadata["linked_model_path"] = model_path
+
+    return eval_result
+
+
+def create_combined_report(
+    model_path: str,
+    eval_results: list[EvalResult] | None = None,
+    inspection_report: Any = None,  # InspectionReport
+    run_inspection: bool = True,
+) -> CombinedReport:
+    """
+    Create a CombinedReport by linking model analysis with eval results.
+
+    If inspection_report is not provided and run_inspection is True,
+    runs haoline analysis on the model first.
+
+    Args:
+        model_path: Path to the model file.
+        eval_results: List of evaluation results to attach.
+        inspection_report: Pre-computed InspectionReport (optional).
+        run_inspection: Whether to run inspection if not provided.
+
+    Returns:
+        CombinedReport combining architecture analysis and eval metrics.
+
+    Example:
+        >>> # Import eval, then combine with architecture analysis
+        >>> eval_result = load_ultralytics_json("val_results.json")
+        >>> combined = create_combined_report("yolov8n.onnx", [eval_result])
+        >>> print(combined.architecture["params_total"])
+        >>> print(combined.eval_results[0].metrics[0].value)
+    """
+    from pathlib import Path
+
+    # Run inspection if needed
+    if inspection_report is None and run_inspection:
+        try:
+            from haoline.report import ModelInspector
+
+            inspector = ModelInspector()
+            inspection_report = inspector.inspect(Path(model_path))
+        except Exception as e:
+            # Can't import or run haoline - create minimal combined report
+            print(f"Warning: Could not run model inspection: {e}")
+            return CombinedReport(
+                model_id=Path(model_path).stem,
+                model_path=model_path,
+                architecture={},
+                eval_results=eval_results or [],
+            )
+
+    # Link eval results to model
+    linked_evals: list[EvalResult] = []
+    if eval_results:
+        for er in eval_results:
+            linked = link_eval_to_model(model_path, er)
+            linked_evals.append(linked)
+
+    # Create combined report
+    if inspection_report:
+        return CombinedReport.from_inspection_report(
+            inspection_report,
+            model_path=model_path,
+            eval_results=linked_evals,
+        )
+    else:
+        return CombinedReport(
+            model_id=Path(model_path).stem,
+            model_path=model_path,
+            architecture={},
+            eval_results=linked_evals,
         )
 
 

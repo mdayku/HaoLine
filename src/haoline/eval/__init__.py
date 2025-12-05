@@ -37,9 +37,12 @@ from .schemas import (
     NLPEvalResult,
     SegmentationEvalResult,
     TaskType,
+    compute_model_hash,
+    create_combined_report,
     get_combined_report_schema,
     get_eval_schema,
     is_valid_task_type,
+    link_eval_to_model,
     validate_eval_result,
 )
 
@@ -60,6 +63,10 @@ __all__ = [
     "get_combined_report_schema",
     "validate_eval_result",
     "is_valid_task_type",
+    # Linking utilities
+    "compute_model_hash",
+    "link_eval_to_model",
+    "create_combined_report",
     # Adapters - Ultralytics
     "parse_ultralytics_val",
     "load_ultralytics_json",

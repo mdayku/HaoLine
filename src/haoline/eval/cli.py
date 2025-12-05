@@ -12,7 +12,10 @@ import sys
 from pathlib import Path
 
 from .schemas import (
+    CombinedReport,
     EvalResult,
+    create_combined_report,
+    link_eval_to_model,
     validate_eval_result,
 )
 
@@ -49,6 +52,12 @@ Examples:
 
   # Validate an eval results file
   haoline-import-eval --validate results.json
+
+  # Combine eval results with model architecture analysis
+  haoline-import-eval --from-ultralytics results.json --model yolo.onnx --combine
+
+  # Combine and output to file
+  haoline-import-eval --auto results.json --model model.onnx --combine --out-json combined.json
 """,
     )
 
@@ -98,11 +107,22 @@ Examples:
     )
 
     # Model linking
-    parser.add_argument(
+    link_group = parser.add_argument_group("Model Linking")
+    link_group.add_argument(
         "--model",
         type=Path,
         metavar="PATH",
         help="Path to the model file to link eval results to.",
+    )
+    link_group.add_argument(
+        "--combine",
+        action="store_true",
+        help="Combine eval results with model architecture analysis (requires --model).",
+    )
+    link_group.add_argument(
+        "--use-hash",
+        action="store_true",
+        help="Use file hash instead of filename as model identifier.",
     )
 
     # Task type
@@ -198,7 +218,7 @@ def import_from_json(path: Path) -> EvalResult | None:
             print(f"Error: Invalid eval result schema in {path}")
             return None
 
-        return EvalResult.from_dict(data)
+        return EvalResult.model_validate(data)
     except Exception as e:
         print(f"Error reading {path}: {e}")
         return None
@@ -308,15 +328,59 @@ def main() -> int:
         print("Failed to import eval results.")
         return 1
 
+    # Link to model if specified
+    if args.model:
+        result = link_eval_to_model(
+            str(args.model),
+            result,
+            use_hash=args.use_hash,
+        )
+        if not args.quiet:
+            print(f"Linked eval to model: {result.model_id}")
+
+    # Combine with architecture analysis if requested
+    output_data: EvalResult | CombinedReport = result
+    if args.combine:
+        if not args.model:
+            print("Error: --combine requires --model to be specified.")
+            return 1
+
+        if not args.model.exists():
+            print(f"Error: Model file not found: {args.model}")
+            return 1
+
+        if not args.quiet:
+            print(f"Running architecture analysis on {args.model}...")
+
+        combined = create_combined_report(
+            str(args.model),
+            eval_results=[result],
+            run_inspection=True,
+        )
+
+        if not args.quiet:
+            arch = combined.architecture
+            print(f"  Parameters: {arch.get('params_total', 0):,}")
+            print(f"  FLOPs: {arch.get('flops_total', 0):,}")
+            print(f"  Memory: {arch.get('model_size_bytes', 0) / 1024 / 1024:.1f} MB")
+            if combined.latency_ms > 0:
+                print(f"  Latency: {combined.latency_ms:.2f} ms")
+            if combined.throughput_fps > 0:
+                print(f"  Throughput: {combined.throughput_fps:.1f} fps")
+
+        output_data = combined
+
     # Output
     if args.out_json:
         args.out_json.parent.mkdir(parents=True, exist_ok=True)
-        args.out_json.write_text(result.to_json(), encoding="utf-8")
+        args.out_json.write_text(output_data.to_json(), encoding="utf-8")
         if not args.quiet:
-            print(f"Eval results written to: {args.out_json}")
+            print(
+                f"{'Combined report' if args.combine else 'Eval results'} written to: {args.out_json}"
+            )
 
     if not args.quiet and not args.out_json:
-        print(result.to_json())
+        print(output_data.to_json())
 
     return 0
 
