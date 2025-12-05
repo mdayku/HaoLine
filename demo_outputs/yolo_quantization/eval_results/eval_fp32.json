@@ -2,25 +2,25 @@
   "model_id": "yolov8n_fp32",
   "task_type": "detection",
   "dataset": "roof_damage_combined_v3",
-  "timestamp": "2025-12-04T19:58:41.264786",
+  "timestamp": "2025-12-04T20:11:10.783212",
   "metrics": [
     {
       "name": "mAP@50",
-      "value": 0.44034725393773216,
+      "value": 0.44030637549030166,
       "unit": "",
       "higher_is_better": true,
       "category": "accuracy"
     },
     {
       "name": "mAP@50-95",
-      "value": 0.19313006554097686,
+      "value": 0.19309947448694953,
       "unit": "",
       "higher_is_better": true,
       "category": "accuracy"
     },
     {
       "name": "precision",
-      "value": 0.6122825217434057,
+      "value": 0.6120037974984194,
       "unit": "",
       "higher_is_better": true,
       "category": "accuracy"
@@ -34,10 +34,17 @@
     },
     {
       "name": "inference_ms",
-      "value": 7.341946868075754,
+      "value": 51.54111670608915,
       "unit": "ms",
       "higher_is_better": false,
       "category": "speed"
+    },
+    {
+      "name": "model_size_mb",
+      "value": 11.671416282653809,
+      "unit": "MB",
+      "higher_is_better": false,
+      "category": "efficiency"
     }
   ],
   "metadata": {

@@ -22,17 +22,18 @@
       "flops_total": 8140497248,
       "model_size_mb": 11.466381072998047,
       "primary_metric_name": "mAP@50",
-      "primary_metric_value": 0.44034725393773216,
+      "primary_metric_value": 0.44030637549030166,
       "latency_ms": 0.0,
       "throughput_fps": 0.0,
       "hardware_tier": "T4",
       "cost_per_month_usd": 360.0,
       "cost_per_1k_inferences_usd": 0.00046527762048468235,
       "extra_metrics": {
-        "mAP@50-95": 0.19313006554097686,
-        "precision": 0.6122825217434057,
+        "mAP@50-95": 0.19309947448694953,
+        "precision": 0.6120037974984194,
         "recall": 0.3921852387843705,
-        "inference_ms": 7.341946868075754
+        "inference_ms": 51.54111670608915,
+        "model_size_mb": 11.671416282653809
       }
     },
     {
@@ -40,20 +41,30 @@
       "model_path": "demo_outputs\\yolo_quantization\\models\\yolov8n_fp16.onnx",
       "params_total": 3005843,
       "flops_total": 8140497248,
-      "model_size_mb": 11.466381072998047,
-      "primary_metric_name": "mAP@50",
-      "primary_metric_value": 0.44034725393773216,
+      "model_size_mb": 5.733190536499023,
+      "primary_metric_name": "",
+      "primary_metric_value": 0.0,
       "latency_ms": 0.0,
       "throughput_fps": 0.0,
       "hardware_tier": "T4",
       "cost_per_month_usd": 360.0,
       "cost_per_1k_inferences_usd": 0.00046527762048468235,
-      "extra_metrics": {
-        "mAP@50-95": 0.19313006554097686,
-        "precision": 0.6122825217434057,
-        "recall": 0.3921852387843705,
-        "inference_ms": 7.596383526005075
-      }
+      "extra_metrics": {}
+    },
+    {
+      "model_id": "yolov8n_int8",
+      "model_path": "demo_outputs\\yolo_quantization\\models\\yolov8n_int8.onnx",
+      "params_total": 3006223,
+      "flops_total": 119278243,
+      "model_size_mb": 2.8832969665527344,
+      "primary_metric_name": "",
+      "primary_metric_value": 0.0,
+      "latency_ms": 0.0,
+      "throughput_fps": 0.0,
+      "hardware_tier": "T4",
+      "cost_per_month_usd": 360.0,
+      "cost_per_1k_inferences_usd": 6.817457876085964e-06,
+      "extra_metrics": {}
     }
   ]
 }
