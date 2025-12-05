@@ -27,7 +27,7 @@
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
 | Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
-| Epic 12: Eval Import & Comparison | In Progress | 7 | 30/36 | P1 |
+| Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | Not Started | 3 | 0/12 | P1 |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
@@ -487,7 +487,7 @@
 
 ---
 
-## Epic 12: Eval Import & Comparison (P1)
+## Epic 12: Eval Import & Comparison (P1) - **COMPLETE**
 
 *Import eval metrics from existing tools (Ultralytics, HF evaluate, etc.) — don't reinvent the wheel.*
 *Combine with architecture analysis for unified accuracy × speed × cost comparison.*
@@ -539,23 +539,23 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 *Combine imported eval metrics with HaoLine's architecture analysis*
 - [x] **Task 12.4.1**: Link eval results to model files (by path or hash) - `link_eval_to_model()`, `compute_model_hash()`
 - [x] **Task 12.4.2**: Create `CombinedReport` dataclass (architecture + eval) - `schemas.py`
-- [ ] **Task 12.4.3**: Handle multiple eval runs per model (aggregate or select) — *defer*
-- [ ] **Task 12.4.4**: Validate eval task matches model type (warn if mismatch) — *defer*
+- ~~**Task 12.4.3**~~: → Moved to Epic 40.2.5
+- ~~**Task 12.4.4**~~: → Moved to Epic 40.2.6
 
 ### Story 12.6: Deployment Cost Calculator ← **MOVED UP**
 *Answer: "What does it cost to run this model at X fps?"*
 - [x] **Task 12.6.1**: Define deployment scenario inputs - `DeploymentScenario`, `DeploymentTarget`, `CloudProvider`
 - [x] **Task 12.6.2**: Calculate required hardware tier for latency SLA - `select_hardware_tier_for_latency()`
 - [x] **Task 12.6.3**: Estimate $/day and $/month for deployment - `calculate_deployment_cost()`, `DeploymentCostEstimate`
-- [ ] **Task 12.6.4**: Compare cost across precision variants (fp32 vs fp16 vs int8) — *defer*
-- [ ] **Task 12.6.5**: Generate "Deployment Recommendation" section in report — *defer*
+- ~~**Task 12.6.4**~~: → Moved to Epic 31.3.1 (Quantization Service)
+- ~~**Task 12.6.5**~~: → Moved to Epic 37.1.5 (Hardware Recommender)
 - [x] **Task 12.6.6**: Add `--deployment-fps` and `--deployment-hours` CLI flags
 
 ### Story 12.5: Unified Comparison Report
 *Architecture + Eval + Hardware in one view*
 - [x] **Task 12.5.1**: Multi-model comparison table - `comparison.py`: `compare_models()`, CSV/JSON/MD export
-- [ ] **Task 12.5.2**: Accuracy vs Speed scatter plot (Pareto frontier) — *defer*
-- [ ] **Task 12.5.3**: Per-class metric comparison (radar chart or grouped bars) — *defer*
+- ~~**Task 12.5.2**~~: → Moved to Epic 34.5.1 (Comparison Visualizations)
+- ~~**Task 12.5.3**~~: → Moved to Epic 34.5.2 (Comparison Visualizations)
 - [x] **Task 12.5.4**: Add eval metrics to HTML/PDF - `generate_eval_metrics_html()`, updated `to_html()`
 - [x] **Task 12.5.5**: Export comparison as CSV/JSON - `to_csv()`, `to_json()`, `to_markdown()`
 
@@ -984,6 +984,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 31.2.6**: Save quantized model to user-specified path
 
 ### Story 31.3: Advanced Quantization Backends
+- [ ] **Task 31.3.0**: Compare deployment cost across precision variants (fp32 vs fp16 vs int8) — *from Epic 12.6.4*
 - [ ] **Task 31.3.1**: Integrate Intel Neural Compressor (INC) for advanced PTQ
 - [ ] **Task 31.3.2**: Integrate ONNX GPTQ quantization (for LLMs)
 - [ ] **Task 31.3.3**: Integrate AWQ quantization support
@@ -1132,6 +1133,13 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 34.5.4**: Export activation visualizations as images
 - [ ] **Task 34.5.5**: Add activation inspection to Streamlit UI
 
+### Story 34.6: Comparison Visualizations
+*Charts for multi-model comparison.*
+- [ ] **Task 34.6.1**: Accuracy vs Speed scatter plot (Pareto frontier) — *from Epic 12.5.2*
+- [ ] **Task 34.6.2**: Per-class metric comparison (radar chart or grouped bars) — *from Epic 12.5.3*
+- [ ] **Task 34.6.3**: Size vs Accuracy bubble chart
+- [ ] **Task 34.6.4**: Interactive comparison dashboard in Streamlit
+
 ---
 
 ## Epic 35: TensorRT-Aware Graph Visualization (P3)
@@ -1181,6 +1189,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 37.1.3**: Rank and return top 3-5 recommendations with rationale
 - [ ] **Task 37.1.4**: Include cloud cost estimates ($/hour, $/1M inferences)
 - [ ] **Task 37.1.5**: Show "fits in VRAM" / "requires multi-GPU" warnings
+- [ ] **Task 37.1.6**: Generate "Deployment Recommendation" section in report — *from Epic 12.6.5*
 
 ### Story 37.2: Streamlit Hardware Selector
 - [ ] **Task 37.2.1**: Add hardware profile dropdown in UI
@@ -1312,6 +1321,8 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 40.2.1**: Convert `ParamCounts` to Pydantic `BaseModel`
 - [ ] **Task 40.2.2**: Convert `FlopCounts` to Pydantic `BaseModel`
 - [ ] **Task 40.2.3**: Convert `MemoryEstimates` to Pydantic `BaseModel`
+- [ ] **Task 40.2.5**: Handle multiple eval runs per model (aggregate or select) — *from Epic 12.4.3*
+- [ ] **Task 40.2.6**: Validate eval task matches model type (warn if mismatch) — *from Epic 12.4.4*
 - [ ] **Task 40.2.4**: Update `MetricsEngine` to return Pydantic models
 
 ### Story 40.3: Hardware and Risk Models
