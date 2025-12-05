@@ -725,3 +725,132 @@ class UniversalGraph(BaseModel):
         path = Path(path)
         output_path = path.with_suffix("")  # Remove .png
         source.render(str(output_path), format="png", cleanup=True)
+
+    def to_hierarchical(self) -> dict[str, Any]:
+        """Convert UniversalGraph to HierarchicalGraph-compatible dict for D3.js.
+
+        Returns a nested dict structure that matches the format expected by the
+        interactive D3.js graph visualization. This enables using UniversalGraph
+        as a drop-in replacement for HierarchicalGraph.
+
+        Returns:
+            Dict structure matching HierarchicalGraph.to_dict() format
+        """
+        # Build tensor -> producing node mapping for edges
+        tensor_to_producer: dict[str, str] = {}
+        for node in self.nodes:
+            for output in node.outputs:
+                tensor_to_producer[output] = node.id
+
+        # Calculate approximate stats per node
+        def estimate_node_flops(node: UniversalNode) -> int:
+            """Rough FLOP estimate based on op type and output shapes."""
+            if not node.output_shapes:
+                return 0
+
+            output_elements = 1
+            for shape in node.output_shapes:
+                for dim in shape:
+                    if dim > 0:
+                        output_elements *= dim
+
+            # Simple heuristics
+            flop_multipliers = {
+                "Conv2D": 9,  # Approximate for 3x3 kernel
+                "MatMul": 2,  # multiply-add
+                "Gemm": 2,
+                "Attention": 4,
+                "MultiHeadAttention": 4,
+            }
+            return output_elements * flop_multipliers.get(node.op_type, 1)
+
+        def estimate_node_memory(node: UniversalNode) -> int:
+            """Rough memory estimate in bytes."""
+            if not node.output_shapes:
+                return 0
+
+            total_elements = 0
+            for shape in node.output_shapes:
+                elements = 1
+                for dim in shape:
+                    if dim > 0:
+                        elements *= dim
+                total_elements += elements
+
+            # Assume float32 (4 bytes) by default
+            bytes_per_elem = 4
+            if node.output_dtypes:
+                dtype = node.output_dtypes[0]
+                if isinstance(dtype, DataType):
+                    bytes_per_elem = dtype.bytes_per_element  # Property, not method
+                elif isinstance(dtype, int):
+                    # Handle case where dtype is stored as int
+                    bytes_per_elem = dtype if dtype > 0 else 4
+
+            return total_elements * bytes_per_elem
+
+        # Convert nodes to hierarchical format
+        children = []
+        total_flops = 0
+        total_params = 0
+        total_memory = 0
+
+        for node in self.nodes:
+            node_flops = estimate_node_flops(node)
+            node_memory = estimate_node_memory(node)
+            total_flops += node_flops
+            total_memory += node_memory
+
+            # Get param count from associated weight tensors
+            node_params = 0
+            for inp in node.inputs:
+                if inp in self.tensors:
+                    tensor = self.tensors[inp]
+                    if tensor.origin == TensorOrigin.WEIGHT:
+                        node_params += tensor.num_elements
+
+            total_params += node_params
+
+            child = {
+                "id": node.id,
+                "name": node.id,
+                "display_name": node.op_type,
+                "node_type": "op",
+                "op_type": node.op_type,
+                "depth": 1,
+                "is_collapsed": False,
+                "is_repeated": False,
+                "repeat_count": 1,
+                "total_flops": node_flops,
+                "total_params": node_params,
+                "total_memory_bytes": node_memory,
+                "node_count": 1,
+                "inputs": node.inputs,
+                "outputs": node.outputs,
+                "attributes": node.attributes,
+            }
+            children.append(child)
+
+        # Create root node
+        model_name = self.metadata.name or "Model"
+        root = {
+            "id": "root",
+            "name": model_name,
+            "display_name": model_name,
+            "node_type": "model",
+            "op_type": None,
+            "depth": 0,
+            "is_collapsed": False,
+            "is_repeated": False,
+            "repeat_count": 1,
+            "total_flops": total_flops,
+            "total_params": total_params or self.total_parameters,
+            "total_memory_bytes": total_memory,
+            "node_count": len(self.nodes),
+            "inputs": self.metadata.input_names,
+            "outputs": self.metadata.output_names,
+            "attributes": {},
+            "children": children,
+        }
+
+        return root

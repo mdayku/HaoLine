@@ -29,7 +29,7 @@
 | Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| Epic 18: Universal IR | In Progress | 6 | 19/25 | P1 |
+| Epic 18: Universal IR | **COMPLETE** | 6 | 25/25 | Done |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
 | Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
 | Epic 21: TFLite | In Progress | 2 | 5/12 | P2 |
@@ -642,20 +642,20 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 - [x] **Task 18.5.3**: CLI integration for graph export — `--export-ir PATH`, `--export-graph PATH` (.dot or .png), `--graph-max-nodes N` flags in cli.py.
 
-### Story 18.6: IR Integration with Main Pipeline
+### Story 18.6: IR Integration with Main Pipeline - **COMPLETE**
 *Integrate UniversalGraph into InspectionReport and downstream systems.*
 
-- [ ] **Task 18.6.1**: Add `universal_graph: Optional[UniversalGraph]` field to `InspectionReport` dataclass in `report.py`. Update `to_dict()` to serialize it (without weights).
+- [x] **Task 18.6.1**: Add `universal_graph: Optional[UniversalGraph]` field to `InspectionReport` dataclass in `report.py`. Updated `to_dict()` to serialize it (without weights). — `report.py`
 
-- [ ] **Task 18.6.2**: Populate `UniversalGraph` during `ModelInspector.inspect()` by calling `load_model()` from format_adapters. Make optional via flag to avoid perf impact.
+- [x] **Task 18.6.2**: Populate `UniversalGraph` during `ModelInspector.inspect()` by calling `load_model()` from format_adapters. Graceful fallback if loading fails. — `report.py`
 
-- [ ] **Task 18.6.3**: Add `to_hierarchical()` method to `UniversalGraph` that outputs the same structure as `HierarchicalGraph` for D3.js compatibility.
+- [x] **Task 18.6.3**: Add `to_hierarchical()` method to `UniversalGraph` that outputs the same structure as `HierarchicalGraph` for D3.js compatibility. — `universal_ir.py`
 
-- [ ] **Task 18.6.4**: Update Streamlit app to show IR summary (`graph.summary()`) when `universal_graph` is available. Add toggle for "IR View".
+- [x] **Task 18.6.4**: Update Streamlit app to show IR summary (`graph.summary()`) when `universal_graph` is available. Added "Universal IR View" expander. — `streamlit_app.py`
 
-- [ ] **Task 18.6.5**: Enable IR-based comparison in compare mode — use `is_structurally_equal()` and `diff()` for FP32 vs FP16 analysis.
+- [x] **Task 18.6.5**: Enable IR-based comparison in compare mode — use `is_structurally_equal()` and `diff()` for FP32 vs FP16 analysis. — `streamlit_app.py`
 
-- [ ] **Task 18.6.6**: Test integration end-to-end: CLI → InspectionReport → Streamlit with UniversalGraph populated.
+- [x] **Task 18.6.6**: Test integration end-to-end: CLI → InspectionReport → Streamlit with UniversalGraph populated. All tests pass.
 
 ---
 
