@@ -9,11 +9,15 @@ import numpy as np
 import pytest
 
 from haoline.format_adapters import (
+    ConversionLevel,
     FormatAdapter,
     OnnxAdapter,
     PyTorchAdapter,
+    can_convert,
     get_adapter,
+    get_conversion_level,
     list_adapters,
+    list_conversion_paths,
     map_onnx_op_to_universal,
     register_adapter,
 )
@@ -383,3 +387,74 @@ class TestDataType:
         assert DataType.from_numpy_dtype(np.dtype(np.float32)) == DataType.FLOAT32
         assert DataType.from_numpy_dtype(np.dtype(np.float16)) == DataType.FLOAT16
         assert DataType.from_numpy_dtype(np.dtype(np.int8)) == DataType.INT8
+
+
+class TestConversionMatrix:
+    """Tests for conversion matrix functionality."""
+
+    def test_conversion_level_enum(self) -> None:
+        """ConversionLevel enum should have expected values."""
+        assert ConversionLevel.FULL.value == "full"
+        assert ConversionLevel.PARTIAL.value == "partial"
+        assert ConversionLevel.LOSSY.value == "lossy"
+        assert ConversionLevel.NONE.value == "none"
+
+    def test_identity_conversion(self) -> None:
+        """Converting to same format should be FULL."""
+        assert get_conversion_level(SourceFormat.ONNX, SourceFormat.ONNX) == ConversionLevel.FULL
+        assert get_conversion_level("pytorch", "pytorch") == ConversionLevel.FULL
+
+    def test_pytorch_to_onnx(self) -> None:
+        """PyTorch to ONNX should be FULL."""
+        level = get_conversion_level(SourceFormat.PYTORCH, SourceFormat.ONNX)
+        assert level == ConversionLevel.FULL
+
+    def test_onnx_to_tensorrt(self) -> None:
+        """ONNX to TensorRT should be PARTIAL."""
+        level = get_conversion_level(SourceFormat.ONNX, SourceFormat.TENSORRT)
+        assert level == ConversionLevel.PARTIAL
+
+    def test_tensorrt_to_onnx(self) -> None:
+        """TensorRT to ONNX should be NONE (no export)."""
+        level = get_conversion_level(SourceFormat.TENSORRT, SourceFormat.ONNX)
+        assert level == ConversionLevel.NONE
+
+    def test_unknown_conversion(self) -> None:
+        """Unknown conversions should return NONE."""
+        level = get_conversion_level(SourceFormat.GGUF, SourceFormat.TENSORRT)
+        assert level == ConversionLevel.NONE
+
+    def test_string_format_input(self) -> None:
+        """Should accept string format names."""
+        level = get_conversion_level("onnx", "openvino")
+        assert level == ConversionLevel.FULL
+
+    def test_can_convert_true(self) -> None:
+        """can_convert should return True for valid conversions."""
+        assert can_convert("pytorch", "onnx") is True
+        assert can_convert("onnx", "tflite") is True
+
+    def test_can_convert_false(self) -> None:
+        """can_convert should return False for impossible conversions."""
+        assert can_convert("safetensors", "onnx") is False
+        assert can_convert("tensorrt", "onnx") is False
+
+    def test_list_conversion_paths(self) -> None:
+        """list_conversion_paths should return available conversions."""
+        paths = list_conversion_paths()
+        assert len(paths) > 0
+        # Each path should have source, target, level
+        for path in paths:
+            assert "source" in path
+            assert "target" in path
+            assert "level" in path
+
+    def test_list_conversion_paths_filtered_source(self) -> None:
+        """list_conversion_paths should filter by source."""
+        paths = list_conversion_paths(source="onnx")
+        assert all(p["source"] == "onnx" for p in paths)
+
+    def test_list_conversion_paths_filtered_target(self) -> None:
+        """list_conversion_paths should filter by target."""
+        paths = list_conversion_paths(target="onnx")
+        assert all(p["target"] == "onnx" for p in paths)

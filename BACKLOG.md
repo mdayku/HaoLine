@@ -29,7 +29,7 @@
 | Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| Epic 18: Universal IR | In Progress | 5 | 10/19 | P1 |
+| Epic 18: Universal IR | In Progress | 5 | 12/19 | P1 |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
 | Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
 | Epic 21: TFLite | In Progress | 2 | 5/12 | P2 |
@@ -615,14 +615,14 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 - [x] **Task 18.2.5**: Unit tests for adapter selection and loading — 33 tests covering registry, adapters, op mapping, graph creation, comparison, diff, serialization. — `src/haoline/tests/test_format_adapters.py`
 
-### Story 18.3: Conversion Matrix
+### Story 18.3: Conversion Matrix - **IN PROGRESS**
 *Track and expose conversion capabilities between formats.*
 
-- [ ] **Task 18.3.1**: Define conversion capability enum — `ConversionLevel.FULL` (lossless), `PARTIAL` (limitations or multi-step), `LOSSY` (info loss), `NONE` (no path). Document what each level means.
+- [x] **Task 18.3.1**: Define conversion capability enum — `ConversionLevel.FULL` (lossless), `PARTIAL` (limitations or multi-step), `LOSSY` (info loss), `NONE` (no path). — `ConversionLevel` enum in format_adapters.py
 
-- [ ] **Task 18.3.2**: Implement conversion matrix lookup — Table mapping (source_format, target_format) → ConversionLevel. Initial entries: ONNX→TensorRT (FULL/PARTIAL), ONNX→TFLite (FULL), ONNX→CoreML (FULL), PyTorch→ONNX (FULL), PyTorch→TFLite (PARTIAL, via ONNX). Mark multi-hop conversions.
+- [x] **Task 18.3.2**: Implement conversion matrix lookup — `get_conversion_level()`, `list_conversion_paths()`, `can_convert()`, `convert_model()`. 15+ format pairs defined. — `_CONVERSION_MATRIX` in format_adapters.py
 
-- [ ] **Task 18.3.3**: Add `--convert-to <format>` CLI flag — Invoke target adapter's `write()` with UniversalGraph. Handle PyTorch→CoreML via ONNX intermediate. Clear error if matrix says NONE. Future: add format-specific params (FP16 for TRT, image inputs for CoreML).
+- [ ] **Task 18.3.3**: Add `--convert-to <format>` CLI flag — Invoke target adapter's `write()` with UniversalGraph. Handle multi-hop conversions. Clear error if matrix says NONE. (Future: add format-specific params)
 
 ### Story 18.4: IR Structural Comparison Tools
 *Compare model architectures at the IR level.*

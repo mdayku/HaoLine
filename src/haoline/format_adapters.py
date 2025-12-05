@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -787,6 +788,192 @@ def save_model(graph: UniversalGraph, path: str | Path) -> None:
 
 
 # =============================================================================
+# Conversion Matrix (Task 18.3)
+# =============================================================================
+
+
+class ConversionLevel(str, Enum):
+    """Conversion capability between formats.
+
+    Describes how well a conversion preserves information:
+    - FULL: Lossless conversion, all info preserved
+    - PARTIAL: Some limitations or requires multi-step
+    - LOSSY: Some information is lost
+    - NONE: No conversion path available
+    """
+
+    FULL = "full"  # Lossless, complete conversion
+    PARTIAL = "partial"  # Some limitations or multi-step required
+    LOSSY = "lossy"  # Information loss during conversion
+    NONE = "none"  # No conversion path
+
+
+# Conversion matrix: (source, target) -> ConversionLevel
+# Format: CONVERSION_MATRIX[(source_format, target_format)] = level
+_CONVERSION_MATRIX: dict[tuple[SourceFormat, SourceFormat], ConversionLevel] = {
+    # ONNX conversions (primary interchange format)
+    (SourceFormat.ONNX, SourceFormat.TENSORRT): ConversionLevel.PARTIAL,  # TensorRT-specific ops
+    (SourceFormat.ONNX, SourceFormat.TFLITE): ConversionLevel.PARTIAL,  # Some ops unsupported
+    (SourceFormat.ONNX, SourceFormat.COREML): ConversionLevel.PARTIAL,  # iOS-specific limits
+    (SourceFormat.ONNX, SourceFormat.OPENVINO): ConversionLevel.FULL,  # Good ONNX support
+    # PyTorch conversions (via ONNX)
+    (SourceFormat.PYTORCH, SourceFormat.ONNX): ConversionLevel.FULL,  # torch.onnx.export
+    (SourceFormat.PYTORCH, SourceFormat.TENSORRT): ConversionLevel.PARTIAL,  # Via ONNX
+    (SourceFormat.PYTORCH, SourceFormat.TFLITE): ConversionLevel.PARTIAL,  # Via ONNX
+    (SourceFormat.PYTORCH, SourceFormat.COREML): ConversionLevel.PARTIAL,  # coremltools
+    # TensorFlow conversions
+    (SourceFormat.TENSORFLOW, SourceFormat.ONNX): ConversionLevel.PARTIAL,  # tf2onnx
+    (SourceFormat.TENSORFLOW, SourceFormat.TFLITE): ConversionLevel.FULL,  # TFLite converter
+    (SourceFormat.TENSORFLOW, SourceFormat.COREML): ConversionLevel.PARTIAL,  # coremltools
+    # TensorRT (inference-only, limited export)
+    (SourceFormat.TENSORRT, SourceFormat.ONNX): ConversionLevel.NONE,  # Cannot export
+    # CoreML (Apple ecosystem)
+    (SourceFormat.COREML, SourceFormat.ONNX): ConversionLevel.LOSSY,  # Some info lost
+    # TFLite (mobile)
+    (SourceFormat.TFLITE, SourceFormat.ONNX): ConversionLevel.PARTIAL,  # tflite2onnx
+    # Weights-only formats (no graph structure)
+    (SourceFormat.SAFETENSORS, SourceFormat.ONNX): ConversionLevel.NONE,  # Weights only
+    (SourceFormat.GGUF, SourceFormat.ONNX): ConversionLevel.NONE,  # Weights only
+}
+
+
+def get_conversion_level(source: SourceFormat | str, target: SourceFormat | str) -> ConversionLevel:
+    """Get the conversion capability between two formats.
+
+    Args:
+        source: Source model format
+        target: Target model format
+
+    Returns:
+        ConversionLevel indicating conversion capability
+    """
+    # Normalize to SourceFormat
+    if isinstance(source, str):
+        try:
+            source = SourceFormat(source.lower())
+        except ValueError:
+            return ConversionLevel.NONE
+    if isinstance(target, str):
+        try:
+            target = SourceFormat(target.lower())
+        except ValueError:
+            return ConversionLevel.NONE
+
+    # Identity conversion
+    if source == target:
+        return ConversionLevel.FULL
+
+    return _CONVERSION_MATRIX.get((source, target), ConversionLevel.NONE)
+
+
+def list_conversion_paths(
+    source: SourceFormat | str | None = None,
+    target: SourceFormat | str | None = None,
+) -> list[dict[str, str]]:
+    """List available conversion paths.
+
+    Args:
+        source: Filter by source format (optional)
+        target: Filter by target format (optional)
+
+    Returns:
+        List of dicts with source, target, and level
+    """
+    result: list[dict[str, str]] = []
+
+    for (src, tgt), level in _CONVERSION_MATRIX.items():
+        # Apply filters
+        if source is not None:
+            source_fmt = (
+                source if isinstance(source, SourceFormat) else SourceFormat(source.lower())
+            )
+            if src != source_fmt:
+                continue
+        if target is not None:
+            target_fmt = (
+                target if isinstance(target, SourceFormat) else SourceFormat(target.lower())
+            )
+            if tgt != target_fmt:
+                continue
+
+        result.append(
+            {
+                "source": src.value,
+                "target": tgt.value,
+                "level": level.value,
+            }
+        )
+
+    return sorted(result, key=lambda x: (x["source"], x["target"]))
+
+
+def can_convert(source: SourceFormat | str, target: SourceFormat | str) -> bool:
+    """Check if conversion is possible between two formats.
+
+    Returns True for FULL, PARTIAL, or LOSSY conversions.
+
+    Args:
+        source: Source model format
+        target: Target model format
+
+    Returns:
+        True if any conversion path exists
+    """
+    level = get_conversion_level(source, target)
+    return level != ConversionLevel.NONE
+
+
+def convert_model(
+    graph: UniversalGraph,
+    target_format: SourceFormat | str,
+    output_path: Path | str,
+) -> Path:
+    """Convert a model to a different format.
+
+    Args:
+        graph: UniversalGraph to convert
+        target_format: Target format (e.g., "onnx", "tflite")
+        output_path: Output file path
+
+    Returns:
+        Path to the converted model
+
+    Raises:
+        ValueError: If conversion is not supported
+    """
+    output_path = Path(output_path)
+
+    # Get conversion level
+    source = graph.metadata.source_format
+    if isinstance(target_format, str):
+        target_format = SourceFormat(target_format.lower())
+
+    level = get_conversion_level(source, target_format)
+    if level == ConversionLevel.NONE:
+        raise ValueError(
+            f"Cannot convert from {source.value} to {target_format.value}. "
+            f"No conversion path available."
+        )
+
+    # Log warning for lossy conversions
+    if level == ConversionLevel.LOSSY:
+        logger.warning(f"Converting {source.value} to {target_format.value} may lose information")
+
+    # Get target adapter
+    # For now, only ONNX writing is supported
+    if target_format != SourceFormat.ONNX:
+        raise NotImplementedError(
+            f"Direct conversion to {target_format.value} not yet implemented. "
+            f"Export to ONNX first, then use format-specific tools."
+        )
+
+    adapter = OnnxAdapter()
+    adapter.write(graph, output_path)
+
+    return output_path
+
+
+# =============================================================================
 # Module Exports
 # =============================================================================
 
@@ -805,4 +992,10 @@ __all__ = [
     "save_model",
     "map_onnx_op_to_universal",
     "ONNX_TO_UNIVERSAL_OP",
+    # Conversion Matrix
+    "ConversionLevel",
+    "get_conversion_level",
+    "list_conversion_paths",
+    "can_convert",
+    "convert_model",
 ]
