@@ -474,193 +474,234 @@ def format_bytes(b: float) -> str:
 
 
 def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
-    """Render side-by-side model comparison."""
-    st.markdown("## Model Comparison")
+    """Render CLI-style model comparison report."""
+    import pandas as pd
 
-    # Header with model names
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(
-            f"""
-        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                    padding: 1rem 1.5rem; border-radius: 12px; text-align: center;">
-            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.1em;">
-                Model A
-            </div>
-            <div style="font-size: 1.25rem; font-weight: 600; color: white; margin-top: 0.25rem;">
-                {model_a.name}
-            </div>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    with col2:
-        st.markdown(
-            f"""
-        <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-                    padding: 1rem 1.5rem; border-radius: 12px; text-align: center;">
-            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.1em;">
-                Model B
-            </div>
-            <div style="font-size: 1.25rem; font-weight: 600; color: white; margin-top: 0.25rem;">
-                {model_b.name}
-            </div>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("---")
-
-    # Metrics comparison
-    st.markdown("### Key Metrics")
-
-    # Get metrics
+    # Extract all metrics
     params_a = model_a.report.param_counts.total if model_a.report.param_counts else 0
     params_b = model_b.report.param_counts.total if model_b.report.param_counts else 0
     flops_a = model_a.report.flop_counts.total if model_a.report.flop_counts else 0
     flops_b = model_b.report.flop_counts.total if model_b.report.flop_counts else 0
-    mem_a = (
-        model_a.report.memory_estimates.peak_activation_bytes
-        if model_a.report.memory_estimates
-        else 0
+    size_a = (
+        model_a.report.memory_estimates.model_size_bytes if model_a.report.memory_estimates else 0
     )
-    mem_b = (
-        model_b.report.memory_estimates.peak_activation_bytes
-        if model_b.report.memory_estimates
-        else 0
+    size_b = (
+        model_b.report.memory_estimates.model_size_bytes if model_b.report.memory_estimates else 0
     )
     ops_a = model_a.report.graph_summary.num_nodes
     ops_b = model_b.report.graph_summary.num_nodes
 
-    # Calculate deltas
-    def delta_str(a, b, is_bytes=False):
-        if a == 0 and b == 0:
-            return ""
-        diff = b - a
-        pct = (diff / a * 100) if a != 0 else 0
-        sign = "+" if diff > 0 else ""
-        if is_bytes:
-            return f"{sign}{format_bytes(abs(diff))} ({sign}{pct:.1f}%)"
-        return f"{sign}{format_number(abs(diff))} ({sign}{pct:.1f}%)"
+    # Precision detection
+    bytes_per_param_a = (size_a / params_a) if params_a > 0 else 0
+    bytes_per_param_b = (size_b / params_b) if params_b > 0 else 0
 
-    # Comparison table
-    col1, col2, col3, col4 = st.columns(4)
+    def get_precision(bpp: float) -> str:
+        if bpp < 1.5:
+            return "INT8"
+        elif bpp < 2.5:
+            return "FP16"
+        elif bpp < 4.5:
+            return "FP32"
+        return "FP64"
 
+    precision_a = get_precision(bytes_per_param_a)
+    precision_b = get_precision(bytes_per_param_b)
+
+    # Size ratio (B relative to A)
+    size_ratio = size_b / size_a if size_a > 0 else 1.0
+
+    # Title
+    st.markdown(
+        f"""
+    <h2 style="margin-bottom: 0.25rem;">Quantization Impact Report</h2>
+    <p style="color: #a3a3a3; font-size: 0.9rem;">
+        Baseline: <strong>{model_a.name}</strong> ({precision_a})
+    </p>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    # Trade-off Analysis box
+    st.markdown("### Trade-off Analysis")
+
+    # Determine best characteristics
+    smaller = model_b.name if size_b < size_a else model_a.name
+    fewer_params = model_b.name if params_b < params_a else model_a.name
+    fewer_flops = model_b.name if flops_b < flops_a else model_a.name
+
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown("**Parameters**")
-        st.markdown(f"🟢 A: **{format_number(params_a)}**")
-        st.markdown(f"🟣 B: **{format_number(params_b)}**")
-        if params_a != params_b:
-            diff_pct = ((params_b - params_a) / params_a * 100) if params_a else 0
-            color = "#ef4444" if diff_pct > 0 else "#10b981"
-            st.markdown(
-                f"<span style='color: {color};'>Δ {diff_pct:+.1f}%</span>", unsafe_allow_html=True
-            )
-
+        st.metric(
+            "Smallest",
+            smaller,
+            f"{(1 - min(size_a, size_b) / max(size_a, size_b)) * 100:.1f}% smaller",
+        )
     with col2:
-        st.markdown("**FLOPs**")
-        st.markdown(f"🟢 A: **{format_number(flops_a)}**")
-        st.markdown(f"🟣 B: **{format_number(flops_b)}**")
-        if flops_a != flops_b:
-            diff_pct = ((flops_b - flops_a) / flops_a * 100) if flops_a else 0
-            color = "#ef4444" if diff_pct > 0 else "#10b981"
-            st.markdown(
-                f"<span style='color: {color};'>Δ {diff_pct:+.1f}%</span>", unsafe_allow_html=True
-            )
-
+        st.metric("Fewest Params", fewer_params)
     with col3:
-        st.markdown("**Peak Memory**")
-        st.markdown(f"🟢 A: **{format_bytes(mem_a)}**")
-        st.markdown(f"🟣 B: **{format_bytes(mem_b)}**")
-        if mem_a != mem_b:
-            diff_pct = ((mem_b - mem_a) / mem_a * 100) if mem_a else 0
-            color = "#ef4444" if diff_pct > 0 else "#10b981"
-            st.markdown(
-                f"<span style='color: {color};'>Δ {diff_pct:+.1f}%</span>", unsafe_allow_html=True
+        st.metric("Fewest FLOPs", fewer_flops)
+
+    # Recommendations
+    st.markdown("#### Recommendations")
+    recommendations = []
+
+    if precision_a != precision_b:
+        if size_ratio < 0.6:
+            recommendations.append(
+                f"**{model_b.name}** offers **{(1 - size_ratio) * 100:.0f}% smaller** model size "
+                f"({precision_a} → {precision_b})"
+            )
+        if size_ratio > 1.4:
+            recommendations.append(
+                f"**{model_a.name}** is **{(1 - 1 / size_ratio) * 100:.0f}% smaller** than {model_b.name}"
             )
 
-    with col4:
-        st.markdown("**Operators**")
-        st.markdown(f"🟢 A: **{ops_a}**")
-        st.markdown(f"🟣 B: **{ops_b}**")
-        if ops_a != ops_b:
-            diff_pct = ((ops_b - ops_a) / ops_a * 100) if ops_a else 0
-            color = "#ef4444" if diff_pct > 0 else "#10b981"
-            st.markdown(
-                f"<span style='color: {color};'>Δ {diff_pct:+.1f}%</span>", unsafe_allow_html=True
-            )
+    if abs(size_ratio - 0.5) < 0.1 and precision_b == "FP16":
+        recommendations.append(
+            "FP16 achieves expected ~50% size reduction with minimal accuracy impact"
+        )
+    elif abs(size_ratio - 0.25) < 0.1 and precision_b == "INT8":
+        recommendations.append(
+            "INT8 achieves expected ~75% size reduction - verify accuracy on your dataset"
+        )
+
+    if params_a == params_b and flops_a == flops_b:
+        recommendations.append("Same architecture - only precision/quantization differs")
+
+    if not recommendations:
+        recommendations.append("Models have similar characteristics")
+
+    for rec in recommendations:
+        st.markdown(f"- {rec}")
 
     st.markdown("---")
 
-    # Operator distribution comparison
-    st.markdown("### Operator Distribution Comparison")
+    # Variant Comparison Table (CLI-style)
+    st.markdown("### Variant Comparison")
 
-    import pandas as pd
+    table_data = [
+        {
+            "Model": model_a.name,
+            "Precision": precision_a,
+            "Size": format_bytes(size_a),
+            "Params": format_number(params_a),
+            "FLOPs": format_number(flops_a),
+            "Size vs Baseline": "baseline",
+            "Ops": ops_a,
+        },
+        {
+            "Model": model_b.name,
+            "Precision": precision_b,
+            "Size": format_bytes(size_b),
+            "Params": format_number(params_b),
+            "FLOPs": format_number(flops_b),
+            "Size vs Baseline": f"{size_ratio:.2f}x ({(size_ratio - 1) * 100:+.1f}%)",
+            "Ops": ops_b,
+        },
+    ]
 
-    # Merge operator counts
+    df = pd.DataFrame(table_data)
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Model": st.column_config.TextColumn("Model", width="medium"),
+            "Precision": st.column_config.TextColumn("Precision", width="small"),
+            "Size": st.column_config.TextColumn("Size", width="small"),
+            "Params": st.column_config.TextColumn("Params", width="small"),
+            "FLOPs": st.column_config.TextColumn("FLOPs", width="small"),
+            "Size vs Baseline": st.column_config.TextColumn("Δ Size", width="medium"),
+            "Ops": st.column_config.NumberColumn("Ops", width="small"),
+        },
+    )
+
+    st.markdown("---")
+
+    # Memory Savings visualization
+    st.markdown("### Memory Comparison")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # Size comparison bar
+        size_data = pd.DataFrame(
+            {"Model": [model_a.name, model_b.name], "Size (MB)": [size_a / 1e6, size_b / 1e6]}
+        )
+        st.bar_chart(size_data.set_index("Model"), height=200)
+        st.caption("Model Size (weights)")
+
+    with col2:
+        # Savings indicator
+        if size_a > size_b:
+            savings_pct = (1 - size_b / size_a) * 100
+            savings_bytes = size_a - size_b
+            st.markdown(
+                f"""
+            <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
+                        border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 1.5rem; text-align: center;">
+                <div style="font-size: 2rem; font-weight: 700; color: #10b981;">{savings_pct:.1f}%</div>
+                <div style="color: #a3a3a3; font-size: 0.9rem;">Size Reduction</div>
+                <div style="color: #6b7280; font-size: 0.8rem; margin-top: 0.5rem;">
+                    Saves {format_bytes(savings_bytes)}
+                </div>
+            </div>
+            """,
+                unsafe_allow_html=True,
+            )
+        elif size_b > size_a:
+            increase_pct = (size_b / size_a - 1) * 100
+            st.markdown(
+                f"""
+            <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%);
+                        border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1.5rem; text-align: center;">
+                <div style="font-size: 2rem; font-weight: 700; color: #ef4444;">+{increase_pct:.1f}%</div>
+                <div style="color: #a3a3a3; font-size: 0.9rem;">Size Increase</div>
+            </div>
+            """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.info("Models have identical size")
+
+    st.markdown("---")
+
+    # Operator Distribution
+    st.markdown("### Operator Distribution")
+
     ops_a_dict = model_a.report.graph_summary.op_type_counts or {}
     ops_b_dict = model_b.report.graph_summary.op_type_counts or {}
-    all_ops = set(ops_a_dict.keys()) | set(ops_b_dict.keys())
+    all_ops = sorted(set(ops_a_dict.keys()) | set(ops_b_dict.keys()))
 
-    comparison_data = []
-    for op in sorted(all_ops):
-        count_a = ops_a_dict.get(op, 0)
-        count_b = ops_b_dict.get(op, 0)
-        comparison_data.append(
-            {
-                "Operator": op,
-                f"Model A ({model_a.name})": count_a,
-                f"Model B ({model_b.name})": count_b,
-                "Difference": count_b - count_a,
-            }
+    if all_ops:
+        op_data = []
+        for op in all_ops:
+            count_a = ops_a_dict.get(op, 0)
+            count_b = ops_b_dict.get(op, 0)
+            if count_a > 0 or count_b > 0:
+                op_data.append({"Operator": op, model_a.name: count_a, model_b.name: count_b})
+
+        op_df = pd.DataFrame(op_data)
+        st.bar_chart(op_df.set_index("Operator"), height=300)
+
+        with st.expander("View operator details"):
+            # Add difference column
+            for row in op_data:
+                row["Difference"] = row[model_b.name] - row[model_a.name]
+            detail_df = pd.DataFrame(op_data)
+            st.dataframe(detail_df, use_container_width=True, hide_index=True)
+
+    # Architecture compatibility check
+    if params_a != params_b or flops_a != flops_b:
+        st.markdown("---")
+        st.warning(
+            "**Architecture Difference Detected**: Models have different parameter counts or FLOPs. "
+            "This may indicate structural changes beyond precision conversion."
         )
 
-    df = pd.DataFrame(comparison_data)
-
-    # Bar chart
-    chart_df = df.set_index("Operator")[[f"Model A ({model_a.name})", f"Model B ({model_b.name})"]]
-    st.bar_chart(chart_df)
-
-    # Table
-    with st.expander("View detailed comparison table"):
-        st.dataframe(df, use_container_width=True)
-
-    # Summary
-    st.markdown("### Summary")
-
-    # Auto-generate comparison summary
-    summary_points = []
-
-    if params_b < params_a:
-        reduction = (1 - params_b / params_a) * 100 if params_a else 0
-        summary_points.append(f"Model B has **{reduction:.1f}% fewer parameters** than Model A")
-    elif params_b > params_a:
-        increase = (params_b / params_a - 1) * 100 if params_a else 0
-        summary_points.append(f"Model B has **{increase:.1f}% more parameters** than Model A")
-
-    if flops_b < flops_a:
-        reduction = (1 - flops_b / flops_a) * 100 if flops_a else 0
-        summary_points.append(
-            f"Model B requires **{reduction:.1f}% fewer FLOPs** (faster inference)"
-        )
-    elif flops_b > flops_a:
-        increase = (flops_b / flops_a - 1) * 100 if flops_a else 0
-        summary_points.append(f"Model B requires **{increase:.1f}% more FLOPs** (slower inference)")
-
-    if mem_b < mem_a:
-        reduction = (1 - mem_b / mem_a) * 100 if mem_a else 0
-        summary_points.append(f"Model B uses **{reduction:.1f}% less memory**")
-    elif mem_b > mem_a:
-        increase = (mem_b / mem_a - 1) * 100 if mem_a else 0
-        summary_points.append(f"Model B uses **{increase:.1f}% more memory**")
-
-    if summary_points:
-        for point in summary_points:
-            st.markdown(f"- {point}")
-    else:
-        st.info("Models have similar characteristics.")
+    # Footer
+    st.markdown("---")
+    st.caption("*Generated by HaoLine Compare Mode*")
 
 
 def render_compare_mode():
@@ -682,8 +723,32 @@ def render_compare_mode():
 
     # Model selection interface
     st.markdown("## Compare Two Models")
-    st.markdown("Select models from your session history, or upload new models to compare.")
+    st.markdown("Upload two models at once, or select from session history.")
 
+    # Quick dual upload
+    with st.expander("📤 Quick Upload (both models at once)", expanded=not (model_a or model_b)):
+        dual_files = st.file_uploader(
+            "Select two ONNX models",
+            type=["onnx"],
+            accept_multiple_files=True,
+            key="dual_upload",
+            help="Select exactly 2 models to compare",
+        )
+        if dual_files:
+            if len(dual_files) == 2:
+                with st.spinner("Analyzing both models..."):
+                    result_a = analyze_model_file(dual_files[0])
+                    result_b = analyze_model_file(dual_files[1])
+                    if result_a and result_b:
+                        st.session_state.compare_models["model_a"] = result_a
+                        st.session_state.compare_models["model_b"] = result_b
+                        st.rerun()
+            elif len(dual_files) == 1:
+                st.warning("Please select 2 models to compare")
+            else:
+                st.warning(f"Please select exactly 2 models (you selected {len(dual_files)})")
+
+    st.markdown("**Or select individually:**")
     col1, col2 = st.columns(2)
 
     with col1:
