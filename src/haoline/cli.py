@@ -132,6 +132,12 @@ Examples:
 
   # Custom resolutions for object detection
   python -m haoline yolo.onnx --hardware rtx4090 --sweep-resolutions "320x320,640x640,1280x1280"
+
+  # List available format conversions
+  python -m haoline --list-conversions
+
+  # Convert PyTorch to ONNX and save
+  python -m haoline --from-pytorch model.pt --input-shape 1,3,224,224 --convert-to onnx --convert-output model.onnx
 """,
     )
 
@@ -538,6 +544,30 @@ Examples:
         action="store_true",
         help="Output only aggregate statistics (params, FLOPs, memory). "
         "Omit per-layer details and graph structure for maximum privacy.",
+    )
+
+    # Format conversion
+    convert_group = parser.add_argument_group("Format Conversion Options")
+    convert_group.add_argument(
+        "--convert-to",
+        type=str,
+        choices=["onnx"],  # Only ONNX writing is currently supported
+        default=None,
+        metavar="FORMAT",
+        help="Convert the model to the specified format (currently only 'onnx' supported). "
+        "Use with --from-pytorch or other input formats.",
+    )
+    convert_group.add_argument(
+        "--convert-output",
+        type=pathlib.Path,
+        default=None,
+        metavar="PATH",
+        help="Output path for format conversion. Required when using --convert-to.",
+    )
+    convert_group.add_argument(
+        "--list-conversions",
+        action="store_true",
+        help="List available format conversion paths and exit.",
     )
 
     return parser.parse_args()
@@ -1654,6 +1684,41 @@ def run_inspect():
         print("=" * 70 + "\n")
         sys.exit(0)
 
+    # Handle --list-conversions
+    if args.list_conversions:
+        from .format_adapters import list_conversion_paths
+
+        print("\n" + "=" * 70)
+        print("Available Format Conversion Paths")
+        print("=" * 70)
+
+        paths = list_conversion_paths()
+        current_source = None
+
+        for path in paths:
+            if path["source"] != current_source:
+                current_source = path["source"]
+                print(f"\nFrom {current_source.upper()}:")
+
+            level_icons = {
+                "full": "[FULL]    ",
+                "partial": "[PARTIAL] ",
+                "lossy": "[LOSSY]   ",
+                "none": "[NONE]    ",
+            }
+            icon = level_icons.get(path["level"], "          ")
+            print(f"  {icon} -> {path['target']}")
+
+        print("\n" + "-" * 70)
+        print("Conversion Levels:")
+        print("  FULL    = Lossless, complete conversion")
+        print("  PARTIAL = Some limitations or multi-step required")
+        print("  LOSSY   = Information may be lost")
+        print("  NONE    = No conversion path available")
+        print("\nUse --convert-to FORMAT to convert a model")
+        print("=" * 70 + "\n")
+        sys.exit(0)
+
     # Handle model conversion if requested
     temp_onnx_file = None
     conversion_sources = [
@@ -1737,6 +1802,73 @@ def run_inspect():
 
         if model_path.suffix.lower() not in (".onnx", ".pb", ".ort"):
             logger.warning(f"Unexpected file extension: {model_path.suffix}. Proceeding anyway.")
+
+    # Handle --convert-to for format conversion
+    if args.convert_to:
+        from .format_adapters import (
+            ConversionLevel,
+            OnnxAdapter,
+            get_conversion_level,
+            load_model,
+        )
+        from .universal_ir import SourceFormat
+
+        if not args.convert_output:
+            logger.error("--convert-output is required when using --convert-to")
+            sys.exit(1)
+
+        target_format = SourceFormat(args.convert_to.lower())
+        output_path = args.convert_output.resolve()
+
+        # Determine source format from file extension
+        source_ext = model_path.suffix.lower()
+        source_format_map = {
+            ".onnx": SourceFormat.ONNX,
+            ".pt": SourceFormat.PYTORCH,
+            ".pth": SourceFormat.PYTORCH,
+        }
+        source_format = source_format_map.get(source_ext, SourceFormat.UNKNOWN)
+
+        # Check conversion level
+        level = get_conversion_level(source_format, target_format)
+        if level == ConversionLevel.NONE:
+            logger.error(
+                f"Cannot convert from {source_format.value} to {target_format.value}. "
+                f"Use --list-conversions to see available paths."
+            )
+            sys.exit(1)
+        elif level == ConversionLevel.LOSSY:
+            logger.warning(
+                f"Converting {source_format.value} to {target_format.value} may lose information"
+            )
+
+        # Load to Universal IR and convert
+        try:
+            logger.info(f"Loading {model_path} as Universal IR...")
+            graph = load_model(model_path)
+
+            if target_format == SourceFormat.ONNX:
+                logger.info(f"Exporting to ONNX: {output_path}")
+                OnnxAdapter().write(graph, output_path)
+                logger.info(f"Successfully converted to {output_path}")
+                print(f"\nConverted: {model_path} -> {output_path}")
+                print(f"  Nodes: {graph.num_nodes}")
+                print(f"  Parameters: {graph.total_parameters:,}")
+                print(f"  Source: {graph.metadata.source_format.value}")
+            else:
+                logger.error(f"Conversion to {target_format.value} not yet implemented")
+                sys.exit(1)
+
+            # If no analysis requested, exit after conversion
+            if not (args.out_json or args.out_md or args.out_html or args.out_pdf):
+                sys.exit(0)
+
+            # Use the converted file for analysis
+            model_path = output_path
+
+        except Exception as e:
+            logger.error(f"Conversion failed: {e}")
+            sys.exit(1)
 
     # Determine hardware profile
     hardware_profile = None
