@@ -1,0 +1,641 @@
+{
+  "metadata": {
+    "name": "CNTKGraph",
+    "source_format": "onnx",
+    "source_path": "demo_mnist.onnx",
+    "ir_version": 7,
+    "producer_name": "CNTK",
+    "producer_version": "2.5.1",
+    "opset_version": 12,
+    "input_names": [
+      "Input3"
+    ],
+    "output_names": [
+      "Plus214_Output_0"
+    ],
+    "extra": {}
+  },
+  "nodes": [
+    {
+      "id": "Convolution28",
+      "op_type": "Conv2D",
+      "inputs": [
+        "Input3",
+        "Parameter5"
+      ],
+      "outputs": [
+        "Convolution28_Output_0"
+      ],
+      "attributes": {
+        "kernel_shape": [
+          5,
+          5
+        ],
+        "strides": [
+          1,
+          1
+        ],
+        "auto_pad": "SAME_UPPER",
+        "group": 1,
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "output_shapes": [
+        [
+          1,
+          8,
+          28,
+          28
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "Conv",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "Plus30",
+      "op_type": "Add",
+      "inputs": [
+        "Convolution28_Output_0",
+        "Parameter6"
+      ],
+      "outputs": [
+        "Plus30_Output_0"
+      ],
+      "attributes": {},
+      "output_shapes": [
+        [
+          1,
+          8,
+          28,
+          28
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "Add",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "ReLU32",
+      "op_type": "Relu",
+      "inputs": [
+        "Plus30_Output_0"
+      ],
+      "outputs": [
+        "ReLU32_Output_0"
+      ],
+      "attributes": {},
+      "output_shapes": [
+        [
+          1,
+          8,
+          28,
+          28
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "Relu",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "Pooling66",
+      "op_type": "MaxPool2D",
+      "inputs": [
+        "ReLU32_Output_0"
+      ],
+      "outputs": [
+        "Pooling66_Output_0"
+      ],
+      "attributes": {
+        "kernel_shape": [
+          2,
+          2
+        ],
+        "strides": [
+          2,
+          2
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "auto_pad": "NOTSET"
+      },
+      "output_shapes": [
+        [
+          1,
+          8,
+          14,
+          14
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "MaxPool",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "Convolution110",
+      "op_type": "Conv2D",
+      "inputs": [
+        "Pooling66_Output_0",
+        "Parameter87"
+      ],
+      "outputs": [
+        "Convolution110_Output_0"
+      ],
+      "attributes": {
+        "kernel_shape": [
+          5,
+          5
+        ],
+        "strides": [
+          1,
+          1
+        ],
+        "auto_pad": "SAME_UPPER",
+        "group": 1,
+        "dilations": [
+          1,
+          1
+        ]
+      },
+      "output_shapes": [
+        [
+          1,
+          16,
+          14,
+          14
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "Conv",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "Plus112",
+      "op_type": "Add",
+      "inputs": [
+        "Convolution110_Output_0",
+        "Parameter88"
+      ],
+      "outputs": [
+        "Plus112_Output_0"
+      ],
+      "attributes": {},
+      "output_shapes": [
+        [
+          1,
+          16,
+          14,
+          14
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "Add",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "ReLU114",
+      "op_type": "Relu",
+      "inputs": [
+        "Plus112_Output_0"
+      ],
+      "outputs": [
+        "ReLU114_Output_0"
+      ],
+      "attributes": {},
+      "output_shapes": [
+        [
+          1,
+          16,
+          14,
+          14
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "Relu",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "Pooling160",
+      "op_type": "MaxPool2D",
+      "inputs": [
+        "ReLU114_Output_0"
+      ],
+      "outputs": [
+        "Pooling160_Output_0"
+      ],
+      "attributes": {
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "strides": [
+          3,
+          3
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "auto_pad": "NOTSET"
+      },
+      "output_shapes": [
+        [
+          1,
+          16,
+          4,
+          4
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "MaxPool",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "Times212_reshape0",
+      "op_type": "Reshape",
+      "inputs": [
+        "Pooling160_Output_0",
+        "Pooling160_Output_0_reshape0_shape"
+      ],
+      "outputs": [
+        "Pooling160_Output_0_reshape0"
+      ],
+      "attributes": {},
+      "output_shapes": [
+        [
+          1,
+          256
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "Reshape",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "Times212_reshape1",
+      "op_type": "Reshape",
+      "inputs": [
+        "Parameter193",
+        "Parameter193_reshape1_shape"
+      ],
+      "outputs": [
+        "Parameter193_reshape1"
+      ],
+      "attributes": {},
+      "output_shapes": [
+        [
+          256,
+          10
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "Reshape",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "Times212",
+      "op_type": "MatMul",
+      "inputs": [
+        "Pooling160_Output_0_reshape0",
+        "Parameter193_reshape1"
+      ],
+      "outputs": [
+        "Times212_Output_0"
+      ],
+      "attributes": {},
+      "output_shapes": [
+        [
+          1,
+          10
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "MatMul",
+      "source_domain": "ai.onnx"
+    },
+    {
+      "id": "Plus214",
+      "op_type": "Add",
+      "inputs": [
+        "Times212_Output_0",
+        "Parameter194"
+      ],
+      "outputs": [
+        "Plus214_Output_0"
+      ],
+      "attributes": {},
+      "output_shapes": [
+        [
+          1,
+          10
+        ]
+      ],
+      "output_dtypes": [
+        "float32"
+      ],
+      "source_op": "Add",
+      "source_domain": "ai.onnx"
+    }
+  ],
+  "tensors": {
+    "Parameter193": {
+      "name": "Parameter193",
+      "shape": [
+        16,
+        4,
+        4,
+        10
+      ],
+      "dtype": "float32",
+      "origin": "weight",
+      "data": null,
+      "source_name": "Parameter193"
+    },
+    "Parameter87": {
+      "name": "Parameter87",
+      "shape": [
+        16,
+        8,
+        5,
+        5
+      ],
+      "dtype": "float32",
+      "origin": "weight",
+      "data": null,
+      "source_name": "Parameter87"
+    },
+    "Parameter5": {
+      "name": "Parameter5",
+      "shape": [
+        8,
+        1,
+        5,
+        5
+      ],
+      "dtype": "float32",
+      "origin": "weight",
+      "data": null,
+      "source_name": "Parameter5"
+    },
+    "Parameter6": {
+      "name": "Parameter6",
+      "shape": [
+        8,
+        1,
+        1
+      ],
+      "dtype": "float32",
+      "origin": "weight",
+      "data": null,
+      "source_name": "Parameter6"
+    },
+    "Parameter88": {
+      "name": "Parameter88",
+      "shape": [
+        16,
+        1,
+        1
+      ],
+      "dtype": "float32",
+      "origin": "weight",
+      "data": null,
+      "source_name": "Parameter88"
+    },
+    "Pooling160_Output_0_reshape0_shape": {
+      "name": "Pooling160_Output_0_reshape0_shape",
+      "shape": [
+        2
+      ],
+      "dtype": "int64",
+      "origin": "weight",
+      "data": null,
+      "source_name": "Pooling160_Output_0_reshape0_shape"
+    },
+    "Parameter193_reshape1_shape": {
+      "name": "Parameter193_reshape1_shape",
+      "shape": [
+        2
+      ],
+      "dtype": "int64",
+      "origin": "weight",
+      "data": null,
+      "source_name": "Parameter193_reshape1_shape"
+    },
+    "Parameter194": {
+      "name": "Parameter194",
+      "shape": [
+        1,
+        10
+      ],
+      "dtype": "float32",
+      "origin": "weight",
+      "data": null,
+      "source_name": "Parameter194"
+    },
+    "Input3": {
+      "name": "Input3",
+      "shape": [
+        1,
+        1,
+        28,
+        28
+      ],
+      "dtype": "float32",
+      "origin": "input",
+      "data": null,
+      "source_name": "Input3"
+    },
+    "Plus214_Output_0": {
+      "name": "Plus214_Output_0",
+      "shape": [
+        1,
+        10
+      ],
+      "dtype": "float32",
+      "origin": "output",
+      "data": null,
+      "source_name": "Plus214_Output_0"
+    },
+    "Parameter193_reshape1": {
+      "name": "Parameter193_reshape1",
+      "shape": [
+        256,
+        10
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "Parameter193_reshape1"
+    },
+    "Convolution28_Output_0": {
+      "name": "Convolution28_Output_0",
+      "shape": [
+        1,
+        8,
+        28,
+        28
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "Convolution28_Output_0"
+    },
+    "Plus30_Output_0": {
+      "name": "Plus30_Output_0",
+      "shape": [
+        1,
+        8,
+        28,
+        28
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "Plus30_Output_0"
+    },
+    "ReLU32_Output_0": {
+      "name": "ReLU32_Output_0",
+      "shape": [
+        1,
+        8,
+        28,
+        28
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "ReLU32_Output_0"
+    },
+    "Pooling66_Output_0": {
+      "name": "Pooling66_Output_0",
+      "shape": [
+        1,
+        8,
+        14,
+        14
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "Pooling66_Output_0"
+    },
+    "Convolution110_Output_0": {
+      "name": "Convolution110_Output_0",
+      "shape": [
+        1,
+        16,
+        14,
+        14
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "Convolution110_Output_0"
+    },
+    "Plus112_Output_0": {
+      "name": "Plus112_Output_0",
+      "shape": [
+        1,
+        16,
+        14,
+        14
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "Plus112_Output_0"
+    },
+    "ReLU114_Output_0": {
+      "name": "ReLU114_Output_0",
+      "shape": [
+        1,
+        16,
+        14,
+        14
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "ReLU114_Output_0"
+    },
+    "Pooling160_Output_0": {
+      "name": "Pooling160_Output_0",
+      "shape": [
+        1,
+        16,
+        4,
+        4
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "Pooling160_Output_0"
+    },
+    "Pooling160_Output_0_reshape0": {
+      "name": "Pooling160_Output_0_reshape0",
+      "shape": [
+        1,
+        256
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "Pooling160_Output_0_reshape0"
+    },
+    "Times212_Output_0": {
+      "name": "Times212_Output_0",
+      "shape": [
+        1,
+        10
+      ],
+      "dtype": "float32",
+      "origin": "activation",
+      "data": null,
+      "source_name": "Times212_Output_0"
+    }
+  },
+  "summary": {
+    "num_nodes": 12,
+    "num_tensors": 21,
+    "total_parameters": 5998,
+    "total_weight_bytes": 24008,
+    "op_type_counts": {
+      "Conv2D": 2,
+      "Add": 3,
+      "Relu": 2,
+      "MaxPool2D": 2,
+      "Reshape": 2,
+      "MatMul": 1
+    }
+  }
+}
