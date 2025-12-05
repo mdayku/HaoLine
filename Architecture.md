@@ -14,8 +14,9 @@ This document describes the system architecture for HaoLine, a universal model a
 4. [Data Flow](#4-data-flow)
 5. [File Structure](#5-file-structure)
 6. [Integration Points](#6-integration-points)
-7. [Deployment Architecture](#7-deployment-architecture)
-8. [Design Decisions](#8-design-decisions)
+7. [Universal Internal Representation (IR)](#7-universal-internal-representation-ir)
+8. [Deployment Architecture](#8-deployment-architecture)
+9. [Design Decisions](#9-design-decisions)
 
 ---
 
@@ -990,9 +991,266 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 
 ---
 
-## 7. Deployment Architecture
+## 7. Universal Internal Representation (IR)
 
-### 7.1 Standalone CLI
+The Universal IR is HaoLine's format-agnostic model representation, enabling analysis and comparison across different frameworks (ONNX, PyTorch, TensorFlow, TensorRT, CoreML, etc.).
+
+### 7.1 Design Inspiration
+
+| Framework | Key Concept Borrowed |
+|-----------|---------------------|
+| **OpenVINO IR** | Graph + weights separation; XML graph + binary weights |
+| **TVM Relay** | Strongly-typed graph IR with high-level op abstraction |
+| **MLIR** | Extensible operation types, dialect system for domain-specific ops |
+
+### 7.2 Core Data Structures
+
+```
+                    UniversalGraph
+                          |
+         +----------------+----------------+
+         |                |                |
+         v                v                v
+   GraphMetadata    UniversalNode[]   UniversalTensor{}
+         |                |                |
+         v                v                v
+   source_format      op_type          TensorOrigin
+   ir_version         inputs[]         DataType
+   producer_name      outputs[]        shape[]
+   opset_version      attributes{}     data (lazy)
+```
+
+#### 7.2.1 UniversalGraph
+
+Top-level container holding the entire model:
+
+```python
+class UniversalGraph(BaseModel):
+    nodes: list[UniversalNode]              # Operations in execution order
+    tensors: dict[str, UniversalTensor]     # Name -> tensor mapping
+    metadata: GraphMetadata                 # Source info, I/O, version
+
+    # Key properties
+    @property
+    def total_parameters(self) -> int: ...
+    @property
+    def total_weight_bytes(self) -> int: ...
+    @property
+    def op_type_counts(self) -> dict[str, int]: ...
+
+    # Comparison
+    def is_structurally_equal(self, other: UniversalGraph) -> bool: ...
+    def diff(self, other: UniversalGraph) -> dict[str, Any]: ...
+
+    # Serialization
+    def to_json(self, path: Path) -> None: ...
+    @classmethod
+    def from_json(cls, path: Path) -> UniversalGraph: ...
+```
+
+#### 7.2.2 UniversalNode
+
+Format-agnostic operation representation:
+
+```python
+class UniversalNode(BaseModel):
+    id: str                    # Unique identifier
+    op_type: str               # High-level: Conv2D, MatMul, Relu (NOT ONNX-specific)
+    inputs: list[str]          # Input tensor names
+    outputs: list[str]         # Output tensor names
+    attributes: dict[str, Any] # Op-specific params (kernel_size, strides, etc.)
+    output_shapes: list[list[int]]
+    output_dtypes: list[DataType]
+
+    # Round-trip metadata
+    source_op: str | None      # Original op name (e.g., "Conv" in ONNX)
+    source_domain: str | None  # e.g., "ai.onnx", "com.microsoft"
+```
+
+**Op Type Abstraction**: The `op_type` field uses high-level names that are NOT tied to any specific framework:
+
+| Universal Op | ONNX | PyTorch | TensorFlow |
+|-------------|------|---------|------------|
+| `Conv2D` | Conv | nn.Conv2d | tf.nn.conv2d |
+| `MatMul` | MatMul, Gemm | torch.matmul | tf.linalg.matmul |
+| `Relu` | Relu | nn.ReLU | tf.nn.relu |
+| `Attention` | Custom/Subgraph | nn.MultiheadAttention | tf.keras.MultiHeadAttention |
+
+#### 7.2.3 UniversalTensor
+
+Represents weights, inputs, outputs, and activations:
+
+```python
+class UniversalTensor(BaseModel):
+    name: str
+    shape: list[int]
+    dtype: DataType            # float32, float16, int8, etc.
+    origin: TensorOrigin       # WEIGHT, INPUT, OUTPUT, ACTIVATION
+    data: Any | None           # Lazy-loaded numpy array
+    source_name: str | None    # Original name for round-trip
+```
+
+#### 7.2.4 Supporting Enums
+
+```python
+class DataType(str, Enum):
+    FLOAT64 = "float64"
+    FLOAT32 = "float32"
+    FLOAT16 = "float16"
+    BFLOAT16 = "bfloat16"
+    INT8 = "int8"
+    # ...
+
+class TensorOrigin(str, Enum):
+    WEIGHT = "weight"          # Constant model parameter
+    INPUT = "input"            # Model input
+    OUTPUT = "output"          # Model output
+    ACTIVATION = "activation"  # Intermediate (runtime)
+
+class SourceFormat(str, Enum):
+    ONNX = "onnx"
+    PYTORCH = "pytorch"
+    TENSORRT = "tensorrt"
+    COREML = "coreml"
+    # ...
+```
+
+### 7.3 Structural Comparison
+
+The IR enables comparing models across formats and precision levels:
+
+```python
+# Compare FP32 vs FP16 models
+fp32_graph = OnnxAdapter().read("model_fp32.onnx")
+fp16_graph = OnnxAdapter().read("model_fp16.onnx")
+
+# Structural equality (ignores weight values and precision)
+if fp32_graph.is_structurally_equal(fp16_graph):
+    print("Same architecture!")
+
+# Detailed diff
+diff = fp32_graph.diff(fp16_graph)
+# {
+#   "structurally_equal": True,
+#   "param_count_diff": (25000000, 25000000),
+#   "weight_bytes_diff": (100000000, 50000000),  # FP16 is half size
+#   "dtype_changes": [{"tensor": "conv1.weight", "self_dtype": "float32", "other_dtype": "float16"}, ...]
+# }
+```
+
+### 7.4 JSON Serialization
+
+The IR can be serialized to JSON for debugging, interchange, and visualization:
+
+```json
+{
+  "metadata": {
+    "name": "resnet50",
+    "source_format": "onnx",
+    "ir_version": 8,
+    "opset_version": 17,
+    "input_names": ["input"],
+    "output_names": ["output"]
+  },
+  "nodes": [
+    {
+      "id": "conv1",
+      "op_type": "Conv2D",
+      "inputs": ["input", "conv1.weight", "conv1.bias"],
+      "outputs": ["conv1_out"],
+      "attributes": {"kernel_shape": [7, 7], "strides": [2, 2]},
+      "source_op": "Conv",
+      "source_domain": "ai.onnx"
+    }
+  ],
+  "tensors": {
+    "conv1.weight": {
+      "shape": [64, 3, 7, 7],
+      "dtype": "float32",
+      "origin": "weight"
+    }
+  },
+  "summary": {
+    "num_nodes": 122,
+    "total_parameters": 25557032,
+    "total_weight_bytes": 102228128
+  }
+}
+```
+
+### 7.5 Format Adapter Interface
+
+Adapters convert format-specific models to/from UniversalGraph:
+
+```python
+class FormatAdapter(Protocol):
+    """Interface for model format readers/writers."""
+
+    def can_read(self, path: Path) -> bool:
+        """Check if this adapter can read the file."""
+        ...
+
+    def read(self, path: Path) -> UniversalGraph:
+        """Read model and convert to UniversalGraph."""
+        ...
+
+    def can_write(self) -> bool:
+        """Check if this adapter supports writing."""
+        ...
+
+    def write(self, graph: UniversalGraph, path: Path) -> None:
+        """Write UniversalGraph to format-specific file."""
+        ...
+```
+
+**Adapter Registry:**
+
+| Format | Extension | Adapter | Read | Write |
+|--------|-----------|---------|------|-------|
+| ONNX | `.onnx` | `OnnxAdapter` | Yes | Yes |
+| PyTorch | `.pt`, `.pth` | `PyTorchAdapter` | Yes | Via ONNX |
+| TensorRT | `.engine`, `.plan` | `TensorRTAdapter` | Partial | No |
+| CoreML | `.mlmodel`, `.mlpackage` | `CoreMLAdapter` | Yes | No |
+| TFLite | `.tflite` | `TFLiteAdapter` | Yes | No |
+| SafeTensors | `.safetensors` | `SafeTensorsAdapter` | Weights only | No |
+| GGUF | `.gguf` | `GGUFAdapter` | Weights only | No |
+
+### 7.6 Extensibility
+
+Adding a new format requires:
+
+1. **Create adapter** in `src/haoline/formats/myformat.py`:
+```python
+class MyFormatAdapter:
+    def can_read(self, path: Path) -> bool:
+        return path.suffix.lower() == ".myformat"
+
+    def read(self, path: Path) -> UniversalGraph:
+        # Parse format-specific file
+        # Map ops to universal op_types
+        # Build UniversalGraph with nodes, tensors, metadata
+        return graph
+```
+
+2. **Register in adapter registry** (auto-detection by extension)
+
+3. **Map format-specific ops** to universal op_types (or add new ones if needed)
+
+### 7.7 Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Pydantic BaseModel** | Automatic validation, JSON serialization, IDE support |
+| **Op-type abstraction** | Enables cross-format comparison without ONNX coupling |
+| **Lazy weight loading** | Support large models (70B+ params) without OOM |
+| **source_op/source_domain** | Preserve original info for round-trip conversion |
+| **Dict-based tensors** | O(1) lookup by name, easy serialization |
+
+---
+
+## 8. Deployment Architecture
+
+### 8.1 Standalone CLI
 
 ```
 +------------------+
@@ -1012,7 +1270,7 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 +------------------+
 ```
 
-### 7.2 Integration with Model Registry
+### 8.2 Integration with Model Registry
 
 ```
 +------------------+     +------------------+     +------------------+
@@ -1027,7 +1285,7 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
                                                  +------------------+
 ```
 
-### 7.3 Batch Processing Mode
+### 8.3 Batch Processing Mode
 
 ```
 +------------------+
@@ -1051,9 +1309,9 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 
 ---
 
-## 8. Design Decisions
+## 9. Design Decisions
 
-### 8.1 Decision Log
+### 9.1 Decision Log
 
 | Decision | Rationale | Alternatives Considered |
 |----------|-----------|------------------------|
@@ -1064,7 +1322,7 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | Hardware profiles as JSON files | Easy to extend, no code changes for new hardware | Hardcoded profiles |
 | Graceful degradation | Tool should always produce some output | Fail fast on any error |
 
-### 8.2 Trade-offs
+### 9.2 Trade-offs
 
 | Trade-off | Choice | Consequence |
 |-----------|--------|-------------|
@@ -1072,7 +1330,7 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | Simplicity vs Completeness | Focus on common ops | Exotic ops get generic estimates |
 | Bundled vs External | Integrated into ORT | Requires ORT build; could be standalone |
 
-### 8.3 Future Considerations
+### 9.3 Future Considerations
 
 - **C++ Core**: For performance-critical deployments, implement core analysis in C++
 - **Interactive Mode**: Web-based UI for exploring model architecture

@@ -29,7 +29,7 @@
 | Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| Epic 18: Universal IR | Not Started | 5 | 0/19 | P1 |
+| Epic 18: Universal IR | In Progress | 5 | 5/19 | P1 |
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
 | Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
 | Epic 21: TFLite | In Progress | 2 | 5/12 | P2 |
@@ -589,18 +589,18 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 **Inspiration:** OpenVINO IR (graph+weights separation), TVM Relay, MLIR typed IR patterns.
 
-### Story 18.1: Universal Graph IR
+### Story 18.1: Universal Graph IR - **COMPLETE**
 *Core data structures for backend-neutral model representation.*
 
-- [ ] **Task 18.1.1**: Design `UniversalGraph` dataclass — Container for entire model graph. Fields: `nodes` (list of UniversalNode), `edges` (connections or inferred from node I/O), `tensors` (dict of weight name → UniversalTensor), `metadata` (model name, inputs/outputs, source info). Use Pydantic BaseModel for validation and serialization.
+- [x] **Task 18.1.1**: Design `UniversalGraph` dataclass — Container for entire model graph. Fields: `nodes` (list of UniversalNode), `edges` (connections or inferred from node I/O), `tensors` (dict of weight name → UniversalTensor), `metadata` (model name, inputs/outputs, source info). Use Pydantic BaseModel for validation and serialization. — `src/haoline/universal_ir.py`
 
-- [ ] **Task 18.1.2**: Design `UniversalNode` abstraction — Represents a single operation. Fields: `id` (unique name), `op_type` (high-level category like "Conv2D", "Relu", "MatMul" — NOT tied to ONNX names), `inputs` (list of tensor names), `outputs` (list of tensor names), `attributes` (dict for op-specific params), `dtype` (precision), `output_shapes`. Design for cross-format compatibility.
+- [x] **Task 18.1.2**: Design `UniversalNode` abstraction — Represents a single operation. Fields: `id` (unique name), `op_type` (high-level category like "Conv2D", "Relu", "MatMul" — NOT tied to ONNX names), `inputs` (list of tensor names), `outputs` (list of tensor names), `attributes` (dict for op-specific params), `dtype` (precision), `output_shapes`. Design for cross-format compatibility. — `src/haoline/universal_ir.py`
 
-- [ ] **Task 18.1.3**: Design `UniversalTensor` class — Represents weights/activations. Fields: `name`, `shape`, `dtype` (fp32/fp16/int8), `origin` (WEIGHT/INPUT/ACTIVATION), `data` (lazy-load for large tensors or reference). Edges between nodes are abstracted via tensor names.
+- [x] **Task 18.1.3**: Design `UniversalTensor` class — Represents weights/activations. Fields: `name`, `shape`, `dtype` (fp32/fp16/int8), `origin` (WEIGHT/INPUT/ACTIVATION), `data` (lazy-load for large tensors or reference). Edges between nodes are abstracted via tensor names. — `src/haoline/universal_ir.py`
 
-- [ ] **Task 18.1.4**: Add source format tracking and round-trip info — Fields like `source_format` ("ONNX", "PyTorch", etc.), original opset/version, per-node metadata for round-trip conversion (original op name/domain, PyTorch module names). Ensures we don't lose info needed for export.
+- [x] **Task 18.1.4**: Add source format tracking and round-trip info — Fields like `source_format` ("ONNX", "PyTorch", etc.), original opset/version, per-node metadata for round-trip conversion (original op name/domain, PyTorch module names). Ensures we don't lose info needed for export. — `GraphMetadata`, `source_op`, `source_domain` fields
 
-- [ ] **Task 18.1.5**: Document IR design decisions in Architecture.md — Explain UniversalGraph/Node/Tensor interaction, design rationale (citing OpenVINO IR, TVM Relay), how IR enables format-agnostic analysis, JSON serialization approach, and extensibility for new ops/formats.
+- [x] **Task 18.1.5**: Document IR design decisions in Architecture.md — Explain UniversalGraph/Node/Tensor interaction, design rationale (citing OpenVINO IR, TVM Relay), how IR enables format-agnostic analysis, JSON serialization approach, and extensibility for new ops/formats. — **Section 7 in Architecture.md**
 
 ### Story 18.2: Format Adapter Interface
 *Plugin system for model format readers/writers.*
