@@ -752,8 +752,8 @@ def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
         )
 
     # Universal IR Structural Comparison (if available)
-    ir_a = model_a.report.universal_graph
-    ir_b = model_b.report.universal_graph
+    ir_a = getattr(model_a.report, "universal_graph", None)
+    ir_b = getattr(model_b.report, "universal_graph", None)
 
     if ir_a and ir_b:
         st.markdown("---")
@@ -1630,16 +1630,6 @@ def main():
                     llm_enabled = st.session_state.get("enable_llm", False)
                     llm_api_key = st.session_state.get("openai_api_key_value", "")
 
-                    # DEBUG: Always show LLM status
-                    st.markdown("---")
-                    st.markdown("**LLM Debug Status:**")
-                    st.write(f"- `enable_llm` in session_state: `{llm_enabled}`")
-                    st.write(
-                        f"- `openai_api_key_value` length: `{len(llm_api_key) if llm_api_key else 0}`"
-                    )
-                    st.write(f"- Session state keys: `{list(st.session_state.keys())}`")
-                    st.markdown("---")
-
                     if llm_enabled:
                         st.markdown("### AI Analysis")
 
@@ -1696,7 +1686,7 @@ def main():
                                     st.error(f"AI summary generation failed: {e}")
 
                     # Universal IR Summary (if available)
-                    if report.universal_graph:
+                    if hasattr(report, "universal_graph") and report.universal_graph:
                         with st.expander("Universal IR View", expanded=False):
                             ir = report.universal_graph
                             st.markdown(

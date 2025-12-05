@@ -50,6 +50,7 @@
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | Not Started | 4 | 0/20 | P2 |
+| Epic 41: Standardized Reporting | Not Started | 3 | 0/15 | **P1** |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | P3 |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
@@ -1390,3 +1391,40 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 40.4.4**: Update all unit tests for Pydantic models
 - [ ] **Task 40.4.5**: Remove old dataclass definitions (or keep as aliases)
 - [ ] **Task 40.4.6**: Performance testing (Pydantic overhead vs dataclass)
+
+---
+
+## Epic 41: Standardized Reporting (P1)
+
+*Unify reporting across CLI and Streamlit UI. The CLI HTML/PDF output has richer visualizations and analysis than the Streamlit UI - standardize on the better version.*
+
+**Goal:** Users get the same comprehensive report whether using CLI or Streamlit.
+
+### Story 41.1: Audit Current Report Differences
+*Document what's different between CLI and Streamlit outputs.*
+
+- [ ] **Task 41.1.1**: Create comparison matrix: CLI HTML vs Streamlit sections
+- [ ] **Task 41.1.2**: List visualizations present in CLI but missing in Streamlit
+- [ ] **Task 41.1.3**: List analysis sections present in CLI but missing in Streamlit
+- [ ] **Task 41.1.4**: Document styling/theme differences
+- [ ] **Task 41.1.5**: Identify reusable components vs duplicated code
+
+### Story 41.2: Unified Report Components
+*Create shared report generation that both CLI and Streamlit use.*
+
+- [ ] **Task 41.2.1**: Extract report sections into reusable functions
+- [ ] **Task 41.2.2**: Create `ReportBuilder` class with pluggable output formats
+- [ ] **Task 41.2.3**: Implement HTML output backend for ReportBuilder
+- [ ] **Task 41.2.4**: Implement Streamlit output backend for ReportBuilder
+- [ ] **Task 41.2.5**: Add all CLI visualizations to Streamlit (op distribution, memory charts, etc.)
+- [ ] **Task 41.2.6**: Add parameter distribution visualization to both
+- [ ] **Task 41.2.7**: Add layer-by-layer breakdown table to both
+
+### Story 41.3: Enhanced Streamlit Visualizations
+*Port the better CLI visualizations to Streamlit.*
+
+- [ ] **Task 41.3.1**: Add FLOPs breakdown chart (pie/bar) to Streamlit
+- [ ] **Task 41.3.2**: Add memory usage timeline/waterfall to Streamlit
+- [ ] **Task 41.3.3**: Add layer statistics table with sorting to Streamlit
+- [ ] **Task 41.3.4**: Add architecture pattern summary to Streamlit
+- [ ] **Task 41.3.5**: Ensure consistent color scheme between CLI HTML and Streamlit
