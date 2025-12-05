@@ -1634,7 +1634,9 @@ def main():
                     st.markdown("---")
                     st.markdown("**LLM Debug Status:**")
                     st.write(f"- `enable_llm` in session_state: `{llm_enabled}`")
-                    st.write(f"- `openai_api_key_value` length: `{len(llm_api_key) if llm_api_key else 0}`")
+                    st.write(
+                        f"- `openai_api_key_value` length: `{len(llm_api_key) if llm_api_key else 0}`"
+                    )
                     st.write(f"- Session state keys: `{list(st.session_state.keys())}`")
                     st.markdown("---")
 
