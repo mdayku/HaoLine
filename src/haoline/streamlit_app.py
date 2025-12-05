@@ -1315,38 +1315,74 @@ def main():
                         # Try TorchScript first
                         try:
                             model = torch.jit.load(pt_path, map_location="cpu")
+                            is_ultralytics = False
                         except Exception:
                             loaded = torch.load(pt_path, map_location="cpu", weights_only=False)
-                            if isinstance(loaded, dict):
-                                st.error(
-                                    """
-                                **State dict detected** — This file contains only weights, not the model architecture.
+                            is_ultralytics = False
 
-                                To analyze, you need the full model. Export to ONNX from your training code:
-                                ```python
-                                torch.onnx.export(model, dummy_input, "model.onnx")
-                                ```
-                                """
+                            if isinstance(loaded, dict):
+                                # Check for Ultralytics YOLO format
+                                if "model" in loaded and hasattr(loaded.get("model"), "forward"):
+                                    is_ultralytics = True
+                                else:
+                                    st.error(
+                                        """
+                                    **State dict detected** — This file contains only weights, not the model architecture.
+
+                                    To analyze, you need the full model. Export to ONNX from your training code:
+                                    ```python
+                                    torch.onnx.export(model, dummy_input, "model.onnx")
+                                    ```
+                                    """
+                                    )
+                                    st.stop()
+
+                            if not is_ultralytics:
+                                model = loaded
+
+                        # Handle Ultralytics models with their native export
+                        if is_ultralytics:
+                            try:
+                                from ultralytics import YOLO
+
+                                st.info("🔄 Ultralytics YOLO detected — using native export...")
+                                yolo_model = YOLO(pt_path)
+                                onnx_tmp = tempfile.NamedTemporaryFile(suffix=".onnx", delete=False)
+                                yolo_model.export(
+                                    format="onnx",
+                                    imgsz=input_shape[2] if len(input_shape) >= 3 else 640,
+                                    simplify=True,
+                                )
+                                # Ultralytics saves next to .pt, move to our temp
+                                import shutil
+
+                                default_onnx = Path(pt_path).with_suffix(".onnx")
+                                if default_onnx.exists():
+                                    shutil.move(str(default_onnx), onnx_tmp.name)
+                                tmp_path = onnx_tmp.name
+                                st.success("✅ YOLO conversion successful!")
+                            except ImportError:
+                                st.error(
+                                    "**Ultralytics required** — Install with: `pip install ultralytics`"
                                 )
                                 st.stop()
-                            model = loaded
+                        else:
+                            model.eval()
+                            dummy_input = torch.randn(*input_shape)
 
-                        model.eval()
-                        dummy_input = torch.randn(*input_shape)
-
-                        # Convert to ONNX
-                        onnx_tmp = tempfile.NamedTemporaryFile(suffix=".onnx", delete=False)
-                        torch.onnx.export(
-                            model,
-                            dummy_input,
-                            onnx_tmp.name,
-                            opset_version=17,
-                            input_names=["input"],
-                            output_names=["output"],
-                            dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
-                        )
-                        tmp_path = onnx_tmp.name
-                        st.success("✅ Conversion successful!")
+                            # Convert to ONNX
+                            onnx_tmp = tempfile.NamedTemporaryFile(suffix=".onnx", delete=False)
+                            torch.onnx.export(
+                                model,
+                                dummy_input,
+                                onnx_tmp.name,
+                                opset_version=17,
+                                input_names=["input"],
+                                output_names=["output"],
+                                dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
+                            )
+                            tmp_path = onnx_tmp.name
+                            st.success("✅ Conversion successful!")
 
                     except Exception as e:
                         st.error(

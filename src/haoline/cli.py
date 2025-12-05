@@ -725,13 +725,57 @@ def _convert_pytorch_to_onnx(
     except Exception:
         pass
 
-    # Try 2: Regular torch.load (full model or state_dict)
+    # Try 2: Check for Ultralytics YOLO format first
     if model is None:
         try:
             loaded = torch.load(pytorch_path, map_location="cpu", weights_only=False)
 
             if isinstance(loaded, dict):
-                # It's a state_dict - we can't use it directly
+                # Check if it's an Ultralytics model (has 'model' key with the actual model)
+                if "model" in loaded and hasattr(loaded.get("model"), "forward"):
+                    logger.info("Detected Ultralytics YOLO format, using native export...")
+                    try:
+                        from ultralytics import YOLO
+
+                        yolo_model = YOLO(str(pytorch_path))
+
+                        # Determine output path for Ultralytics export
+                        if output_path:
+                            onnx_out = output_path.resolve()
+                        else:
+                            import tempfile as tf
+
+                            temp = tf.NamedTemporaryFile(suffix=".onnx", delete=False)
+                            onnx_out = pathlib.Path(temp.name)
+                            temp.close()
+
+                        # Export using Ultralytics (handles all the complexity)
+                        yolo_model.export(
+                            format="onnx",
+                            imgsz=input_shape[2] if len(input_shape) >= 3 else 640,
+                            simplify=True,
+                            opset=opset_version,
+                        )
+
+                        # Ultralytics saves next to the .pt file, move if needed
+                        default_onnx = pytorch_path.with_suffix(".onnx")
+                        if default_onnx.exists() and default_onnx != onnx_out:
+                            import shutil
+
+                            shutil.move(str(default_onnx), str(onnx_out))
+
+                        logger.info(f"ONNX model saved to: {onnx_out}")
+                        return onnx_out, None if output_path else onnx_out
+
+                    except ImportError:
+                        logger.error(
+                            "Ultralytics YOLO model detected but 'ultralytics' package not installed.\n"
+                            "Install with: pip install ultralytics\n"
+                            "Then re-run this command."
+                        )
+                        return None, None
+
+                # It's a regular state_dict - we can't use it directly
                 logger.error(
                     "Model file appears to be a state_dict (weights only). "
                     "To convert, you need either:\n"
