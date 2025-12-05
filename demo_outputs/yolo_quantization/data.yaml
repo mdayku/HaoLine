@@ -1,0 +1,8 @@
+# YOLO Data Configuration
+path: C:/Users/marcu/tiptop/data/combined_v3
+train: train/images
+val: val/images
+test: test/images
+
+nc: 1
+names: ['damage']

@@ -55,6 +55,8 @@ def init_session_state():
         st.session_state.compare_models = {"model_a": None, "model_b": None}
     if "current_mode" not in st.session_state:
         st.session_state.current_mode = "analyze"  # "analyze" or "compare"
+    if "demo_model" not in st.session_state:
+        st.session_state.demo_model = None  # Tuple of (bytes, name) when demo requested
 
 
 def add_to_history(name: str, report: Any, file_size: int) -> AnalysisResult:
@@ -76,6 +78,55 @@ def add_to_history(name: str, report: Any, file_size: int) -> AnalysisResult:
 import streamlit.components.v1 as components
 
 from haoline import ModelInspector, __version__
+
+# Demo models from ONNX Model Zoo (small, real models)
+DEMO_MODELS = {
+    "mnist": {
+        "name": "MNIST CNN",
+        "file": "mnist-12.onnx",
+        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/mnist/model/mnist-12.onnx",
+        "description": "Tiny CNN for handwritten digits (26 KB)",
+        "size": "26 KB",
+    },
+    "squeezenet": {
+        "name": "SqueezeNet 1.0",
+        "file": "squeezenet1.0-12.onnx",
+        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/squeezenet/model/squeezenet1.0-12.onnx",
+        "description": "Compact CNN for ImageNet (5 MB)",
+        "size": "5 MB",
+    },
+    "efficientnet": {
+        "name": "EfficientNet-Lite4",
+        "file": "efficientnet-lite4-11.onnx",
+        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx",
+        "description": "Efficient CNN architecture (49 MB)",
+        "size": "49 MB",
+    },
+}
+
+
+def download_demo_model(model_key: str) -> tuple[bytes, str]:
+    """Download a demo model from ONNX Model Zoo.
+
+    Args:
+        model_key: Key from DEMO_MODELS dict
+
+    Returns:
+        Tuple of (model_bytes, model_name)
+    """
+    import urllib.request
+
+    model_info = DEMO_MODELS[model_key]
+    url = model_info["url"]
+    filename = model_info["file"]
+
+    # Download with timeout
+    with urllib.request.urlopen(url, timeout=30) as response:
+        model_bytes = response.read()
+
+    return model_bytes, filename
+
+
 from haoline.analyzer import ONNXGraphLoader
 from haoline.edge_analysis import EdgeAnalyzer
 from haoline.hardware import (
@@ -1149,18 +1200,70 @@ def main():
                     <span style="color: #a3a3a3;">PyTorch</span> ↻ &nbsp;&nbsp;
                     <span style="color: #a3a3a3;">SafeTensors</span> ↻
                 </p>
-                <p style="font-size: 0.8rem; color: #737373;">
-                    Need a model? Browse the
-                    <a href="https://huggingface.co/models?library=onnx" target="_blank" style="color: #10b981; text-decoration: none;">HuggingFace ONNX Hub →</a>
-                </p>
             </div>
             """,
                 unsafe_allow_html=True,
             )
 
-    # Analysis
-    if uploaded_file is not None:
-        file_ext = Path(uploaded_file.name).suffix.lower()
+            # Demo model options
+            st.markdown(
+                """<div style="text-align: center; margin: 1rem 0 0.5rem 0;">
+                    <span style="font-size: 0.9rem; color: #a3a3a3; font-weight: 500;">
+                        No model handy? Try a demo:
+                    </span>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+
+            # Demo model buttons in a row
+            demo_cols = st.columns(len(DEMO_MODELS))
+            for i, (key, info) in enumerate(DEMO_MODELS.items()):
+                with demo_cols[i]:
+                    if st.button(
+                        f"{info['name']}\n({info['size']})",
+                        key=f"demo_{key}",
+                        use_container_width=True,
+                        help=info["description"],
+                    ):
+                        with st.spinner(f"Downloading {info['name']}..."):
+                            try:
+                                demo_bytes, demo_name = download_demo_model(key)
+                                st.session_state.demo_model = (demo_bytes, demo_name)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Failed to download: {e}")
+
+            st.markdown(
+                """<div style="text-align: center; margin-top: 1rem;">
+                <p style="font-size: 0.8rem; color: #737373;">
+                    Or browse the
+                    <a href="https://huggingface.co/models?library=onnx" target="_blank"
+                       style="color: #10b981; text-decoration: none;">HuggingFace ONNX Hub</a>
+                </p>
+            </div>""",
+                unsafe_allow_html=True,
+            )
+
+    # Handle demo model if requested
+    demo_model_bytes = None
+    demo_model_name = None
+    if st.session_state.demo_model is not None:
+        demo_model_bytes, demo_model_name = st.session_state.demo_model
+        st.session_state.demo_model = None  # Clear after use
+
+    # Analysis - either uploaded file or demo model
+    if uploaded_file is not None or demo_model_bytes is not None:
+        if demo_model_bytes is not None:
+            # Use demo model
+            file_ext = ".onnx"
+            file_name = demo_model_name
+            file_bytes = demo_model_bytes
+        else:
+            # Use uploaded file
+            file_ext = Path(uploaded_file.name).suffix.lower()
+            file_name = uploaded_file.name
+            file_bytes = uploaded_file.getvalue()
+
         tmp_path = None
 
         # Check if format needs conversion
@@ -1203,7 +1306,7 @@ def main():
 
                 # Save uploaded file
                 with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as pt_tmp:
-                    pt_tmp.write(uploaded_file.getvalue())
+                    pt_tmp.write(file_bytes)
                     pt_path = pt_tmp.name
 
                 # Attempt conversion
@@ -1266,7 +1369,7 @@ def main():
                 1. Use the CLI locally (supports conversion):
                    ```bash
                    pip install haoline torch
-                   haoline --from-pytorch {uploaded_file.name} --input-shape 1,3,224,224 --html
+                   haoline --from-pytorch {file_name} --input-shape 1,3,224,224 --html
                    ```
 
                 2. Convert to ONNX first in your code:
@@ -1294,7 +1397,7 @@ def main():
         # Save ONNX to temp file (if not already set by conversion)
         if tmp_path is None:
             with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as tmp:
-                tmp.write(uploaded_file.getvalue())
+                tmp.write(file_bytes)
                 tmp_path = tmp.name
 
         try:
@@ -1325,7 +1428,7 @@ def main():
                     )
 
                 # Save to session history
-                add_to_history(uploaded_file.name, report, len(uploaded_file.getvalue()))
+                add_to_history(file_name, report, len(file_bytes))
 
                 # Display results
                 st.markdown("---")
@@ -1368,7 +1471,7 @@ def main():
                             f"""
                         | Property | Value |
                         |----------|-------|
-                        | **Model** | `{uploaded_file.name}` |
+                        | **Model** | `{file_name}` |
                         | **IR Version** | {report.metadata.ir_version} |
                         | **Producer** | {report.metadata.producer_name or "Unknown"} |
                         | **Opset** | {list(report.metadata.opsets.values())[0] if report.metadata.opsets else "Unknown"} |
@@ -1462,7 +1565,7 @@ def main():
 
                             # Build hierarchical graph
                             builder = HierarchicalGraphBuilder(logger=graph_logger)
-                            model_name = Path(uploaded_file.name).stem
+                            model_name = Path(file_name).stem
                             hier_graph = builder.build(graph_info, blocks, model_name)
 
                             # Generate the full D3.js HTML
@@ -1473,7 +1576,7 @@ def main():
                                 hier_graph,
                                 edge_result,
                                 title=model_name,
-                                model_size_bytes=len(uploaded_file.getvalue()),
+                                model_size_bytes=len(file_bytes),
                             )
 
                             # Embed with generous height for comfortable viewing
@@ -1521,7 +1624,7 @@ def main():
                         st.success("No risk signals detected!")
 
                 with tab4:
-                    model_name = uploaded_file.name.replace(".onnx", "")
+                    model_name = file_name.replace(".onnx", "")
 
                     st.markdown(
                         """

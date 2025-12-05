@@ -1,0 +1,48 @@
+{
+  "model_id": "yolov8n_fp16",
+  "task_type": "detection",
+  "dataset": "roof_damage_combined_v3",
+  "timestamp": "2025-12-04T19:59:00.848293",
+  "metrics": [
+    {
+      "name": "mAP@50",
+      "value": 0.44034725393773216,
+      "unit": "",
+      "higher_is_better": true,
+      "category": "accuracy"
+    },
+    {
+      "name": "mAP@50-95",
+      "value": 0.19313006554097686,
+      "unit": "",
+      "higher_is_better": true,
+      "category": "accuracy"
+    },
+    {
+      "name": "precision",
+      "value": 0.6122825217434057,
+      "unit": "",
+      "higher_is_better": true,
+      "category": "accuracy"
+    },
+    {
+      "name": "recall",
+      "value": 0.3921852387843705,
+      "unit": "",
+      "higher_is_better": true,
+      "category": "accuracy"
+    },
+    {
+      "name": "inference_ms",
+      "value": 7.596383526005075,
+      "unit": "ms",
+      "higher_is_better": false,
+      "category": "speed"
+    }
+  ],
+  "metadata": {
+    "precision": "fp16",
+    "imgsz": 640,
+    "epochs": 20
+  }
+}

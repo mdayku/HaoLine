@@ -1,0 +1,59 @@
+{
+  "title": "YOLO Quantization Comparison",
+  "description": "",
+  "scenario": {
+    "target_fps": 30,
+    "batch_size": 1,
+    "hours_per_day": 24.0,
+    "days_per_month": 30,
+    "target": "cloud_gpu",
+    "provider": "generic",
+    "precision": "fp32",
+    "max_latency_ms": 33.333333333333336,
+    "replicas": 1,
+    "name": "realtime_video",
+    "notes": ""
+  },
+  "rows": [
+    {
+      "model_id": "yolov8n_fp32",
+      "model_path": "demo_outputs\\yolo_quantization\\models\\yolov8n_fp32.onnx",
+      "params_total": 3005843,
+      "flops_total": 8140497248,
+      "model_size_mb": 11.466381072998047,
+      "primary_metric_name": "mAP@50",
+      "primary_metric_value": 0.44034725393773216,
+      "latency_ms": 0.0,
+      "throughput_fps": 0.0,
+      "hardware_tier": "T4",
+      "cost_per_month_usd": 360.0,
+      "cost_per_1k_inferences_usd": 0.00046527762048468235,
+      "extra_metrics": {
+        "mAP@50-95": 0.19313006554097686,
+        "precision": 0.6122825217434057,
+        "recall": 0.3921852387843705,
+        "inference_ms": 7.341946868075754
+      }
+    },
+    {
+      "model_id": "yolov8n_fp16",
+      "model_path": "demo_outputs\\yolo_quantization\\models\\yolov8n_fp16.onnx",
+      "params_total": 3005843,
+      "flops_total": 8140497248,
+      "model_size_mb": 11.466381072998047,
+      "primary_metric_name": "mAP@50",
+      "primary_metric_value": 0.44034725393773216,
+      "latency_ms": 0.0,
+      "throughput_fps": 0.0,
+      "hardware_tier": "T4",
+      "cost_per_month_usd": 360.0,
+      "cost_per_1k_inferences_usd": 0.00046527762048468235,
+      "extra_metrics": {
+        "mAP@50-95": 0.19313006554097686,
+        "precision": 0.6122825217434057,
+        "recall": 0.3921852387843705,
+        "inference_ms": 7.596383526005075
+      }
+    }
+  ]
+}
