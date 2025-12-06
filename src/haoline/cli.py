@@ -149,6 +149,9 @@ Examples:
   # Convert PyTorch to ONNX and save
   python -m haoline --from-pytorch model.pt --input-shape 1,3,224,224 --convert-to onnx --convert-output model.onnx
 
+  # Convert ONNX to TFLite (requires onnx2tf + tensorflow)
+  python -m haoline model.onnx --convert-to tflite --convert-output model.tflite
+
   # Export model as Universal IR (JSON)
   python -m haoline model.onnx --export-ir model_ir.json
 
@@ -611,11 +614,11 @@ Examples:
     convert_group.add_argument(
         "--convert-to",
         type=str,
-        choices=["onnx"],  # Only ONNX writing is currently supported
+        choices=["onnx", "tflite"],
         default=None,
         metavar="FORMAT",
-        help="Convert the model to the specified format (currently only 'onnx' supported). "
-        "Use with --from-pytorch or other input formats.",
+        help="Convert the model to the specified format ('onnx' or 'tflite'). "
+        "Use with --from-pytorch or other input formats. TFLite requires onnx2tf + tensorflow.",
     )
     convert_group.add_argument(
         "--convert-output",
@@ -1230,6 +1233,157 @@ def _convert_keras_to_onnx(
         return None, None
 
     return onnx_path, temp_file
+
+
+def _convert_onnx_to_tflite(
+    onnx_path: pathlib.Path,
+    output_path: pathlib.Path | None,
+    logger: logging.Logger,
+) -> tuple[pathlib.Path | None, Any]:
+    """
+    Convert an ONNX model to TFLite format.
+
+    This requires onnx2tf or onnx-tf (both need TensorFlow).
+    The conversion path is: ONNX -> TF SavedModel -> TFLite
+
+    Args:
+        onnx_path: Path to ONNX model file
+        output_path: Where to save TFLite file (None = temp file)
+        logger: Logger instance
+
+    Returns:
+        Tuple of (tflite_path, temp_file_handle_or_None)
+    """
+    # Check if onnx2tf is available (preferred - more actively maintained)
+    onnx2tf_available = False
+    try:
+        import onnx2tf
+
+        onnx2tf_available = True
+    except ImportError:
+        pass
+
+    # Check if onnx-tf is available (alternative)
+    onnx_tf_available = False
+    try:
+        import onnx_tf  # noqa: F401
+
+        onnx_tf_available = True
+    except ImportError:
+        pass
+
+    if not onnx2tf_available and not onnx_tf_available:
+        logger.error(
+            "Neither onnx2tf nor onnx-tf installed. Install with:\n"
+            "  pip install onnx2tf tensorflow  (recommended)\n"
+            "  OR pip install onnx-tf tensorflow"
+        )
+        return None, None
+
+    onnx_path = onnx_path.resolve()
+    if not onnx_path.exists():
+        logger.error(f"ONNX model not found: {onnx_path}")
+        return None, None
+
+    # Determine output path
+    temp_file = None
+    if output_path:
+        tflite_path = output_path.resolve()
+        tflite_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        import tempfile
+
+        temp_file = tempfile.NamedTemporaryFile(suffix=".tflite", delete=False)
+        tflite_path = pathlib.Path(temp_file.name)
+        temp_file.close()
+
+    logger.info("Converting ONNX model to TFLite...")
+    logger.info(f"  Source: {onnx_path}")
+    logger.info(f"  Target: {tflite_path}")
+
+    try:
+        if onnx2tf_available:
+            # Use onnx2tf (preferred)
+            logger.info("Using onnx2tf for conversion...")
+
+            # onnx2tf outputs to a directory, then we get the .tflite
+            import tempfile as tf_tempfile
+
+            with tf_tempfile.TemporaryDirectory() as tmpdir:
+                # Convert ONNX to TF SavedModel + TFLite
+                onnx2tf.convert(
+                    input_onnx_file_path=str(onnx_path),
+                    output_folder_path=tmpdir,
+                    non_verbose=True,
+                    copy_onnx_input_output_names_to_tflite=True,
+                )
+
+                # Find the generated .tflite file
+                import glob
+
+                tflite_files = glob.glob(f"{tmpdir}/*.tflite")
+                if not tflite_files:
+                    # Check subdirectories
+                    tflite_files = glob.glob(f"{tmpdir}/**/*.tflite", recursive=True)
+
+                if not tflite_files:
+                    logger.error("onnx2tf did not produce a .tflite file")
+                    return None, None
+
+                # Copy to target location
+                import shutil
+
+                shutil.copy(tflite_files[0], tflite_path)
+
+            logger.info("ONNX model converted to TFLite successfully")
+
+        else:
+            # Use onnx-tf (fallback)
+            logger.info("Using onnx-tf for conversion...")
+            import onnx
+            import tensorflow as tf
+            from onnx_tf.backend import prepare
+
+            # Load ONNX model
+            onnx_model = onnx.load(str(onnx_path))
+
+            # Convert to TF
+            tf_rep = prepare(onnx_model)
+
+            # Export to SavedModel
+            with tf_tempfile.TemporaryDirectory() as tmpdir:
+                saved_model_path = pathlib.Path(tmpdir) / "saved_model"
+                tf_rep.export_graph(str(saved_model_path))
+
+                # Convert SavedModel to TFLite
+                converter = tf.lite.TFLiteConverter.from_saved_model(str(saved_model_path))
+                tflite_model = converter.convert()
+
+                # Save TFLite model
+                with open(tflite_path, "wb") as f:
+                    f.write(tflite_model)
+
+            logger.info("ONNX model converted to TFLite successfully")
+
+        # Verify the output exists
+        if not tflite_path.exists():
+            logger.error("TFLite conversion produced no output file")
+            return None, None
+
+        logger.info(
+            f"TFLite model saved: {tflite_path} ({tflite_path.stat().st_size / 1024:.1f} KB)"
+        )
+
+    except Exception as e:
+        logger.error(f"ONNX to TFLite conversion failed: {e}")
+        if temp_file:
+            try:
+                tflite_path.unlink()
+            except Exception:
+                pass
+        return None, None
+
+    return tflite_path, temp_file
 
 
 def _convert_tflite_to_onnx(
@@ -2781,6 +2935,40 @@ def run_inspect():
                 print(f"  Nodes: {graph.num_nodes}")
                 print(f"  Parameters: {graph.total_parameters:,}")
                 print(f"  Source: {graph.metadata.source_format.value}")
+            elif target_format == SourceFormat.TFLITE:
+                # ONNX -> TFLite conversion
+                # First ensure we have an ONNX file to convert from
+                if source_format != SourceFormat.ONNX:
+                    # Need to convert to ONNX first
+                    logger.info("Converting to ONNX intermediate format first...")
+                    import tempfile
+
+                    with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as tmp:
+                        intermediate_onnx = pathlib.Path(tmp.name)
+                    OnnxAdapter().write(graph, intermediate_onnx)
+                    onnx_source = intermediate_onnx
+                else:
+                    onnx_source = model_path
+                    intermediate_onnx = None
+
+                # Convert ONNX to TFLite
+                tflite_path, _ = _convert_onnx_to_tflite(
+                    onnx_source,
+                    output_path,
+                    logger,
+                )
+
+                # Cleanup intermediate if created
+                if intermediate_onnx:
+                    intermediate_onnx.unlink(missing_ok=True)
+
+                if tflite_path is None:
+                    sys.exit(1)
+
+                logger.info(f"Successfully converted to {output_path}")
+                print(f"\nConverted: {model_path} -> {output_path}")
+                print(f"  Original format: {source_format.value}")
+                print("  Target format: tflite")
             else:
                 logger.error(f"Conversion to {target_format.value} not yet implemented")
                 sys.exit(1)

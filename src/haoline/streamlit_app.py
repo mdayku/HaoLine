@@ -1459,33 +1459,20 @@ def main():
 
         # Format Capabilities
         st.markdown("---")
-        with st.expander("📁 Supported Formats", expanded=False):
+        with st.expander("📁 Format Capabilities", expanded=False):
             st.markdown(
                 """
-**Full Analysis (graph + params):**
-| Format | Extension | Status |
-|--------|-----------|--------|
-| ONNX | `.onnx` | ✅ Native |
-| TensorRT | `.engine`, `.plan` | ✅ GPU required |
+| Format | Graph | Params | FLOPs | Interactive Map | Notes |
+|--------|-------|--------|-------|-----------------|-------|
+| **ONNX** | Yes | Yes | Yes | Yes | Full support (recommended) |
+| **PyTorch** | CLI | CLI | CLI | CLI | Requires local PyTorch install |
+| **SafeTensors** | No | Yes | No | No | Weights only - convert to ONNX for full analysis |
+| **TensorRT** | GPU | GPU | N/A | No | Quant bottleneck analysis |
+| **TFLite** | CLI | CLI | No | No | Basic analysis via CLI |
+| **CoreML** | CLI | CLI | No | No | Basic analysis via CLI (macOS) |
 
-**Auto-Convert to ONNX:**
-| Format | Extension | Status |
-|--------|-----------|--------|
-| PyTorch | `.pt`, `.pth` | ✅ + shape |
-| TensorFlow | SavedModel dir | ✅ tf2onnx |
-| Keras | `.h5`, `.keras` | ✅ tf2onnx |
-| JAX/Flax | `.pkl`, `.msgpack` | ✅ + apply fn |
-
-**Weights-Only (limited):**
-| Format | Extension | Notes |
-|--------|-----------|-------|
-| SafeTensors | `.safetensors` | ⚠️ No graph |
-| GGUF | `.gguf` | ⚠️ LLM quants |
-
-**CLI-Only Formats:**
-- TFLite (`.tflite`) - header parsing
-- CoreML (`.mlpackage`) - needs coremltools
-- OpenVINO (`.xml`+`.bin`) - needs openvino
+**CLI** = Use `pip install haoline` and run `haoline model.ext` locally.
+For full features, convert models to ONNX format.
                 """,
                 unsafe_allow_html=True,
             )
@@ -1539,21 +1526,18 @@ def main():
         uploaded_file = st.file_uploader(
             "Upload your model",
             type=["onnx", "pt", "pth", "safetensors", "engine", "plan"],
-            help="ONNX, PyTorch (.pt/.pth), SafeTensors, or TensorRT engines (.engine/.plan)",
+            help="Limit 500MB per file",
         )
 
         if uploaded_file is None:
+            # Link to format capabilities (in sidebar expander)
             st.markdown(
                 """
-            <div style="text-align: center; padding: 1rem 2rem; margin-top: -0.5rem;">
-                <p style="font-size: 0.9rem; margin-bottom: 0.75rem; color: #a3a3a3;">
-                    <span style="color: #10b981; font-weight: 600;">ONNX</span> ✓ &nbsp;
-                    <span style="color: #10b981; font-weight: 600;">TensorRT</span> ✓ &nbsp;
-                    <span style="color: #f59e0b;">PyTorch</span> ↻ &nbsp;
-                    <span style="color: #737373;">SafeTensors</span> ⚠
-                </p>
-                <p style="font-size: 0.7rem; color: #525252; margin-top: 0.25rem;">
-                    ✓ Full analysis &nbsp;|&nbsp; ↻ Auto-converts to ONNX &nbsp;|&nbsp; ⚠ Weights only
+            <div style="text-align: center; padding: 0.5rem 2rem; margin-top: -0.5rem;">
+                <p style="font-size: 0.8rem; color: #737373;">
+                    Need a model? Browse the
+                    <a href="https://huggingface.co/models?library=onnx" target="_blank"
+                       style="color: #10b981; text-decoration: none;">HuggingFace ONNX Hub</a>
                 </p>
             </div>
             """,
@@ -1587,17 +1571,6 @@ def main():
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"Failed to download: {e}")
-
-            st.markdown(
-                """<div style="text-align: center; margin-top: 1rem;">
-                <p style="font-size: 0.8rem; color: #737373;">
-                    Or browse the
-                    <a href="https://huggingface.co/models?library=onnx" target="_blank"
-                       style="color: #10b981; text-decoration: none;">HuggingFace ONNX Hub</a>
-                </p>
-            </div>""",
-                unsafe_allow_html=True,
-            )
 
     # Handle demo model if requested
     demo_model_bytes = None
