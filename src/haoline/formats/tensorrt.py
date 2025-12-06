@@ -794,6 +794,213 @@ class TRTEngineReader:
         return "Mixed"  # Assume mixed precision when FP16 is enabled
 
 
+def parse_timing_cache(cache_path: str | Path) -> dict[str, float] | None:
+    """
+    Parse a TensorRT timing cache file for layer timing information.
+
+    TensorRT timing caches store kernel selection decisions and can include
+    timing data when built with profiling verbosity enabled.
+
+    Args:
+        cache_path: Path to the timing cache file (.cache or .timing)
+
+    Returns:
+        Dictionary mapping layer names to average time in milliseconds,
+        or None if timing data is not available.
+
+    Note:
+        Timing caches are builder-side artifacts. For runtime profiling,
+        use run_inference_profile() instead.
+    """
+    cache_path = Path(cache_path)
+    if not cache_path.exists():
+        return None
+
+    try:
+        import tensorrt as trt
+
+        # Read timing cache
+        with open(cache_path, "rb") as f:
+            cache_data = f.read()
+
+        # Create timing cache from serialized data
+        logger = trt.Logger(trt.Logger.WARNING)
+        builder = trt.Builder(logger)
+
+        timing_cache = builder.create_timing_cache(cache_data)
+        if timing_cache is None:
+            return None
+
+        # Note: TensorRT's timing cache doesn't expose per-layer timings directly
+        # It stores kernel selection decisions for reproducible builds
+        # For actual runtime timings, we need to profile during inference
+
+        return None  # Timing cache doesn't contain runtime measurements
+
+    except Exception:
+        return None
+
+
+def run_inference_profile(
+    engine_path: str | Path,
+    input_data: dict[str, Any] | None = None,
+    num_iterations: int = 10,
+    warmup_iterations: int = 3,
+) -> dict[str, float]:
+    """
+    Run inference with profiling to get actual per-layer timing.
+
+    This requires running actual inference with the TensorRT engine,
+    which needs appropriate input data and GPU resources.
+
+    Args:
+        engine_path: Path to the TensorRT engine file.
+        input_data: Dictionary of input name -> numpy array. If None, uses random data.
+        num_iterations: Number of profiling iterations (default 10).
+        warmup_iterations: Warmup iterations before timing (default 3).
+
+    Returns:
+        Dictionary mapping layer names to average time in milliseconds.
+
+    Raises:
+        ImportError: If TensorRT or CUDA is not available.
+        RuntimeError: If profiling fails.
+    """
+    import numpy as np
+    import tensorrt as trt
+
+    engine_path = Path(engine_path)
+
+    # Load engine
+    logger = trt.Logger(trt.Logger.WARNING)
+    with open(engine_path, "rb") as f:
+        engine = trt.Runtime(logger).deserialize_cuda_engine(f.read())
+
+    if engine is None:
+        raise RuntimeError(f"Failed to load engine: {engine_path}")
+
+    # Create execution context with profiler
+    context = engine.create_execution_context()
+
+    class SimpleProfiler(trt.IProfiler):
+        """Collect per-layer timing data."""
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.timings: dict[str, list[float]] = {}
+
+        def report_layer_time(self, layer_name: str, time_ms: float) -> None:
+            if layer_name not in self.timings:
+                self.timings[layer_name] = []
+            self.timings[layer_name].append(time_ms)
+
+        def get_average_timings(self) -> dict[str, float]:
+            return {name: sum(times) / len(times) for name, times in self.timings.items() if times}
+
+    profiler = SimpleProfiler()
+    context.profiler = profiler
+
+    # Allocate buffers
+    try:
+        import pycuda.autoinit  # noqa: F401
+        import pycuda.driver as cuda
+    except ImportError as e:
+        raise ImportError("pycuda required for profiling. Install with: pip install pycuda") from e
+
+    # Get binding shapes and allocate
+    bindings = []
+    for i in range(engine.num_io_tensors):
+        name = engine.get_tensor_name(i)
+        shape = context.get_tensor_shape(name)
+        dtype = trt.nptype(engine.get_tensor_dtype(name))
+        size = int(np.prod(shape) * np.dtype(dtype).itemsize)
+
+        if engine.get_tensor_mode(name) == trt.TensorIOMode.INPUT:
+            if input_data and name in input_data:
+                data = input_data[name].astype(dtype)
+            else:
+                data = np.random.randn(*shape).astype(dtype)
+            mem = cuda.mem_alloc(data.nbytes)
+            cuda.memcpy_htod(mem, data)
+        else:
+            mem = cuda.mem_alloc(size)
+
+        bindings.append(int(mem))
+        context.set_tensor_address(name, int(mem))
+
+    # Warmup
+    for _ in range(warmup_iterations):
+        context.execute_async_v3(cuda.Stream().handle)
+
+    # Profile
+    cuda.Context.synchronize()
+    for _ in range(num_iterations):
+        context.execute_async_v3(cuda.Stream().handle)
+        cuda.Context.synchronize()
+
+    return profiler.get_average_timings()
+
+
+def estimate_layer_times(
+    engine_info: TRTEngineInfo,
+    total_inference_time_ms: float | None = None,
+) -> dict[str, float]:
+    """
+    Estimate per-layer times based on layer characteristics.
+
+    This provides rough estimates when actual profiling is not available.
+    Estimates are based on layer type and input/output shapes.
+
+    Args:
+        engine_info: Parsed TRT engine information.
+        total_inference_time_ms: Total inference time to distribute. If None,
+            returns relative weights (summing to 1.0).
+
+    Returns:
+        Dictionary mapping layer names to estimated time (ms or relative weight).
+    """
+    # Weight factors by layer type (relative compute intensity)
+    TYPE_WEIGHTS = {
+        "Convolution": 1.0,
+        "MatrixMultiply": 1.0,
+        "FullyConnected": 0.8,
+        "Normalization": 0.3,
+        "Activation": 0.1,
+        "ElementWise": 0.1,
+        "Pooling": 0.2,
+        "SoftMax": 0.2,
+        "Shuffle": 0.05,
+        "Constant": 0.01,
+        "Slice": 0.05,
+        "Concatenation": 0.1,
+    }
+
+    # Calculate weights
+    weights: dict[str, float] = {}
+    for layer in engine_info.layers:
+        base_weight = TYPE_WEIGHTS.get(layer.type, 0.5)
+
+        # Adjust for precision
+        if layer.precision == "INT8":
+            base_weight *= 0.5  # INT8 is ~2x faster
+        elif layer.precision == "FP16":
+            base_weight *= 0.7  # FP16 is ~1.5x faster
+
+        # Adjust for fusion (fused layers are more efficient)
+        if layer.is_fused:
+            base_weight *= 0.8
+
+        weights[layer.name] = base_weight
+
+    # Normalize
+    total_weight = sum(weights.values()) or 1.0
+
+    if total_inference_time_ms is not None:
+        return {name: (w / total_weight) * total_inference_time_ms for name, w in weights.items()}
+    else:
+        return {name: w / total_weight for name, w in weights.items()}
+
+
 def is_tensorrt_file(path: str | Path) -> bool:
     """
     Check if a file is a TensorRT engine.
