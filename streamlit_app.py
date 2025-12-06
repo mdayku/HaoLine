@@ -1535,7 +1535,7 @@ def main():
 
                     # Analyze patterns
                     pattern_analyzer = PatternAnalyzer()
-                    blocks = pattern_analyzer.detect_blocks(graph_info)
+                    blocks = pattern_analyzer.group_into_blocks(graph_info)
 
                     # Edge analysis
                     edge_analyzer = EdgeAnalyzer()
