@@ -360,10 +360,10 @@ class BottleneckSection:
     def from_bottleneck_analysis(cls, analysis: BottleneckAnalysis) -> BottleneckSection:
         """Create from BottleneckAnalysis object."""
         return cls(
-            classification=analysis.classification,
+            classification=analysis.bottleneck_type,
             compute_time_ms=analysis.compute_time_ms,
             memory_time_ms=analysis.memory_time_ms,
-            ratio=analysis.ratio,
+            ratio=analysis.compute_ratio,
             recommendations=analysis.recommendations,
         )
 

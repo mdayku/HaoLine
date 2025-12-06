@@ -23,7 +23,7 @@ Example usage:
     print(report.to_json())
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 from .analyzer import MetricsEngine, ONNXGraphLoader
 from .compare_visualizations import (
@@ -226,6 +226,7 @@ __all__ = [
     "OpSubstitution",
     "QuantGranularityRec",
     "advise_quantization",
+    "generate_qat_readiness_report",
     "SystemRequirements",
     "TradeoffPoint",
     "ValidationError",

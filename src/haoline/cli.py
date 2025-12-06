@@ -939,7 +939,7 @@ def _convert_pytorch_to_onnx(
     try:
         torch.onnx.export(
             model,
-            dummy_input,
+            (dummy_input,),  # Wrap in tuple as required by torch.onnx.export
             str(onnx_path),
             input_names=["input"],
             output_names=["output"],

@@ -31,7 +31,7 @@ try:
     _TORCH_AVAILABLE = True
 except ImportError:
     _TORCH_AVAILABLE = False
-    nn = None  # Placeholder for type hints
+    nn = None  # type: ignore[assignment]  # Placeholder when torch unavailable
 
 
 # Only define the model class if torch is available

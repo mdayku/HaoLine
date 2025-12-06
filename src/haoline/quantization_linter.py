@@ -31,7 +31,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from haoline.analyzer import GraphInfo
+    from haoline.analyzer import GraphInfo, NodeInfo
 
 
 class Severity(Enum):
@@ -535,7 +535,7 @@ class QuantizationLinter:
         - Inconsistent scales/zero points across residual connections
         """
         # Build maps for efficient lookup
-        node_by_output: dict[str, object] = {}
+        node_by_output: dict[str, NodeInfo] = {}
         for node in graph_info.nodes:
             for output in node.outputs:
                 node_by_output[output] = node
@@ -568,7 +568,7 @@ class QuantizationLinter:
     def _check_missing_fake_quant(
         self,
         graph_info: GraphInfo,
-        node_by_output: dict[str, object],
+        node_by_output: dict[str, NodeInfo],
         result: QuantizationLintResult,
     ) -> None:
         """Check for quantizable ops missing fake-quant on their inputs."""
@@ -593,7 +593,7 @@ class QuantizationLinter:
     def _check_inconsistent_fake_quant(
         self,
         graph_info: GraphInfo,
-        node_by_output: dict[str, object],
+        node_by_output: dict[str, NodeInfo],
         result: QuantizationLintResult,
     ) -> None:
         """Check for inconsistent fake-quant placement across parallel branches."""
@@ -706,7 +706,7 @@ class QuantizationLinter:
     def _check_residual_scale_consistency(
         self,
         graph_info: GraphInfo,
-        node_by_output: dict[str, object],
+        node_by_output: dict[str, NodeInfo],
         result: QuantizationLintResult,
     ) -> None:
         """Check for scale mismatches in residual connections."""
@@ -895,7 +895,7 @@ class QuantizationLinter:
 
     def _calculate_score(self, result: QuantizationLintResult) -> int:
         """Calculate overall readiness score (0-100)."""
-        score = 100
+        score: float = 100.0
 
         # Deduct for critical issues (custom ops)
         score -= len(result.custom_ops) * 20  # -20 per custom op

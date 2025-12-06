@@ -7,7 +7,7 @@
 | Project | HaoLine - Universal Model Inspector |
 | Author | Marcus |
 | Version | 2.0 |
-| Last Updated | December 4, 2025 |
+| Last Updated | December 6, 2025 |
 | Status | In Development |
 
 **Related Documents:**
@@ -1869,86 +1869,20 @@ This creates a complete **optimize → analyze → deploy** workflow.
 
 ## Appendix: Delta Log
 
-*Use this section to track changes to the PRD over time.*
+*Full historical changelog archived in [PRDBacklogArchive.md](PRDBacklogArchive.md) to reduce context window usage.*
 
-| Date | Section | Change | Reason |
-|------|---------|--------|--------|
-| Dec 2025 | Initial | Created unified PRD from starter pack + visualization extension | Consolidation |
-| Dec 2025 | Structure | Split backlog into BACKLOG.md, brainlift into BRAINLIFT.md | Context window optimization |
-| Dec 2, 2025 | 4.3 | Scaffolding complete: `tools/python/util/autodoc/` with analyzer, patterns, risks, report modules | Following ORT patterns from mobile_helpers |
-| Dec 2, 2025 | Risk Signals | Added minimum thresholds for risk signals (1M+ params, 1B+ FLOPs) to avoid flagging trivial models | Common sense - don't recommend optimization for 13-param models |
-| Dec 2, 2025 | README | Updated README.md to match actual implementation: correct paths, CLI flags, hardware profiles | Documentation accuracy |
-| Dec 2, 2025 | Testing | Created comprehensive unit test suite: test_analyzer.py, test_patterns.py, test_risks.py, test_hardware.py, test_report.py | Code quality and regression prevention |
-| Dec 2, 2025 | CI/CD | Added `.github/workflows/autodoc-ci.yml` with lint, type check, unit tests, and integration tests | Automated quality gates |
-| Dec 2, 2025 | Visualization | Added `visualizations.py` with matplotlib Agg backend, dark theme, 4 chart types, CLI `--with-plots`/`--assets-dir`, Markdown embedding, 17 tests | Epic 5 complete |
-| Dec 2, 2025 | Build | C++ ONNX Runtime build complete with CUDA provider (357MB); Python wheel build in progress | Environment setup milestone |
-| Dec 2, 2025 | LLM | Added `llm_summarizer.py` with OpenAI integration, prompt templates, CLI `--llm-summary`/`--llm-model`, Executive Summary in Markdown | Epic 7 complete |
-| Dec 2, 2025 | Hardware | Adding GPU Saturation metric (model_flops/gpu_capacity) alongside compute utilization | Better hardware insight |
-| Dec 2, 2025 | PyTorch | Added PyTorch-to-ONNX conversion (--from-pytorch, --input-shape, --keep-onnx), Ultralytics metadata extraction, DatasetInfo in reports | Epic 4B implementation |
-| Dec 2, 2025 | Attention FLOPs | Added _estimate_attention_flops() with full formula: 3*seq*d² + 2*heads*seq²*d_head + 5*heads*seq² + seq*d² | Task 2.3.3 complete |
-| Dec 2, 2025 | KV Cache | Added KV cache estimation for transformers (kv_cache_bytes_per_token, kv_cache_bytes_full_context, kv_cache_config) | Task 2.4.3 complete |
-| Dec 2, 2025 | Memory Breakdown | Added MemoryBreakdown dataclass with weights_by_op_type, activations_by_op_type, largest_weights/activations | Task 2.4.4 complete |
-| Dec 2, 2025 | Progress | Added --progress CLI flag with step-by-step display for large model analysis | Task 4.1.3 complete |
-| Dec 2, 2025 | Risk Thresholds | Added RiskThresholds dataclass for configurable severity thresholds | Task 3.2.5 complete |
-| Dec 2, 2025 | HTML Parity | Identified gap: HTML missing Operator Distribution, KV Cache, Memory Breakdown, Architecture sections | Added Story 4.4 to backlog |
-| Dec 2, 2025 | Non-standard Residuals | Added detect_nonstandard_residual_blocks() for Concat/Gated/Sub skip patterns, check_nonstandard_residuals() risk signal, Architecture sections in MD/HTML reports | Task 3.2.4 complete, Epic 3 complete |
-| Dec 2, 2025 | HTML Parity | Added Operator Distribution table, KV Cache section, Memory Breakdown table to HTML report; CSS styling for .kv-cache, .memory-breakdown sections | Story 4.4 complete (4/4 tasks) |
-| Dec 2, 2025 | JSON Schema | Added schema.py with Draft 7 JSON schema for InspectionReport, validate_report()/validate_report_strict() functions, report.validate() method, 12 new tests | Task 4.2.2 complete, Epic 4 complete |
-| Dec 2, 2025 | Shared Weights | Added fractional weight attribution (Option C) for shared weights - by_op_type sums correctly without over/under counting. Added shared_weights dict with details, num_shared_weights count | Task 2.2.4 edge case 1 |
-| Dec 2, 2025 | Quantized Params | Added quantization detection: QUANTIZED_OPS set (15 ops), QUANTIZED_DTYPES set, precision_breakdown dict, is_quantized bool, quantized_ops list. Updated JSON schema, MD/HTML reports | Task 2.2.4 edge case 2 |
-| Dec 2, 2025 | Tests | Added 8 new tests: TestSharedWeights (3 tests), TestQuantizedParams (5 tests) covering fractional attribution, precision breakdown, INT8/FP16 detection | Task 2.2.4 complete |
-| Dec 2, 2025 | GPU Variants | Added 50+ GPU profiles: H100 (SXM/PCIe/NVL), A100 (40/80GB x SXM/PCIe), V100 variants, RTX 40-series (4090-4060), RTX 30-series (3090Ti-3050), laptop variants | Story 6.5 complete |
-| Dec 2, 2025 | Multi-GPU | Added MultiGPUProfile dataclass, create_multi_gpu_profile(), NVLink bandwidth modeling, tensor/pipeline parallelism overhead estimation, DGX H100/A100 profiles | Story 6.6 complete |
-| Dec 2, 2025 | Cloud | Added CloudInstanceProfile dataclass, 17 cloud instances (AWS p5/p4d/g5/inf2, Azure NC/ND, GCP a3/a2/g2), hourly cost estimates, --cloud and --list-cloud CLI flags | Story 6.7 complete |
-| Dec 2, 2025 | CLI | Added --gpu-count N for multi-GPU scaling, --cloud for cloud instances, --list-cloud to list instances, --out-pdf for PDF reports | CLI enhancements |
-| Dec 2, 2025 | PDF | Added pdf_generator.py with Playwright-based PDF generation, PDFGenerator class, --out-pdf CLI flag, header/footer templates | Task 5.3.4 complete |
-| Dec 2, 2025 | ML Feedback | Added Section 6.7-6.8 (Graph Viz, Per-Layer Summary), Section 7.5 (HW Recommendations), Section 8.5-8.6 (Resolution/Batch, Layer Quantization), Section 14 (SaaS Architecture) | ML Engineer/MLOps feedback integration |
-| Dec 2, 2025 | Backlog | Added Epic 4C (TF Conversion), Epic 10 (SaaS), Epic 10B (PyPI), Stories 5.4-5.5, 6.4 enhancements, Stories 6.8-6.9 | Feature roadmap expansion |
-| Dec 3, 2025 | Distribution | **PIVOT**: Greenfield standalone package over ORT fork. Zero functionality lost, immediate PyPI distribution | Distribution was blocked by fork dependency |
-| Dec 3, 2025 | Priority | Reordered epics: P0 = Standalone Package + Streamlit UI. Ship usable software first | "Science fair project" → "Real software" pivot |
-| Dec 3, 2025 | Streamlit | Added Section 14.9 with Streamlit Web UI spec, HF Spaces deployment plan | Maximize accessibility without installation |
-| Dec 3, 2025 | Inference | Added Section 15: Inference Platform with "wide hole" architecture. InferenceRunner, DataLoader interface, MetricsCalculator extension point | Platform-first approach: build horizontal, go vertical when paid |
-| Dec 3, 2025 | Backlog | Added Epic 12: Inference Platform (24 tasks across 5 stories). Platform layer for inference, not task-specific metrics | Extensible architecture for future customer needs |
-| Dec 3, 2025 | Future | Added Section 16: MLOps Platform Vision (P5). Cloud GPU orchestration, training estimation, model inventory. High-level only | Document vision, execute MVP. Don't confuse the two |
-| Dec 3, 2025 | Backlog | Added Epics 18-25: Universal IR, SafeTensors, CoreML, TFLite, TensorRT, OpenVINO, GGUF, Privacy/Trust | Format-agnostic vision: read/write any model format |
-| Dec 3, 2025 | Git | Merged feature/onnx-autodoc to main branch, now working on main | This is our IP, not a Microsoft contribution |
-| Dec 3, 2025 | Backlog | Removed Epic 9 (Demo/Deliverables), reordered to original epic numbers | User preference: feature work tonight, deployment tomorrow |
-| Dec 3, 2025 | Epic 4C | **COMPLETE**: TensorFlow/Keras/JAX to ONNX conversion. --from-tensorflow (SavedModel), --from-keras (.h5/.keras), --from-frozen-graph (.pb), --from-jax (Flax). 15/15 tasks, 17 tests | ONNX as universal hub: any format -> ONNX -> any format (max 2 hops) |
-| Dec 3, 2025 | CI/CD | Removed 42 Microsoft ORT workflows, kept only autodoc-ci.yml. Fixed Black formatting. | Avoid spam from fork's inherited CI |
-| Dec 3, 2025 | Epic 5 | Expanded visualization for LLM-scale: 5.4 (patterns), 5.5 (icons), 5.6 (edges), 5.7 (graph, BLOCKED), 5.8 (table). 13/47 tasks | Must handle 70B+ param models with 20k+ ops |
-| Dec 3, 2025 | Section 17 | Added LLM-Scale Analysis section covering Epics 26-30 | Gap analysis for Opus 4.5-class models |
-| Dec 3, 2025 | Epics 26-30 | Added: 26 (Quantization), 27 (Attention Variants), 28 (Memory Patterns), 29 (Sparse/Efficient), 30 (LLM Deployment). 88 new tasks | Complete LLM analysis capability |
-| Dec 3, 2025 | Section 18 | Added Model Optimization Service (Epics 31-32). Automated quantization, graph optimization, multi-variant generation | Don't just analyze - optimize. User uploads model + test data, we handle quantization |
-| Dec 3, 2025 | Epics 31-32 | Added: 31 (Quantization Service, 32 tasks), 32 (Model Optimization, 14 tasks). 46 new tasks | Transform from analysis tool to optimization platform |
-| Dec 3, 2025 | Epic 5 | **COMPLETE**: All 52 tasks done. Added layer_summary.py (5.8), search in graph (5.7.6), performance mode (5.7.9), --include-graph/--include-layer-table/--layer-csv CLI flags | Full visualization suite with interactive graphs and per-layer analysis |
-| Dec 3, 2025 | Story 6.3 | **COMPLETE**: Compare Mode CLI in `model_inspect_compare.py`. Multi-model args (`--models`, `--eval-metrics`, `--precisions`), eval JSON loading/validation, architecture compatibility checks (type, I/O shapes, block counts), comprehensive delta computation (size, params, FLOPs, memory, latency, VRAM, utilization). Outputs JSON + Markdown | Quantization impact analysis foundation for Stories 6.4 and 6.10 |
-| Dec 3, 2025 | Story 6.4 | **COMPLETE**: Quantization Impact Report. `compare_visualizations.py` with tradeoff charts, memory savings charts, calibration recommendations, HTML engine summary panel. 19 tests | TRT EngineXplorer-inspired quantization analysis |
-| Dec 3, 2025 | Story 6.8 | **COMPLETE**: Resolution/Batch Impact Analysis. `--sweep-resolutions auto`, `--input-resolution`. Only sweeps UP TO training resolution, matches aspect ratio. Resolution scaling charts. `recommend_resolution()` for target FPS | Smart resolution scaling that respects training constraints |
-| Dec 3, 2025 | Story 6.11 | **MOVED** to Story 12.6 (Inference Platform). Model Leaderboard requires inference metrics for meaningful ranking | Proper placement in Inference Platform epic |
-| Dec 3, 2025 | Section 9.4 | Added Runtime Profiling (Epic 9). Batch benchmarking with actual ONNX Runtime inference now **default** (`--no-benchmark` for theoretical). Story 9.1 complete, 9.2-9.5 planned for GPU memory, per-layer profiling, bottleneck detection | Real measurements > theoretical estimates. Batch 8 optimal vs theoretical batch 128 |
-| Dec 3, 2025 | Bug Fixes | Fixed VRAM calculation (symbolic dims like 'N' now handled), throughput model (added 0.1ms overhead), pie chart labels (legend instead of overlapping text), graph tooltip (smart positioning) | Integration test findings |
-| Dec 4, 2025 | Epic 9.6 | **COMPLETE**: Multi-input model profiling (BERT, LLMs). Auto-detect inputs, dtypes, sequence lengths. BERT batch sweep working (optimal batch 2) | LLM profiling foundation |
-| Dec 4, 2025 | Epic 22 | Expanded TensorRT Engine Introspection from 2 to 6 stories (34 tasks). Engine loader, fused graph reconstruction, ONNX↔TRT diff view | TRT Engine Explorer-inspired |
-| Dec 4, 2025 | Epics 33-35 | Added QAT Linters (P1, 22 tasks), Activation Visualization (P2, 25 tasks), TRT-Aware Graph UX (P3, 16 tasks) | ML engineer feedback |
-| Dec 4, 2025 | **HaoLine** | **EXTRACTED** to standalone repo: [github.com/mdayku/HaoLine](https://github.com/mdayku/HaoLine). 43 modules, 229 tests passing. CI/CD complete | Epic 10B.0-10B.2 complete |
-| Dec 4, 2025 | **PyPI** | **PUBLISHED** haoline v0.2.2 to PyPI. `pip install haoline` works worldwide. matplotlib included by default, LLM extras optional | Epic 10B complete |
-| Dec 4, 2025 | Epic 7 | **COMPLETE**: LLM Integration. Story 7.2 (config file) cancelled - using env vars + .env auto-load instead. CLI shows clear prompts when API key missing | Simpler approach, industry standard |
-| Dec 4, 2025 | Branding | Fixed etymology: 皓 (hào, "bright/luminous") not 好 (hǎo, "good"). Updated all docs | Correct Chinese character |
-| Dec 4, 2025 | README | Complete rewrite for beginners: step-by-step guide, where to find models, how to get API keys, "golden command" for full output | AI agent friendly documentation |
-| Dec 4, 2025 | v0.2.3 | Added CLI Reference section to README with all flags documented. Docker moved to Epic 38 (P3). Epic 10B closed | Complete standalone package |
-| Dec 4, 2025 | **Epic 11** | **Streamlit MVP Complete** (12/17 tasks): Full web UI with model upload, hardware dropdown (50+ GPUs with search/categorization), interactive D3.js graph (fully embedded, matches standalone HTML), LLM summaries with secure API key input, PDF/HTML/JSON/MD export. Modern dark theme with emerald accents. FLOPs-based node sizing (log scale). Collapsible graph sidebar. Timing heatmap removed (requires profiling data). Ready for HF Spaces deployment | Demo-ready web interface for non-CLI users |
-| Dec 4, 2025 | **Story 11.2** | **COMPLETE** (14/16 tasks): Added model comparison mode (upload 2 models, side-by-side metrics, operator distribution comparison, auto-generated summary), session history (stores last 10 analyses in sidebar, quick re-select for comparison). Mobile responsive task cancelled (not targeting mobile users) | Full-featured web UI ready for deployment |
-| Dec 4, 2025 | **Epics 19-24** | **Format Readers Implemented** (excluding TRT): Created `src/haoline/formats/` module with readers for GGUF (400 LOC, pure Python), SafeTensors (220 LOC), TFLite (350 LOC), CoreML (260 LOC), OpenVINO (240 LOC). Each reader extracts metadata, tensor info, and quantization details. Added optional deps to pyproject.toml. **NEEDS TESTING** with real model files | Expanded format support for LLM ecosystem |
-| Dec 4, 2025 | **Epic 12** | Added `haoline-import-eval` CLI skeleton (`src/haoline/eval/cli.py`), eval schemas for detection/classification/NLP/LLM/segmentation, `--deployment-fps` and `--deployment-hours` CLI flags, YOLO quantization workflow guide (`docs/YOLO_QUANTIZATION_WORKFLOW.md`) | Foundation for eval import and deployment cost calculation |
-| Dec 4, 2025 | **Epic 25** | **COMPLETE** (9/9 tasks): Privacy architecture diagram in PRIVACY.md, `--offline` flag, `--redact-names` flag (anonymizes layer names), `--summary-only` flag (aggregate stats only), output format documentation, open-source audit guide. New module: `src/haoline/privacy.py` | Enterprise trust features for model IP protection |
-| Dec 4, 2025 | **Epic 12** | Added `GenericEvalResult` schema (12.2.6), `CombinedReport` dataclass (12.4.2), Ultralytics YOLO adapter (12.3.1), generic CSV/JSON adapter (12.3.5). New file: `src/haoline/eval/adapters.py`. Epic now 13/36 | Eval import foundation for accuracy × speed × cost comparison |
-| Dec 4, 2025 | **Epic 11** | **COMPLETE** (17/17 tasks): HuggingFace Spaces deployed at `huggingface.co/spaces/mdayku/haoline`. Docker-based deployment with dark theme, file upload fix (XSRF/CORS disabled), Streamlit config bundled. CI/CD pipeline deploys on push to main or after PyPI publish | Public demo available |
-| Dec 4, 2025 | **Epic 39** | **COMPLETE** (12/12 tasks): Pydantic schema migration complete. Validation uses Pydantic models (`HaolineInspectionReport`), fallback to jsonschema. Eval schemas converted to Pydantic. Tests updated with `TestPydanticValidation` class (8 new tests) | Type-safe validation layer |
-| Dec 4, 2025 | **Epic 40** | Created from Epic 39 future tasks. Full Pydantic dataclass migration (20 tasks across 4 stories). Covers `report.py`, `analyzer.py`, `hardware.py`, `patterns.py`, `risks.py`. P2 priority | Foundation for cleaner serialization |
-| Dec 5, 2025 | **Epic 18** | **COMPLETE** (19/19 tasks): Universal Internal Representation. `UniversalGraph`, `UniversalNode`, `UniversalTensor` Pydantic models. Format adapter system with `OnnxAdapter`, `PyTorchAdapter`. Conversion matrix (15+ format pairs). CLI: `--list-conversions`, `--convert-to`, `--export-ir`, `--export-graph`. Graphviz DOT/PNG export. New files: `universal_ir.py`, `format_adapters.py` | Foundation for format-agnostic analysis |
-| Dec 5, 2025 | **Epic 41** | In Progress: Standardized Reporting audit complete. Found 14 completed features NOT surfaced in Streamlit UI: System Requirements, Deployment Cost, Bottleneck Analysis, KV Cache, Precision Breakdown, Batch/Resolution Sweeps, Cloud Instances, Privacy Controls, etc. Added Story 41.4 for CLI-Streamlit Parity (20 CLI flags need Streamlit equivalents) | Epic expanded from 15 to 49 tasks for full CLI-UI parity |
-| Dec 5, 2025 | **Epic 42** | Created: Format Conversion Testing (24 tasks). Tests every conversion path in the matrix: ONNX↔TFLite/CoreML/OpenVINO, PyTorch→ONNX/TFLite/CoreML, TensorFlow→ONNX/TFLite/CoreML, round-trip validation | Quality assurance for Epics 19-24 |
-| Dec 5, 2025 | **Story 41.2** | 8/11 tasks complete: `report_sections.py` (17 dataclasses for reusable sections), Streamlit now has KV Cache, Precision Breakdown, Memory Breakdown, Bottleneck Analysis, Param Distribution chart, FLOPs Distribution chart, Layer-by-Layer table with CSV download | CLI-Streamlit parity for analysis sections |
-| Dec 5, 2025 | **Story 41.5** | 6/8 tasks complete: LLM prompt enhanced with all analysis data: KV Cache, Precision/Quantization, Memory breakdown by op type, Hardware estimates (utilization, saturation, throughput), System Requirements | AI summaries now see full model analysis |
-| Dec 6, 2025 | **Epic 41** | **COMPLETE** (43/44 tasks). Full CLI-Streamlit parity achieved. Added: System Requirements (Steam-style), Deployment Cost Calculator (cloud instance pricing), Batch/Resolution Sweep views, Per-Layer Timing, Memory Overview chart, Run Benchmark button, Privacy Controls, Universal IR export, DOT graph export. Streamlit now has all CLI features | Unified analysis experience across CLI and web |
-| Dec 6, 2025 | **v0.3.0** | Major release with CLI-Streamlit parity. New features: System Requirements, Deployment Cost Calculator, Cloud Instance selector, Per-Layer Timing, Memory Overview, Run Benchmark, Privacy Controls, Universal IR/DOT export. 20+ new Streamlit UI components | Full-featured web UI matching CLI capabilities |
+**Recent Changes (December 2025):**
+
+| Date | Change | 
+|------|--------|
+| Dec 6, 2025 | **v0.4.0 Released** - Epic 33 complete, mypy fixes, documentation archival system |
+| Dec 6, 2025 | **Documentation** - Added archival cursor rule, slimmed PRD/BACKLOG by 50%+ |
+| Dec 6, 2025 | **v0.3.0 Released** - Full CLI-Streamlit parity, 20+ new UI components |
+| Dec 6, 2025 | **Epic 41 COMPLETE** - Standardized Reporting (44/44 tasks) |
+| Dec 6, 2025 | **Epics 43-48 Added** - Deep Research suggestions (performance, op types, UI polish, model diff, standards compliance, quantization efficiency) |
+| Dec 5, 2025 | **Epic 18 COMPLETE** - Universal IR with format adapters |
+| Dec 4, 2025 | **Epic 33 COMPLETE** - QAT & Quantization Linters (41/41 tasks) |
+| Dec 4, 2025 | **Epic 11 COMPLETE** - Streamlit Web UI deployed to HuggingFace Spaces |
+| Dec 4, 2025 | **PyPI Published** - `pip install haoline` available worldwide |
+
+*See [PRDBacklogArchive.md](PRDBacklogArchive.md) for complete December 2024 changelog.*

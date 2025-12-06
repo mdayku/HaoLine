@@ -627,16 +627,14 @@ class QuantizationAdvisor:
         """
         self.model = model
         self.use_llm = use_llm and _OPENAI_AVAILABLE
+        self.client: OpenAI | None = None
 
         if self.use_llm:
             key = api_key or os.environ.get("OPENAI_API_KEY")
             if key and OpenAI is not None:
                 self.client = OpenAI(api_key=key)
             else:
-                self.client = None
                 self.use_llm = False
-        else:
-            self.client = None
 
     def advise(
         self,
@@ -787,7 +785,8 @@ class QuantizationAdvisor:
             content = "\n".join(lines[1:-1])
 
         try:
-            return json.loads(content)
+            result = json.loads(content)
+            return result if isinstance(result, dict) else {}
         except json.JSONDecodeError:
             logger.warning(f"Failed to parse LLM JSON response: {content[:100]}")
             return {}

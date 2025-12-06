@@ -31,16 +31,25 @@ def analyze_model(
 
 ## Code Quality
 
-Before ANY commit:
+**Before EVERY commit (MANDATORY):**
 1. Run `ruff format src/haoline/` to format Python code
 2. Run `ruff check src/haoline/ --fix` to fix linting issues
-3. Run `mypy src/haoline/` to check types (config in pyproject.toml)
-4. Verify all three pass before committing
+3. Verify both pass before committing
 
-Quick command:
+**Every 3 commits (or before any release):**
+4. Run `mypy src/haoline/ --ignore-missing-imports` to check types
+5. Fix any type errors before proceeding
+
+Quick commands:
 ```bash
-ruff format src/haoline/; ruff check src/haoline/ --fix; mypy src/haoline/
+# Every commit (required):
+ruff format src/haoline/; ruff check src/haoline/ --fix
+
+# Every 3 commits or before release:
+mypy src/haoline/ --ignore-missing-imports
 ```
+
+**Commit frequency tracking:** Keep a mental note of commits since last mypy run. If unsure, just run it - it's fast.
 
 ### Common mypy Fixes
 
@@ -110,4 +119,37 @@ if universal_graph:
 **When to use safe access:**
 - In `streamlit_app.py` for any attribute added after v0.2.4
 - When the attribute was added in a commit but not yet published to PyPI
+
+## Documentation Archival (IMPORTANT)
+
+**When editing PRD.md or BACKLOG.md:**
+
+These files can grow large and consume context window. After editing:
+
+1. **Check for completed epics** in BACKLOG.md - if an epic is 100% complete, move detailed task lists to `PRDBacklogArchive.md`
+2. **Check for old delta log entries** in PRD.md - entries older than 7 days should be moved to `PRDBacklogArchive.md`
+3. **Keep summaries** - completed epics should retain a one-line summary in BACKLOG.md, not full task lists
+
+**Archive file:** `PRDBacklogArchive.md` - contains:
+- Detailed task lists from completed epics
+- Historical delta log entries
+- This is for reference only, not active development
+
+**What to keep in active docs:**
+- BACKLOG.md: Progress summary table, in-progress epics, future epics
+- PRD.md: Requirements, specs, architecture decisions, recent (7 days) delta log
+
+**Example trimming:**
+```markdown
+# Before (in BACKLOG.md):
+## Epic 5: Visualization (COMPLETE - 52/52)
+### Story 5.1: Chart Infrastructure
+- [x] Task 5.1.1: Set up matplotlib...
+- [x] Task 5.1.2: Create theme...
+(20 more tasks)
+
+# After:
+## Epic 5: Visualization (COMPLETE - 52/52)
+*Archived to PRDBacklogArchive.md*
+```
 

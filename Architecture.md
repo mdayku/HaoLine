@@ -660,8 +660,13 @@ HaoLine/
 |   |   +-- cli.py           # haoline-import-eval command
 |   |
 |   +-- privacy.py           # Name redaction, summary-only output (Epic 25)
+|   +-- universal_ir.py      # UniversalGraph, UniversalNode, UniversalTensor (Epic 18)
+|   +-- format_adapters.py   # FormatAdapter protocol, OnnxAdapter, conversion matrix (Epic 18)
+|   +-- report_sections.py   # Reusable report components (Epic 41)
+|   +-- quantization_linter.py    # Quantization readiness analysis (Epic 33)
+|   +-- quantization_advisor.py   # LLM-powered quantization recommendations (Epic 33)
 |   |
-|   +-- tests/               # 229 unit tests
+|   +-- tests/               # 260+ unit tests
 |   |   +-- conftest.py
 |   |   +-- test_*.py
 |   |
@@ -988,6 +993,11 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | `eval/schemas.py` | Task-specific evaluation schemas, CombinedReport |
 | `eval/adapters.py` | Import adapters (Ultralytics YOLO, generic CSV/JSON) |
 | `eval/cli.py` | CLI entry point for `haoline-import-eval` |
+| `universal_ir.py` | UniversalGraph, UniversalNode, FormatAdapter protocol |
+| `format_adapters.py` | OnnxAdapter, PyTorchAdapter, conversion matrix |
+| `report_sections.py` | Reusable report dataclasses (ExtractedReportSections) |
+| `quantization_linter.py` | QuantizationLinter, QuantWarning, readiness scoring |
+| `quantization_advisor.py` | LLM-powered quantization recommendations |
 
 ---
 
@@ -1345,3 +1355,4 @@ class MyFormatAdapter:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | Dec 2024 | Marcus | Initial architecture document |
+| 1.1 | Dec 6, 2025 | Marcus | Added Universal IR (Epic 18), Quantization Linter (Epic 33), Report Sections (Epic 41), updated file structure |

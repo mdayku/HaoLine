@@ -416,18 +416,19 @@ class LLMSummarizer:
         # System requirements if available
         if hasattr(report, "system_requirements") and report.system_requirements:
             sr = report.system_requirements
-            summary["system_requirements"] = {
-                "minimum": {
-                    "gpu": sr.minimum.gpu,
-                    "vram_gb": sr.minimum.vram_gb,
-                    "description": sr.minimum.description,
-                },
-                "recommended": {
-                    "gpu": sr.recommended.gpu,
-                    "vram_gb": sr.recommended.vram_gb,
-                    "description": sr.recommended.description,
-                },
-            }
+            sr_dict: dict[str, Any] = {}
+            if sr.minimum:
+                sr_dict["minimum"] = {
+                    "gpu": sr.minimum.device,
+                    "vram_gb": round(sr.minimum.vram_required_bytes / (1024**3), 1),
+                }
+            if sr.recommended:
+                sr_dict["recommended"] = {
+                    "gpu": sr.recommended.device,
+                    "vram_gb": round(sr.recommended.vram_required_bytes / (1024**3), 1),
+                }
+            if sr_dict:
+                summary["system_requirements"] = sr_dict
 
         # Bottleneck analysis with recommendations (Story 41.5.7)
         if hasattr(report, "bottleneck_analysis") and report.bottleneck_analysis:

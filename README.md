@@ -109,6 +109,7 @@ This opens an interactive dashboard at `http://localhost:8501` with:
 - **NEW:** Memory usage overview chart
 - **NEW:** Run Benchmark button (actual ONNX Runtime measurements)
 - **NEW:** Privacy controls (redact layer names, summary-only mode)
+- **NEW:** Quantization Analysis (readiness score, QAT linting, recommendations)
 - AI-powered summaries (bring your own API key)
 - Export to PDF, HTML, JSON, Markdown, **Universal IR**, **DOT graph**
 
@@ -239,6 +240,15 @@ Or use the web UI's comparison mode for an interactive experience.
 | `--summary-only` | Show only aggregate statistics |
 | `--offline` | Disable all network requests |
 
+### Quantization Analysis Options
+
+| Flag | Description |
+|------|-------------|
+| `--lint-quantization` | Run quantization readiness analysis |
+| `--quant-report PATH` | Write quantization report (Markdown) |
+| `--quant-report-html PATH` | Write quantization report (HTML) |
+| `--quant-llm-advice` | Get LLM-powered quantization recommendations |
+
 ### Universal IR Export
 
 | Flag | Description |
@@ -293,6 +303,28 @@ report.to_html("report.html")
 | **AI Summaries** | GPT-powered executive summaries of your architecture |
 | **Multiple Formats** | Export to HTML, Markdown, PDF, JSON, or CSV |
 | **Universal IR** | Format-agnostic intermediate representation for cross-format analysis |
+| **Quantization Analysis** | QAT readiness scoring, problem layer detection, deployment recommendations |
+
+---
+
+## Quantization Analysis
+
+HaoLine includes comprehensive quantization readiness analysis to help you prepare models for INT8/INT4 deployment:
+
+```bash
+# Run quantization analysis
+haoline model.onnx --lint-quantization --quant-report quant_analysis.md
+
+# Get LLM-powered recommendations
+haoline model.onnx --lint-quantization --quant-llm-advice
+```
+
+**Features:**
+- **Readiness Score (0-100)**: Letter grade (A-F) indicating how well the model will quantize
+- **Problem Layer Detection**: Identifies ops that typically cause accuracy loss when quantized
+- **QAT Validation**: Checks fake-quantization node placement in QAT-trained models
+- **Deployment Recommendations**: Target-specific guidance (TensorRT, ONNX Runtime, TFLite)
+- **LLM-Powered Advice**: Context-aware quantization strategy from AI
 
 ---
 

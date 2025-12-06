@@ -138,7 +138,7 @@ img { page-break-inside: avoid !important; break-inside: avoid !important; max-w
                     format=self.page_format,
                     landscape=self.landscape,
                     print_background=self.print_background,
-                    margin=self.margin,
+                    margin=self.margin,  # type: ignore[arg-type]
                     display_header_footer=True,
                     header_template='<div style="font-size: 9px; color: #666; width: 100%; text-align: center; padding: 5px 0;">HaoLine Report</div>',
                     footer_template='<div style="font-size: 9px; color: #666; width: 100%; text-align: center; padding: 5px 0;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>',

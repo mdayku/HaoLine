@@ -833,7 +833,7 @@ class UniversalGraph(BaseModel):
 
         # Create root node
         model_name = self.metadata.name or "Model"
-        root = {
+        root: dict[str, Any] = {
             "id": "root",
             "name": model_name,
             "display_name": model_name,
