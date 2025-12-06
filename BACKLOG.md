@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 17/42 | **P2** |
+| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 19/42 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -283,7 +283,7 @@
 - [x] **Task 22.5.1**: Generate engine overview (layer count, total memory, precision mix)
 - [x] **Task 22.5.2**: Show optimization summary (fusions applied, original ops count)
 - [x] **Task 22.5.3**: Display hardware binding info (GPU arch, compute capability)
-- [ ] **Task 22.5.4**: List builder configuration (max batch, workspace, DLA cores)
+- [x] **Task 22.5.4**: List builder configuration (max batch, workspace, DLA cores)
 
 ### Story 22.6: ONNX vs TRT Comparison Mode [Phase 3]
 *Side-by-side analysis showing what changed and performance impact.*
@@ -303,7 +303,7 @@
 - [x] **Task 22.7.4**: Create TRT-specific report sections (fusions, precision breakdown)
 - [x] **Task 22.7.5**: Add "TensorRT Analysis" tab in Streamlit with engine details
 - [x] **Task 22.7.6**: Handle graceful degradation when TRT not installed (skip with message)
-- [ ] **Task 22.7.7**: Update HuggingFace Spaces requirements (note: TRT requires GPU, may not work on free tier)
+- [x] **Task 22.7.7**: Update HuggingFace Spaces requirements (note: TRT requires GPU, may not work on free tier)
 - [x] **Task 22.7.8**: Write unit tests for TRTEngineReader (9 tests + integration test)
 
 ---

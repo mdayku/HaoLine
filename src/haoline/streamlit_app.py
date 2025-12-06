@@ -1064,6 +1064,29 @@ def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str)
         f"**{info.device_name}** — Compute Capability SM {info.compute_capability[0]}.{info.compute_capability[1]}"
     )
 
+    # Builder configuration
+    cfg = info.builder_config
+    st.markdown("### Builder Configuration")
+    cfg_col1, cfg_col2, cfg_col3 = st.columns(3)
+    with cfg_col1:
+        st.metric("Max Batch Size", cfg.max_batch_size)
+    with cfg_col2:
+        st.metric("Workspace", format_bytes(cfg.device_memory_size))
+    with cfg_col3:
+        dla_text = f"Core {cfg.dla_core}" if cfg.dla_core >= 0 else "GPU Only"
+        st.metric("DLA", dla_text)
+
+    # Additional config details in expander
+    with st.expander("⚙️ More Config Details", expanded=False):
+        config_items = {
+            "Optimization Profiles": cfg.num_optimization_profiles,
+            "Engine Capability": cfg.engine_capability,
+            "Hardware Compatibility": cfg.hardware_compatibility_level,
+            "Implicit Batch Mode": "Yes (legacy)" if cfg.has_implicit_batch else "No",
+        }
+        for key, val in config_items.items():
+            st.text(f"{key}: {val}")
+
     # Bindings
     st.markdown("### Input/Output Bindings")
     binding_data = []

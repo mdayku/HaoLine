@@ -511,13 +511,45 @@ class TestTRTEngineReader:
         assert layer.type == "Fused:BatchNorm+Convolution+ReLU"
         assert layer.precision == "FP16"
 
+    def test_trt_builder_config_fields(self) -> None:
+        """Test TRTBuilderConfig fields."""
+        from haoline.formats.tensorrt import TRTBuilderConfig
+
+        config = TRTBuilderConfig(
+            num_io_tensors=2,
+            num_layers=10,
+            max_batch_size=8,
+            has_implicit_batch=False,
+            device_memory_size=1024 * 1024 * 256,  # 256 MB workspace
+            dla_core=-1,
+            num_optimization_profiles=1,
+            hardware_compatibility_level="None",
+            engine_capability="Standard",
+        )
+        assert config.max_batch_size == 8
+        assert config.device_memory_size == 1024 * 1024 * 256
+        assert config.dla_core == -1
+        assert config.num_optimization_profiles == 1
+
     def test_trt_engine_info_computed_fields(self) -> None:
         """Test computed fields on TRTEngineInfo."""
-        from haoline.formats.tensorrt import TRTBindingInfo, TRTEngineInfo, TRTLayerInfo
+        from haoline.formats.tensorrt import (
+            TRTBindingInfo,
+            TRTBuilderConfig,
+            TRTEngineInfo,
+            TRTLayerInfo,
+        )
 
+        config = TRTBuilderConfig(
+            num_io_tensors=2,
+            num_layers=3,
+            max_batch_size=4,
+            device_memory_size=1024 * 1024 * 100,
+        )
         info = TRTEngineInfo(
             path=Path("test.engine"),
             trt_version="10.14.0",
+            builder_config=config,
             device_name="RTX 4050",
             compute_capability=(8, 9),
             device_memory_bytes=1024 * 1024 * 50,
@@ -536,6 +568,7 @@ class TestTRTEngineReader:
         assert info.precision_breakdown == {"FP16": 2, "FP32": 1}
         assert len(info.input_bindings) == 1
         assert len(info.output_bindings) == 1
+        assert info.builder_config.max_batch_size == 4
 
     def test_format_bytes(self) -> None:
         """Test format_bytes helper."""

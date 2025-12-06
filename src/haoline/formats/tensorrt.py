@@ -50,6 +50,29 @@ class TRTBindingInfo(BaseModel):
     is_input: bool
 
 
+class TRTBuilderConfig(BaseModel):
+    """Builder configuration extracted from TensorRT engine."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # Basic counts
+    num_io_tensors: int = 0
+    num_layers: int = 0
+    # Batch configuration
+    max_batch_size: int = 1
+    has_implicit_batch: bool = False
+    # Memory
+    device_memory_size: int = 0  # Workspace size in bytes
+    # DLA (Deep Learning Accelerator) - for Jetson devices
+    dla_core: int = -1  # -1 means GPU only, 0/1 for DLA core selection
+    # Optimization profiles (for dynamic shapes)
+    num_optimization_profiles: int = 0
+    # Hardware mode
+    hardware_compatibility_level: str = "None"
+    # Sparsity
+    engine_capability: str = "Standard"
+
+
 class TRTEngineInfo(BaseModel):
     """Parsed TensorRT engine information."""
 
@@ -58,7 +81,7 @@ class TRTEngineInfo(BaseModel):
     path: Path
     # Engine metadata
     trt_version: str
-    builder_config: dict[str, Any] = Field(default_factory=dict)
+    builder_config: TRTBuilderConfig = Field(default_factory=TRTBuilderConfig)
     # Hardware binding
     device_name: str = "Unknown"
     compute_capability: tuple[int, int] = (0, 0)
@@ -183,12 +206,6 @@ class TRTEngineReader:
         # Get memory info
         device_memory = engine.device_memory_size if hasattr(engine, "device_memory_size") else 0
 
-        # Builder config info (limited after serialization)
-        builder_config = {
-            "num_io_tensors": engine.num_io_tensors,
-            "num_layers": engine.num_layers,
-        }
-
         # Check for implicit batch dimension (legacy)
         has_implicit_batch = False
         max_batch_size = 1
@@ -196,6 +213,9 @@ class TRTEngineReader:
             has_implicit_batch = engine.has_implicit_batch_dimension
         if hasattr(engine, "max_batch_size"):
             max_batch_size = engine.max_batch_size
+
+        # Extract builder configuration
+        builder_config = self._extract_builder_config(engine, device_memory)
 
         return TRTEngineInfo(
             path=self.path,
@@ -236,6 +256,51 @@ class TRTEngineReader:
             pass
 
         return "Unknown GPU", (0, 0)
+
+    def _extract_builder_config(self, engine: Any, device_memory: int) -> TRTBuilderConfig:
+        """Extract builder configuration from engine."""
+        # Basic counts
+        num_io_tensors = engine.num_io_tensors
+        num_layers = engine.num_layers
+
+        # Batch configuration
+        max_batch_size = 1
+        has_implicit_batch = False
+        if hasattr(engine, "has_implicit_batch_dimension"):
+            has_implicit_batch = engine.has_implicit_batch_dimension
+        if hasattr(engine, "max_batch_size"):
+            max_batch_size = engine.max_batch_size
+
+        # Optimization profiles (for dynamic shapes)
+        num_profiles = 0
+        if hasattr(engine, "num_optimization_profiles"):
+            num_profiles = engine.num_optimization_profiles
+
+        # DLA core (-1 = GPU only)
+        dla_core = -1
+        # TRT doesn't expose DLA config directly from engine after serialization
+
+        # Hardware compatibility level
+        hw_compat = "None"
+        if hasattr(engine, "hardware_compatibility_level"):
+            hw_compat = str(engine.hardware_compatibility_level)
+
+        # Engine capability (Standard, Safety, DLA_Standalone)
+        engine_cap = "Standard"
+        if hasattr(engine, "engine_capability"):
+            engine_cap = str(engine.engine_capability).replace("EngineCapability.", "")
+
+        return TRTBuilderConfig(
+            num_io_tensors=num_io_tensors,
+            num_layers=num_layers,
+            max_batch_size=max_batch_size,
+            has_implicit_batch=has_implicit_batch,
+            device_memory_size=device_memory,
+            dla_core=dla_core,
+            num_optimization_profiles=num_profiles,
+            hardware_compatibility_level=hw_compat,
+            engine_capability=engine_cap,
+        )
 
     def _extract_bindings(self, engine: Any) -> list[TRTBindingInfo]:
         """Extract input/output binding information."""

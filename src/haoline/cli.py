@@ -1678,6 +1678,23 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
     print(f"Device Memory: {format_bytes(info.device_memory_bytes)}")
     print()
 
+    # Builder configuration
+    cfg = info.builder_config
+    print("Builder Configuration:")
+    print(f"  Max Batch Size: {cfg.max_batch_size}")
+    print(f"  Workspace Size: {format_bytes(cfg.device_memory_size)}")
+    if cfg.num_optimization_profiles > 0:
+        print(f"  Optimization Profiles: {cfg.num_optimization_profiles}")
+    if cfg.dla_core >= 0:
+        print(f"  DLA Core: {cfg.dla_core}")
+    else:
+        print("  DLA: Not used (GPU only)")
+    if cfg.engine_capability != "Standard":
+        print(f"  Engine Capability: {cfg.engine_capability}")
+    if cfg.has_implicit_batch:
+        print("  Mode: Implicit Batch (legacy)")
+    print()
+
     # Bindings
     print("Input/Output Bindings:")
     for b in info.input_bindings:
@@ -1712,6 +1729,7 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
     if args.out_json:
         import json
 
+        cfg = info.builder_config
         output_data = {
             "format": "tensorrt",
             "path": str(model_path),
@@ -1721,6 +1739,14 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
                 "compute_capability": list(info.compute_capability),
             },
             "device_memory_bytes": info.device_memory_bytes,
+            "builder_config": {
+                "max_batch_size": cfg.max_batch_size,
+                "workspace_bytes": cfg.device_memory_size,
+                "num_optimization_profiles": cfg.num_optimization_profiles,
+                "dla_core": cfg.dla_core,
+                "engine_capability": cfg.engine_capability,
+                "has_implicit_batch": cfg.has_implicit_batch,
+            },
             "layer_count": info.layer_count,
             "fused_layer_count": fused_count,
             "layer_type_counts": info.layer_type_counts,
@@ -1745,6 +1771,8 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
 
     # Markdown output if requested
     if args.out_md:
+        cfg = info.builder_config
+        dla_str = f"Core {cfg.dla_core}" if cfg.dla_core >= 0 else "Not used (GPU)"
         md_lines = [
             f"# TensorRT Engine Analysis: {model_path.name}",
             "",
@@ -1758,6 +1786,16 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
             f"| Device Memory | {format_bytes(info.device_memory_bytes)} |",
             f"| Layer Count | {info.layer_count} |",
             f"| Fused Layers | {fused_count} ({100 * fused_count // info.layer_count}%) |",
+            "",
+            "## Builder Configuration",
+            "",
+            "| Setting | Value |",
+            "|---------|-------|",
+            f"| Max Batch Size | {cfg.max_batch_size} |",
+            f"| Workspace Size | {format_bytes(cfg.device_memory_size)} |",
+            f"| Optimization Profiles | {cfg.num_optimization_profiles} |",
+            f"| DLA | {dla_str} |",
+            f"| Engine Capability | {cfg.engine_capability} |",
             "",
             "## Bindings",
             "",
