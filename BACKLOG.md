@@ -58,7 +58,7 @@
 | Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
-| Epic 51: AWS GPU Deployment | Not Started | 4 | 0/18 | P3 |
+| Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
 | Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
 | Epic 44: Expanded Op Type Support | Not Started | 3 | 0/14 | P3 |
@@ -525,6 +525,18 @@
 - [ ] **Task 51.4.4**: Display GPU memory utilization during inference
 - [ ] **Task 51.4.5**: Add bottleneck detection summary card
 - [ ] **Task 51.4.6**: Show "GPU Required" message on HF Spaces free tier
+
+### Story 51.5: Eval Import Streamlit UI
+*Epic 12 (Eval Import & Comparison) is CLI-only. Add Streamlit UI.*
+
+- [ ] **Task 51.5.1**: Add "Import Eval Results" expander in analysis view
+- [ ] **Task 51.5.2**: Support file upload for eval JSON (Ultralytics, HF, lm-eval)
+- [ ] **Task 51.5.3**: Auto-detect eval format and parse metrics
+- [ ] **Task 51.5.4**: Display eval metrics cards (mAP, accuracy, F1, etc.)
+- [ ] **Task 51.5.5**: Create combined report view (architecture + eval)
+- [ ] **Task 51.5.6**: Add deployment cost calculator UI ($/day, $/month estimates)
+- [ ] **Task 51.5.7**: Show accuracy vs size/speed tradeoff visualization
+- [ ] **Task 51.5.8**: Export combined report as JSON/PDF
 
 ---
 

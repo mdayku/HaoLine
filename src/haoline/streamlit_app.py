@@ -1444,6 +1444,14 @@ def main():
                 "*Run locally with GPU for full features.*"
             )
 
+        # CLI-only features disclaimer
+        st.markdown("---")
+        st.caption(
+            "**CLI-Only Features:** Eval import (`haoline-import-eval`), "
+            "runtime profiling (`haoline --profile`), $/day cost estimates. "
+            "Install locally: `pip install haoline`"
+        )
+
         st.markdown(f"---\n*HaoLine v{__version__}*")
 
     # Main content - different views based on mode
