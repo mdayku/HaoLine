@@ -688,3 +688,18 @@ class TestTRTComparison:
         )
         assert node.op_type == "Conv"
         assert len(node.inputs) == 3
+
+    def test_memory_metrics_fields(self) -> None:
+        """Test MemoryMetrics model."""
+        from haoline.formats.trt_comparison import MemoryMetrics
+
+        metrics = MemoryMetrics(
+            onnx_file_size_bytes=100 * 1024 * 1024,  # 100 MB
+            trt_engine_size_bytes=50 * 1024 * 1024,  # 50 MB
+            trt_device_memory_bytes=80 * 1024 * 1024,  # 80 MB
+            file_size_ratio=0.5,
+            estimated_precision_savings_bytes=25 * 1024 * 1024,
+            estimated_precision_savings_ratio=0.25,
+        )
+        assert metrics.file_size_ratio == 0.5
+        assert metrics.estimated_precision_savings_ratio == 0.25

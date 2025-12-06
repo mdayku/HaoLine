@@ -1879,6 +1879,19 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
     print(f"Precision Changes: {len(report.precision_changes)}")
     print()
 
+    # Memory metrics
+    mm = report.memory_metrics
+    if mm.onnx_file_size_bytes > 0:
+        print("Memory Comparison:")
+        print(f"  ONNX file:      {mm.onnx_file_size_bytes / 1024 / 1024:.1f} MB")
+        print(f"  TRT engine:     {mm.trt_engine_size_bytes / 1024 / 1024:.1f} MB")
+        print(f"  File ratio:     {mm.file_size_ratio:.2f}x")
+        if mm.trt_device_memory_bytes > 0:
+            print(f"  Device memory:  {mm.trt_device_memory_bytes / 1024 / 1024:.1f} MB")
+        if mm.estimated_precision_savings_ratio > 0:
+            print(f"  Precision savings: ~{mm.estimated_precision_savings_ratio * 100:.0f}%")
+        print()
+
     # Top fusions
     if report.layer_mappings:
         fusions = [m for m in report.layer_mappings if m.is_fusion]
@@ -1924,6 +1937,7 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
     if args.out_json:
         import json
 
+        mm = report.memory_metrics
         output_data = {
             "comparison": "onnx_vs_trt",
             "onnx_path": str(onnx_path),
@@ -1933,6 +1947,13 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
             "compression_ratio": compression,
             "fusion_count": report.fusion_count,
             "removed_node_count": report.removed_node_count,
+            "memory": {
+                "onnx_file_bytes": mm.onnx_file_size_bytes,
+                "trt_engine_bytes": mm.trt_engine_size_bytes,
+                "trt_device_memory_bytes": mm.trt_device_memory_bytes,
+                "file_size_ratio": mm.file_size_ratio,
+                "precision_savings_ratio": mm.estimated_precision_savings_ratio,
+            },
             "precision_changes": [
                 {
                     "layer": c.layer_name,
@@ -1958,6 +1979,7 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
 
     # Markdown output
     if args.out_md:
+        mm = report.memory_metrics
         md_lines = [
             "# ONNX ↔ TensorRT Comparison",
             "",
@@ -1974,6 +1996,15 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
             f"| Fusions | {report.fusion_count} |",
             f"| Removed Nodes | {report.removed_node_count} |",
             f"| Precision Changes | {len(report.precision_changes)} |",
+            "",
+            "## Memory Comparison",
+            "",
+            "| Metric | Value |",
+            "|--------|-------|",
+            f"| ONNX File | {mm.onnx_file_size_bytes / 1024 / 1024:.1f} MB |",
+            f"| TRT Engine | {mm.trt_engine_size_bytes / 1024 / 1024:.1f} MB |",
+            f"| File Ratio | {mm.file_size_ratio:.2f}x |",
+            f"| Device Memory | {mm.trt_device_memory_bytes / 1024 / 1024:.1f} MB |",
             "",
         ]
 

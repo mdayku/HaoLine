@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 31/42 | **P2** |
+| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 33/42 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -252,9 +252,9 @@
 
 - [x] **Task 22.2.1**: Extract layer list from engine (names, types, shapes)
 - [x] **Task 22.2.2**: Identify fused operations (Conv+BN+ReLU → single kernel)
-- [ ] **Task 22.2.3**: Detect removed/optimized-away layers
+- [x] **Task 22.2.3**: Detect removed/optimized-away layers (via comparison)
 - [x] **Task 22.2.4**: Extract kernel substitutions (cuDNN vs custom kernels) - tactic field
-- [ ] **Task 22.2.5**: Parse timing cache if present
+- [ ] **Task 22.2.5**: Parse timing cache if present (Phase 4)
 - [x] **Task 22.2.6**: Identify precision per layer (FP32/FP16/INT8/TF32)
 
 ### Story 22.3: ONNX ↔ TRT Diff View [Phase 3] - **PARTIAL**
@@ -292,7 +292,7 @@
 - [x] **Task 22.6.2**: Compute layer count delta (before/after fusion)
 - [x] **Task 22.6.3**: Show precision changes with accuracy impact notes
 - [x] **Task 22.6.4**: Generate comparison report (JSON/MD/HTML formats)
-- [ ] **Task 22.6.5**: Visualize memory reduction from optimizations
+- [x] **Task 22.6.5**: Visualize memory reduction from optimizations
 
 ### Story 22.7: CLI & Streamlit Integration [Phase 1] - **COMPLETE**
 *Full integration with HaoLine CLI and web UI.*

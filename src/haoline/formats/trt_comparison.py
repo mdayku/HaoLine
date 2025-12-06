@@ -73,6 +73,21 @@ class PrecisionChange(BaseModel):
     reason: str = ""  # Why TRT chose this precision
 
 
+class MemoryMetrics(BaseModel):
+    """Memory comparison metrics between ONNX and TRT."""
+
+    model_config = ConfigDict(frozen=True)
+
+    onnx_file_size_bytes: int = 0
+    trt_engine_size_bytes: int = 0
+    trt_device_memory_bytes: int = 0
+    # Compression metrics
+    file_size_ratio: float = 1.0  # TRT/ONNX file size ratio
+    # Estimated savings from precision changes
+    estimated_precision_savings_bytes: int = 0
+    estimated_precision_savings_ratio: float = 0.0
+
+
 class TRTComparisonReport(BaseModel):
     """Full comparison report between ONNX and TRT engine."""
 
@@ -85,6 +100,8 @@ class TRTComparisonReport(BaseModel):
     trt_layer_count: int = 0
     fusion_count: int = 0
     removed_node_count: int = 0
+    # Memory metrics
+    memory_metrics: MemoryMetrics = Field(default_factory=MemoryMetrics)
     # Detailed mappings
     layer_mappings: list[LayerMapping] = Field(default_factory=list)
     shape_changes: list[ShapeChange] = Field(default_factory=list)
@@ -109,6 +126,25 @@ class TRTComparisonReport(BaseModel):
             f"Precision changes: {len(self.precision_changes)}",
             f"Shape changes: {len(self.shape_changes)}",
         ]
+
+        # Memory metrics
+        mm = self.memory_metrics
+        if mm.onnx_file_size_bytes > 0 and mm.trt_engine_size_bytes > 0:
+            lines.extend(
+                [
+                    "",
+                    "Memory:",
+                    f"  ONNX file: {mm.onnx_file_size_bytes / 1024 / 1024:.1f} MB",
+                    f"  TRT engine: {mm.trt_engine_size_bytes / 1024 / 1024:.1f} MB",
+                    f"  File ratio: {mm.file_size_ratio:.2f}x",
+                ]
+            )
+            if mm.trt_device_memory_bytes > 0:
+                lines.append(f"  Device memory: {mm.trt_device_memory_bytes / 1024 / 1024:.1f} MB")
+            if mm.estimated_precision_savings_ratio > 0:
+                lines.append(
+                    f"  Precision savings: ~{mm.estimated_precision_savings_ratio * 100:.0f}%"
+                )
 
         if self.unmapped_onnx_nodes:
             lines.append(f"\nUnmapped ONNX nodes: {len(self.unmapped_onnx_nodes)}")
@@ -175,6 +211,9 @@ class TRTONNXComparator:
         # Count fusions
         fusion_count = sum(1 for m in layer_mappings if m.is_fusion)
 
+        # Compute memory metrics
+        memory_metrics = self._compute_memory_metrics(trt_info, precision_changes)
+
         return TRTComparisonReport(
             onnx_path=self.onnx_path,
             trt_path=self.trt_path,
@@ -182,6 +221,7 @@ class TRTONNXComparator:
             trt_layer_count=len(trt_info.layers),
             fusion_count=fusion_count,
             removed_node_count=len(removed_nodes),
+            memory_metrics=memory_metrics,
             layer_mappings=layer_mappings,
             shape_changes=shape_changes,
             precision_changes=precision_changes,
@@ -330,6 +370,46 @@ class TRTONNXComparator:
                 )
 
         return changes
+
+    def _compute_memory_metrics(
+        self,
+        trt_info: Any,
+        precision_changes: list[PrecisionChange],
+    ) -> MemoryMetrics:
+        """Compute memory comparison metrics."""
+        # Get file sizes
+        onnx_size = self.onnx_path.stat().st_size if self.onnx_path.exists() else 0
+        trt_size = self.trt_path.stat().st_size if self.trt_path.exists() else 0
+
+        # File size ratio
+        file_ratio = trt_size / onnx_size if onnx_size > 0 else 1.0
+
+        # TRT device memory
+        device_memory = (
+            trt_info.device_memory_bytes if hasattr(trt_info, "device_memory_bytes") else 0
+        )
+
+        # Estimate precision savings
+        # FP16 = 50% of FP32, INT8 = 25% of FP32
+        precision_savings_ratio = 0.0
+        total_layers = max(len(precision_changes), 1)
+        for change in precision_changes:
+            if change.trt_precision == "FP16":
+                precision_savings_ratio += 0.5 / total_layers
+            elif change.trt_precision == "INT8":
+                precision_savings_ratio += 0.75 / total_layers
+
+        # Estimate bytes saved (rough approximation based on model size)
+        estimated_savings = int(onnx_size * precision_savings_ratio)
+
+        return MemoryMetrics(
+            onnx_file_size_bytes=onnx_size,
+            trt_engine_size_bytes=trt_size,
+            trt_device_memory_bytes=device_memory,
+            file_size_ratio=file_ratio,
+            estimated_precision_savings_bytes=estimated_savings,
+            estimated_precision_savings_ratio=precision_savings_ratio,
+        )
 
 
 def compare_onnx_trt(onnx_path: str | Path, trt_path: str | Path) -> TRTComparisonReport:
