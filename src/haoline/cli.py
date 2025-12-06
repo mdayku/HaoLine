@@ -1744,6 +1744,49 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
             print(f"  {prec}: {count}")
         print()
 
+    # Performance Metadata (Task 22.4 - TRT Performance Metadata Panel)
+    perf = info.performance
+    print("Performance Analysis:")
+
+    # Task 22.4.2: Workspace allocation
+    if perf.total_workspace_bytes > 0:
+        print(f"  Total Workspace: {format_bytes(perf.total_workspace_bytes)}")
+
+    # Task 22.4.4: Compute vs memory bound distribution
+    total_classified = perf.compute_bound_layers + perf.memory_bound_layers + perf.balanced_layers
+    if total_classified > 0:
+        print("  Layer Classification:")
+        if perf.compute_bound_layers > 0:
+            print(f"    Compute-bound: {perf.compute_bound_layers}")
+        if perf.memory_bound_layers > 0:
+            print(f"    Memory-bound: {perf.memory_bound_layers}")
+        if perf.balanced_layers > 0:
+            print(f"    Balanced: {perf.balanced_layers}")
+        if perf.unknown_bound_layers > 0:
+            print(f"    Unknown: {perf.unknown_bound_layers}")
+
+    # Task 22.4.1: Per-layer timing (if available from profiling)
+    if perf.has_layer_timing and perf.total_time_ms is not None:
+        print(f"\n  Total Inference Time: {perf.total_time_ms:.2f} ms")
+        if perf.slowest_layers:
+            print("  Slowest Layers:")
+            for name, time_ms in perf.slowest_layers[:5]:
+                pct = (time_ms / perf.total_time_ms) * 100 if perf.total_time_ms > 0 else 0
+                print(f"    {name[:40]}: {time_ms:.3f} ms ({pct:.1f}%)")
+    else:
+        print("  Note: Run with profiling enabled for per-layer timing")
+
+    # Task 22.4.3: Tactic/kernel selection (show sample)
+    layers_with_tactics = [lyr for lyr in info.layers if lyr.tactic_name]
+    if layers_with_tactics:
+        print(f"\n  Kernel/Tactic Selection: ({len(layers_with_tactics)} layers have tactics)")
+        for lyr in layers_with_tactics[:3]:
+            tactic_short = (lyr.tactic_name or "")[:50]
+            print(f"    {lyr.name[:30]}: {tactic_short}")
+        if len(layers_with_tactics) > 3:
+            print(f"    ... and {len(layers_with_tactics) - 3} more")
+    print()
+
     # Quantization bottleneck analysis (--quant-bottlenecks or always show summary)
     show_bottlenecks = getattr(args, "quant_bottlenecks", False)
     from .formats.tensorrt import analyze_quant_bottlenecks
@@ -1845,9 +1888,26 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
                     "is_fused": layer.is_fused,
                     "fused_ops": layer.fused_ops,
                     "tactic": layer.tactic,
+                    "tactic_name": layer.tactic_name,
+                    "workspace_size_bytes": layer.workspace_size_bytes,
+                    "output_memory_bytes": layer.output_memory_bytes,
+                    "bound_type": layer.bound_type,
                 }
                 for layer in info.layers
             ],
+            # Task 22.4: Performance metadata
+            "performance": {
+                "total_time_ms": perf.total_time_ms,
+                "has_layer_timing": perf.has_layer_timing,
+                "slowest_layers": [
+                    {"name": name, "time_ms": time} for name, time in perf.slowest_layers
+                ],
+                "total_workspace_bytes": perf.total_workspace_bytes,
+                "compute_bound_layers": perf.compute_bound_layers,
+                "memory_bound_layers": perf.memory_bound_layers,
+                "balanced_layers": perf.balanced_layers,
+                "unknown_bound_layers": perf.unknown_bound_layers,
+            },
             "quant_bottleneck_analysis": {
                 "int8_layer_count": bottleneck_analysis.int8_layer_count,
                 "fp16_layer_count": bottleneck_analysis.fp16_layer_count,
@@ -1993,6 +2053,22 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
             print(f"  {prec}: {count} layers")
         print()
 
+    # Layer rewrites (attention → Flash Attention, etc.)
+    if hasattr(report, "layer_rewrites") and report.layer_rewrites:
+        print("Layer Rewrites (optimized kernel substitutions):")
+        for rewrite in report.layer_rewrites[:8]:
+            print(f"  {rewrite.rewrite_type}: {rewrite.description}")
+            if rewrite.original_ops:
+                ops_str = ", ".join(rewrite.original_ops[:3])
+                if len(rewrite.original_ops) > 3:
+                    ops_str += f" (+{len(rewrite.original_ops) - 3} more)"
+                print(f"    ONNX ops: {ops_str}")
+            if rewrite.speedup_estimate:
+                print(f"    Speedup: {rewrite.speedup_estimate}")
+        if len(report.layer_rewrites) > 8:
+            print(f"  ... and {len(report.layer_rewrites) - 8} more rewrites")
+        print()
+
     # Removed nodes (optimized away)
     if report.removed_nodes:
         print(f"Removed/Optimized Nodes ({len(report.removed_nodes)}):")
@@ -2049,6 +2125,18 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
                 for m in report.layer_mappings
                 if m.is_fusion
             ],
+            "layer_rewrites": [
+                {
+                    "type": r.rewrite_type,
+                    "original_ops": r.original_ops,
+                    "original_op_types": r.original_op_types,
+                    "trt_layer": r.trt_layer_name,
+                    "kernel": r.trt_kernel,
+                    "description": r.description,
+                    "speedup_estimate": r.speedup_estimate,
+                }
+                for r in (report.layer_rewrites if hasattr(report, "layer_rewrites") else [])
+            ],
             "removed_nodes": report.removed_nodes,
         }
         with open(args.out_json, "w") as f:
@@ -2101,6 +2189,26 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
                 md_lines.append(f"| {fusion.trt_layer_name[:40]} | {desc} |")
             md_lines.append("")
 
+        # Layer rewrites section
+        if hasattr(report, "layer_rewrites") and report.layer_rewrites:
+            md_lines.extend(
+                [
+                    "## Layer Rewrites",
+                    "",
+                    "TensorRT replaced these ONNX patterns with optimized kernels:",
+                    "",
+                    "| Rewrite Type | Description | Speedup |",
+                    "|--------------|-------------|---------|",
+                ]
+            )
+            for rewrite in report.layer_rewrites[:10]:
+                md_lines.append(
+                    f"| {rewrite.rewrite_type} | {rewrite.description} | {rewrite.speedup_estimate} |"
+                )
+            if len(report.layer_rewrites) > 10:
+                md_lines.append(f"| ... | {len(report.layer_rewrites) - 10} more | |")
+            md_lines.append("")
+
         if report.removed_nodes:
             md_lines.extend(
                 [
@@ -2119,6 +2227,18 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
         with open(args.out_md, "w") as f:
             f.write("\n".join(md_lines))
         print(f"Markdown report written to: {args.out_md}")
+
+    # HTML output with side-by-side comparison (Task 22.3.6)
+    if args.out_html:
+        try:
+            from .formats.trt_comparison import generate_comparison_html
+
+            html_content = generate_comparison_html(report)
+            with open(args.out_html, "w", encoding="utf-8") as f:
+                f.write(html_content)
+            print(f"HTML comparison report written to: {args.out_html}")
+        except Exception as e:
+            logger.warning(f"Could not generate HTML comparison: {e}")
 
     print("\n[ONNX ↔ TRT comparison complete]")
 

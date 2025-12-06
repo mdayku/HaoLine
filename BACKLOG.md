@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | In Progress | 8 | 43/50 | **P2** |
+| Epic 22: TensorRT Engine Introspection | **COMPLETE** | 8 | 50/50 | Done |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -257,27 +257,27 @@
 - [x] **Task 22.2.5**: Parse timing cache if present (Phase 4) - `parse_timing_cache()` in v0.7.1
 - [x] **Task 22.2.6**: Identify precision per layer (FP32/FP16/INT8/TF32)
 
-### Story 22.3: ONNX ↔ TRT Diff View [Phase 3] - **PARTIAL**
+### Story 22.3: ONNX ↔ TRT Diff View [Phase 3] - **COMPLETE**
 *Visual comparison between source ONNX and compiled TRT engine.*
 
 - [x] **Task 22.3.1**: Map TRT layers back to original ONNX nodes (by name matching)
 - [x] **Task 22.3.2**: Highlight fused operations (N ONNX ops → 1 TRT layer)
 - [x] **Task 22.3.3**: Show precision auto-selection decisions per layer
-- [ ] **Task 22.3.4**: Visualize layer rewrites (e.g., attention → Flash Attention)
+- [x] **Task 22.3.4**: Visualize layer rewrites (e.g., attention → Flash Attention)
 - [x] **Task 22.3.5**: Display shape changes (dynamic → static binding)
-- [ ] **Task 22.3.6**: Generate side-by-side graph comparison in HTML report
+- [x] **Task 22.3.6**: Generate side-by-side graph comparison in HTML report
 
-### Story 22.4: TRT Performance Metadata Panel [Phase 4]
+### Story 22.4: TRT Performance Metadata Panel [Phase 4] - **COMPLETE**
 *Extract and display engine profiling information (if profiling was enabled during build).*
 
-- [ ] **Task 22.4.1**: Extract per-layer latency from profiling data
-- [ ] **Task 22.4.2**: Show workspace size allocation per layer
-- [ ] **Task 22.4.3**: Display kernel/tactic selection choices
-- [ ] **Task 22.4.4**: Identify memory-bound vs compute-bound layers
-- [ ] **Task 22.4.5**: Show layer timing breakdown chart (HTML/Streamlit)
-- [ ] **Task 22.4.6**: Extract device memory footprint
+- [x] **Task 22.4.1**: Extract per-layer latency from profiling data
+- [x] **Task 22.4.2**: Show workspace size allocation per layer
+- [x] **Task 22.4.3**: Display kernel/tactic selection choices
+- [x] **Task 22.4.4**: Identify memory-bound vs compute-bound layers
+- [x] **Task 22.4.5**: Show layer timing breakdown chart (HTML/Streamlit)
+- [x] **Task 22.4.6**: Extract device memory footprint
 
-### Story 22.5: TRT Engine Summary Block [Phase 1] - **PARTIAL**
+### Story 22.5: TRT Engine Summary Block [Phase 1] - **COMPLETE**
 *Comprehensive summary matching HaoLine report format.*
 
 - [x] **Task 22.5.1**: Generate engine overview (layer count, total memory, precision mix)

@@ -35,13 +35,22 @@ class TRTLayerInfo(BaseModel):
     precision: str = "FP32"
     input_shapes: list[tuple[int, ...]] = Field(default_factory=list)
     output_shapes: list[tuple[int, ...]] = Field(default_factory=list)
-    # Tactic/kernel info if available
+    # Tactic/kernel info if available (Task 22.4.3)
     tactic: str | None = None
+    tactic_name: str | None = None  # Human-readable tactic name
     # Fusion info
     is_fused: bool = False
     fused_ops: list[str] = Field(default_factory=list)  # Original ops that were fused
-    # Timing info (if profiling enabled)
+    # Timing info (if profiling enabled) - Task 22.4.1
     avg_time_ms: float | None = None
+    min_time_ms: float | None = None
+    max_time_ms: float | None = None
+    # Workspace/memory info - Task 22.4.2
+    workspace_size_bytes: int = 0
+    output_memory_bytes: int = 0  # Total output tensor memory
+    # Compute vs memory bound classification - Task 22.4.4
+    bound_type: str = "Unknown"  # "compute", "memory", "balanced", "unknown"
+    arithmetic_intensity: float | None = None  # FLOPs / bytes accessed
     # Origin info for ONNX mapping
     origin: str | None = None  # Original ONNX node name
 
@@ -80,6 +89,35 @@ class TRTBuilderConfig(BaseModel):
     engine_capability: str = "Standard"
 
 
+class TRTPerformanceMetadata(BaseModel):
+    """
+    Performance metadata for a TensorRT engine.
+
+    Task 22.4: TRT Performance Metadata Panel
+    Extracted from engine inspector and optional profiling data.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    # Total inference time estimate (if profiled)
+    total_time_ms: float | None = None
+    # Per-layer timing availability
+    has_layer_timing: bool = False
+    # Slowest layers (top 10)
+    slowest_layers: list[tuple[str, float]] = Field(default_factory=list)  # (name, ms)
+    # Total workspace used
+    total_workspace_bytes: int = 0
+    # Memory bandwidth utilization estimate
+    memory_bandwidth_gbps: float | None = None
+    # Compute utilization estimate
+    compute_utilization_pct: float | None = None
+    # Bound type distribution
+    compute_bound_layers: int = 0
+    memory_bound_layers: int = 0
+    balanced_layers: int = 0
+    unknown_bound_layers: int = 0
+
+
 class TRTEngineInfo(BaseModel):
     """Parsed TensorRT engine information."""
 
@@ -97,6 +135,8 @@ class TRTEngineInfo(BaseModel):
     bindings: list[TRTBindingInfo] = Field(default_factory=list)
     # Memory info
     device_memory_bytes: int = 0
+    # Performance metadata (Task 22.4)
+    performance: TRTPerformanceMetadata = Field(default_factory=TRTPerformanceMetadata)
     # Optimization info (if available from build)
     has_implicit_batch: bool = False
     max_batch_size: int = 1
@@ -517,6 +557,9 @@ class TRTEngineReader:
         # Extract builder configuration
         builder_config = self._extract_builder_config(engine, device_memory)
 
+        # Compute performance metadata (Task 22.4)
+        performance = self._compute_performance_metadata(layers)
+
         return TRTEngineInfo(
             path=self.path,
             trt_version=trt_version,
@@ -526,8 +569,52 @@ class TRTEngineReader:
             layers=layers,
             bindings=bindings,
             device_memory_bytes=device_memory,
+            performance=performance,
             has_implicit_batch=has_implicit_batch,
             max_batch_size=max_batch_size,
+        )
+
+    def _compute_performance_metadata(self, layers: list[TRTLayerInfo]) -> TRTPerformanceMetadata:
+        """
+        Compute performance metadata summary from layer information.
+
+        Task 22.4: TRT Performance Metadata Panel
+        """
+        # Task 22.4.1: Check if we have timing data
+        layers_with_timing = [lyr for lyr in layers if lyr.avg_time_ms is not None]
+        has_timing = len(layers_with_timing) > 0
+
+        # Total time if timing available
+        total_time: float | None = None
+        slowest: list[tuple[str, float]] = []
+        if has_timing:
+            total_time = sum(lyr.avg_time_ms or 0.0 for lyr in layers_with_timing)
+            # Sort by time descending
+            sorted_by_time = sorted(
+                [(lyr.name, lyr.avg_time_ms or 0.0) for lyr in layers_with_timing],
+                key=lambda x: x[1],
+                reverse=True,
+            )
+            slowest = sorted_by_time[:10]
+
+        # Task 22.4.2: Total workspace
+        total_workspace = sum(lyr.workspace_size_bytes for lyr in layers)
+
+        # Task 22.4.4: Bound type distribution
+        compute_bound = sum(1 for lyr in layers if lyr.bound_type == "compute")
+        memory_bound = sum(1 for lyr in layers if lyr.bound_type == "memory")
+        balanced = sum(1 for lyr in layers if lyr.bound_type == "balanced")
+        unknown_bound = sum(1 for lyr in layers if lyr.bound_type == "unknown")
+
+        return TRTPerformanceMetadata(
+            total_time_ms=total_time,
+            has_layer_timing=has_timing,
+            slowest_layers=slowest,
+            total_workspace_bytes=total_workspace,
+            compute_bound_layers=compute_bound,
+            memory_bound_layers=memory_bound,
+            balanced_layers=balanced,
+            unknown_bound_layers=unknown_bound,
         )
 
     def _get_device_info(self) -> tuple[str, tuple[int, int]]:
@@ -652,14 +739,21 @@ class TRTEngineReader:
                             layer_type = self._infer_layer_type(name)
                             precision = self._infer_precision(name)
                             tactic = None
+                            tactic_name = None
                             origin = None
+                            workspace_size = 0
+                            output_memory = 0
                         else:
                             # Dict format (older TRT versions) with more details
                             name = layer_entry.get("Name", "Unknown")
                             layer_type = layer_entry.get("LayerType", self._infer_layer_type(name))
                             precision = layer_entry.get("Precision", "FP32")
                             tactic = layer_entry.get("TacticName") or layer_entry.get("Tactic")
+                            tactic_name = layer_entry.get("TacticName")
                             origin = layer_entry.get("Origin")
+                            # Task 22.4.2: Extract workspace size
+                            workspace_size = layer_entry.get("WorkspaceSize", 0)
+                            output_memory = layer_entry.get("OutputSize", 0)
 
                         # Check if this is a fused layer
                         is_fused = "+" in name
@@ -673,8 +767,19 @@ class TRTEngineReader:
                                 precision = layer_detail["Precision"]
                             if "TacticName" in layer_detail:
                                 tactic = layer_detail["TacticName"]
+                                tactic_name = layer_detail["TacticName"]
                             if "Origin" in layer_detail:
                                 origin = layer_detail["Origin"]
+                            # Task 22.4.2/22.4.6: Workspace and memory info
+                            if "WorkspaceSize" in layer_detail:
+                                workspace_size = layer_detail["WorkspaceSize"]
+                            if "TotalFootprintBytes" in layer_detail:
+                                output_memory = layer_detail["TotalFootprintBytes"]
+                            elif "OutputSize" in layer_detail:
+                                output_memory = layer_detail["OutputSize"]
+
+                        # Task 22.4.4: Infer compute vs memory bound
+                        bound_type = self._classify_layer_bound(layer_type, precision)
 
                         layers.append(
                             TRTLayerInfo(
@@ -682,9 +787,13 @@ class TRTEngineReader:
                                 type=layer_type,
                                 precision=precision,
                                 tactic=tactic,
+                                tactic_name=tactic_name,
                                 is_fused=is_fused,
                                 fused_ops=fused_ops,
                                 origin=origin,
+                                workspace_size_bytes=workspace_size,
+                                output_memory_bytes=output_memory,
+                                bound_type=bound_type,
                             )
                         )
                     return layers
@@ -702,6 +811,60 @@ class TRTEngineReader:
             )
 
         return layers
+
+    def _classify_layer_bound(self, layer_type: str, precision: str) -> str:
+        """
+        Classify a layer as compute-bound, memory-bound, or balanced.
+
+        Task 22.4.4: Identify memory-bound vs compute-bound layers.
+
+        Heuristics based on layer type:
+        - Convolutions/MatMul: Typically compute-bound for larger kernels
+        - Elementwise/Activation: Memory-bound (low arithmetic intensity)
+        - Normalization: Memory-bound (multiple passes over data)
+        - Pooling: Memory-bound (low compute, data movement)
+        """
+        layer_lower = layer_type.lower()
+
+        # Compute-bound operations
+        compute_bound_ops = {"convolution", "matrixmultiply", "matmul", "fullyconnected", "gemm"}
+        for op in compute_bound_ops:
+            if op in layer_lower:
+                # FP16/INT8 may shift towards memory bound
+                if precision in ("FP16", "INT8"):
+                    return "balanced"
+                return "compute"
+
+        # Memory-bound operations
+        memory_bound_ops = {
+            "elementwise",
+            "activation",
+            "relu",
+            "sigmoid",
+            "tanh",
+            "softmax",
+            "pooling",
+            "pool",
+            "normalization",
+            "norm",
+            "shuffle",
+            "reformat",
+            "slice",
+            "concatenation",
+            "concat",
+            "reshape",
+            "transpose",
+            "copy",
+        }
+        for op in memory_bound_ops:
+            if op in layer_lower:
+                return "memory"
+
+        # Fused operations are typically balanced (optimized)
+        if "fused" in layer_lower or "+" in layer_type:
+            return "balanced"
+
+        return "unknown"
 
     def _get_layer_detail(self, inspector: Any, layer_idx: int, trt: Any) -> dict[str, Any] | None:
         """Get detailed info for a specific layer if available."""
@@ -1043,3 +1206,225 @@ def format_bytes(size_bytes: int) -> str:
             return f"{size_float:.2f} {unit}"
         size_float /= 1024
     return f"{size_float:.2f} PB"
+
+
+def generate_timing_chart(
+    engine_info: TRTEngineInfo,
+    output_path: str | Path | None = None,
+    top_n: int = 20,
+) -> bytes | None:
+    """
+    Generate a horizontal bar chart showing per-layer timing breakdown.
+
+    Task 22.4.5: Layer timing breakdown chart (HTML/Streamlit).
+
+    Args:
+        engine_info: TRT engine information with layer timing.
+        output_path: Optional path to save PNG. If None, returns bytes.
+        top_n: Number of top layers to show (default 20).
+
+    Returns:
+        PNG bytes if output_path is None, otherwise None (saves to file).
+        Returns None if no timing data available.
+    """
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return None
+
+    # Extract layers with timing data
+    layers_with_timing = [
+        (lyr.name, lyr.avg_time_ms or 0.0, lyr.precision, lyr.bound_type)
+        for lyr in engine_info.layers
+        if lyr.avg_time_ms is not None and lyr.avg_time_ms > 0
+    ]
+
+    if not layers_with_timing:
+        # Fall back to estimated times if no actual timing
+        estimated = estimate_layer_times(engine_info, 100.0)  # Normalize to 100ms
+        if not estimated:
+            return None
+        layers_with_timing = [
+            (
+                name,
+                time_ms,
+                next((lyr.precision for lyr in engine_info.layers if lyr.name == name), "FP32"),
+                next((lyr.bound_type for lyr in engine_info.layers if lyr.name == name), "unknown"),
+            )
+            for name, time_ms in estimated.items()
+        ]
+
+    # Sort by time and take top N
+    layers_with_timing.sort(key=lambda x: x[1], reverse=True)
+    top_layers = layers_with_timing[:top_n]
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(12, max(6, len(top_layers) * 0.35)))
+
+    # Colors based on precision
+    precision_colors = {
+        "INT8": "#3fb950",  # Green
+        "FP16": "#58a6ff",  # Blue
+        "FP32": "#f0883e",  # Orange
+        "Mixed": "#a371f7",  # Purple
+        "Unknown": "#8b949e",  # Gray
+    }
+
+    # Extract data
+    names = [t[0][:40] + ("..." if len(t[0]) > 40 else "") for t in top_layers]
+    times = [t[1] for t in top_layers]
+    colors = [precision_colors.get(t[2], "#8b949e") for t in top_layers]
+
+    # Reverse for bottom-to-top display
+    names = names[::-1]
+    times = times[::-1]
+    colors = colors[::-1]
+
+    # Create horizontal bar chart
+    y_pos = range(len(names))
+    bars = ax.barh(y_pos, times, color=colors, alpha=0.85, edgecolor="white", linewidth=0.5)
+
+    # Labels and styling
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(names, fontsize=8)
+    ax.set_xlabel("Time (ms)", fontsize=10)
+    ax.set_title(f"Layer Timing Breakdown (Top {len(top_layers)} Layers)", fontsize=12)
+
+    # Add time labels on bars
+    for bar, time_val in zip(bars, times, strict=True):
+        width = bar.get_width()
+        if width > max(times) * 0.1:  # Only show label if bar is wide enough
+            ax.text(
+                width * 0.95,
+                bar.get_y() + bar.get_height() / 2,
+                f"{time_val:.2f}",
+                ha="right",
+                va="center",
+                fontsize=7,
+                color="white",
+                fontweight="bold",
+            )
+
+    # Legend for precision colors
+    legend_elements = [
+        plt.Rectangle((0, 0), 1, 1, facecolor=c, label=p)
+        for p, c in precision_colors.items()
+        if any(t[2] == p for t in top_layers)
+    ]
+    if legend_elements:
+        ax.legend(handles=legend_elements, loc="lower right", fontsize=8, title="Precision")
+
+    # Style
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.grid(axis="x", linestyle="--", alpha=0.3)
+    fig.tight_layout()
+
+    # Save or return bytes
+    if output_path:
+        fig.savefig(output_path, dpi=150, bbox_inches="tight", facecolor="white")
+        plt.close(fig)
+        return None
+    else:
+        from io import BytesIO
+
+        buf = BytesIO()
+        fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="white")
+        plt.close(fig)
+        buf.seek(0)
+        return buf.getvalue()
+
+
+def generate_bound_type_chart(
+    engine_info: TRTEngineInfo,
+    output_path: str | Path | None = None,
+) -> bytes | None:
+    """
+    Generate a pie/donut chart showing compute vs memory bound distribution.
+
+    Task 22.4.4: Identify memory-bound vs compute-bound layers.
+
+    Args:
+        engine_info: TRT engine information.
+        output_path: Optional path to save PNG.
+
+    Returns:
+        PNG bytes if output_path is None, otherwise None.
+    """
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return None
+
+    perf = engine_info.performance
+
+    # Data
+    labels = []
+    sizes = []
+    colors = []
+
+    if perf.compute_bound_layers > 0:
+        labels.append(f"Compute-bound\n({perf.compute_bound_layers})")
+        sizes.append(perf.compute_bound_layers)
+        colors.append("#f0883e")  # Orange
+
+    if perf.memory_bound_layers > 0:
+        labels.append(f"Memory-bound\n({perf.memory_bound_layers})")
+        sizes.append(perf.memory_bound_layers)
+        colors.append("#58a6ff")  # Blue
+
+    if perf.balanced_layers > 0:
+        labels.append(f"Balanced\n({perf.balanced_layers})")
+        sizes.append(perf.balanced_layers)
+        colors.append("#3fb950")  # Green
+
+    if perf.unknown_bound_layers > 0:
+        labels.append(f"Unknown\n({perf.unknown_bound_layers})")
+        sizes.append(perf.unknown_bound_layers)
+        colors.append("#8b949e")  # Gray
+
+    if not sizes:
+        return None
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    # Donut chart
+    wedges, texts, autotexts = ax.pie(
+        sizes,
+        labels=labels,
+        colors=colors,
+        autopct="%1.1f%%",
+        startangle=90,
+        pctdistance=0.75,
+        wedgeprops={"width": 0.5, "edgecolor": "white", "linewidth": 2},
+    )
+
+    # Style autotexts
+    for autotext in autotexts:
+        autotext.set_fontsize(9)
+        autotext.set_fontweight("bold")
+
+    ax.set_title("Layer Classification\n(Compute vs Memory Bound)", fontsize=12)
+
+    fig.tight_layout()
+
+    # Save or return bytes
+    if output_path:
+        fig.savefig(output_path, dpi=150, bbox_inches="tight", facecolor="white")
+        plt.close(fig)
+        return None
+    else:
+        from io import BytesIO
+
+        buf = BytesIO()
+        fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="white")
+        plt.close(fig)
+        buf.seek(0)
+        return buf.getvalue()

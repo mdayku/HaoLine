@@ -1,0 +1,76 @@
+[33mcommit cd8352a5c27f204ef7178dd4ee859bed7316b60b[m
+Author: Marcus Day <marcus@example.com>
+Date:   Thu Dec 4 20:07:33 2025 -0600
+
+    feat(web): add demo models for mobile/quick testing (v0.2.6)
+    
+    - Add 'Try Demo' buttons with 3 real ONNX models from Model Zoo:
+      - MNIST CNN (26 KB) - tiny handwritten digit classifier
+      - SqueezeNet 1.0 (5 MB) - compact ImageNet CNN
+      - EfficientNet-Lite4 (49 MB) - efficient architecture
+    - Downloads on-demand from GitHub ONNX Model Zoo
+    - Allows users to explore HaoLine without uploading their own model
+    - Great for mobile users or quick demos
+    
+    Closes: demo model feature request
+
+ .../yolo_quantization/comparison/comparison.csv    |   3 [32m+[m
+ .../yolo_quantization/comparison/comparison.json   |  59 [32m++++++[m
+ .../yolo_quantization/comparison/comparison.md     |   6 [32m+[m
+ demo_outputs/yolo_quantization/data.yaml           |   8 [32m+[m
+ .../yolo_quantization/eval_results/eval_fp16.json  |  48 [32m+++++[m
+ .../yolo_quantization/eval_results/eval_fp32.json  |  48 [32m+++++[m
+ .../yolo_quantization/train/BoxF1_curve.png        | Bin [31m0[m -> [32m88629[m bytes
+ .../yolo_quantization/train/BoxPR_curve.png        | Bin [31m0[m -> [32m91619[m bytes
+ .../yolo_quantization/train/BoxP_curve.png         | Bin [31m0[m -> [32m96992[m bytes
+ .../yolo_quantization/train/BoxR_curve.png         | Bin [31m0[m -> [32m89051[m bytes
+ demo_outputs/yolo_quantization/train/args.yaml     | 106 [32m++++++++++[m
+ .../yolo_quantization/train/confusion_matrix.png   | Bin [31m0[m -> [32m102008[m bytes
+ .../train/confusion_matrix_normalized.png          | Bin [31m0[m -> [32m96897[m bytes
+ demo_outputs/yolo_quantization/train/labels.jpg    | Bin [31m0[m -> [32m137566[m bytes
+ demo_outputs/yolo_quantization/train/results.csv   |  21 [32m++[m
+ demo_outputs/yolo_quantization/train/results.png   | Bin [31m0[m -> [32m269556[m bytes
+ .../yolo_quantization/train/train_batch0.jpg       | Bin [31m0[m -> [32m548413[m bytes
+ .../yolo_quantization/train/train_batch1.jpg       | Bin [31m0[m -> [32m728296[m bytes
+ .../yolo_quantization/train/train_batch1900.jpg    | Bin [31m0[m -> [32m471915[m bytes
+ .../yolo_quantization/train/train_batch1901.jpg    | Bin [31m0[m -> [32m632732[m bytes
+ .../yolo_quantization/train/train_batch1902.jpg    | Bin [31m0[m -> [32m570512[m bytes
+ .../yolo_quantization/train/train_batch2.jpg       | Bin [31m0[m -> [32m646915[m bytes
+ .../yolo_quantization/train/val_batch0_labels.jpg  | Bin [31m0[m -> [32m721529[m bytes
+ .../yolo_quantization/train/val_batch0_pred.jpg    | Bin [31m0[m -> [32m703113[m bytes
+ .../yolo_quantization/train/val_batch1_labels.jpg  | Bin [31m0[m -> [32m828632[m bytes
+ .../yolo_quantization/train/val_batch1_pred.jpg    | Bin [31m0[m -> [32m840936[m bytes
+ .../yolo_quantization/train/val_batch2_labels.jpg  | Bin [31m0[m -> [32m761851[m bytes
+ .../yolo_quantization/train/val_batch2_pred.jpg    | Bin [31m0[m -> [32m760603[m bytes
+ .../yolo_quantization/train/weights/best.pt        | Bin [31m0[m -> [32m6244643[m bytes
+ .../yolo_quantization/train/weights/last.pt        | Bin [31m0[m -> [32m6244643[m bytes
+ pyproject.toml                                     |   2 [32m+[m[31m-[m
+ runs/detect/val/BoxF1_curve.png                    | Bin [31m0[m -> [32m94144[m bytes
+ runs/detect/val/BoxPR_curve.png                    | Bin [31m0[m -> [32m88795[m bytes
+ runs/detect/val/BoxP_curve.png                     | Bin [31m0[m -> [32m98980[m bytes
+ runs/detect/val/BoxR_curve.png                     | Bin [31m0[m -> [32m93319[m bytes
+ runs/detect/val/confusion_matrix.png               | Bin [31m0[m -> [32m103345[m bytes
+ runs/detect/val/confusion_matrix_normalized.png    | Bin [31m0[m -> [32m96740[m bytes
+ runs/detect/val/val_batch0_labels.jpg              | Bin [31m0[m -> [32m126359[m bytes
+ runs/detect/val/val_batch0_pred.jpg                | Bin [31m0[m -> [32m126860[m bytes
+ runs/detect/val/val_batch1_labels.jpg              | Bin [31m0[m -> [32m122028[m bytes
+ runs/detect/val/val_batch1_pred.jpg                | Bin [31m0[m -> [32m121677[m bytes
+ runs/detect/val/val_batch2_labels.jpg              | Bin [31m0[m -> [32m132861[m bytes
+ runs/detect/val/val_batch2_pred.jpg                | Bin [31m0[m -> [32m132447[m bytes
+ runs/detect/val2/BoxF1_curve.png                   | Bin [31m0[m -> [32m94144[m bytes
+ runs/detect/val2/BoxPR_curve.png                   | Bin [31m0[m -> [32m88795[m bytes
+ runs/detect/val2/BoxP_curve.png                    | Bin [31m0[m -> [32m98980[m bytes
+ runs/detect/val2/BoxR_curve.png                    | Bin [31m0[m -> [32m93319[m bytes
+ runs/detect/val2/confusion_matrix.png              | Bin [31m0[m -> [32m103345[m bytes
+ runs/detect/val2/confusion_matrix_normalized.png   | Bin [31m0[m -> [32m96740[m bytes
+ runs/detect/val2/val_batch0_labels.jpg             | Bin [31m0[m -> [32m126359[m bytes
+ runs/detect/val2/val_batch0_pred.jpg               | Bin [31m0[m -> [32m126860[m bytes
+ runs/detect/val2/val_batch1_labels.jpg             | Bin [31m0[m -> [32m122028[m bytes
+ runs/detect/val2/val_batch1_pred.jpg               | Bin [31m0[m -> [32m121677[m bytes
+ runs/detect/val2/val_batch2_labels.jpg             | Bin [31m0[m -> [32m132861[m bytes
+ runs/detect/val2/val_batch2_pred.jpg               | Bin [31m0[m -> [32m132447[m bytes
+ scripts/yolo_quantization_demo.py                  | 224 [32m+++++++++++++++[m[31m------[m
+ src/haoline/streamlit_app.py                       | 133 [32m++++++++++[m[31m--[m
+ yolo11n.pt                                         | Bin [31m0[m -> [32m5613764[m bytes
+ yolov8n.pt                                         | Bin [31m0[m -> [32m6549796[m bytes
+ 59 files changed, 584 insertions(+), 74 deletions(-)
