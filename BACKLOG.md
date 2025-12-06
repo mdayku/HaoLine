@@ -30,12 +30,12 @@
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | **COMPLETE** | 6 | 25/25 | Done |
-| Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
+| Epic 19: SafeTensors | In Progress | 2 | 5/10 | P2 |
 | Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
-| Epic 21: TFLite | In Progress | 2 | 5/12 | P2 |
+| Epic 21: TFLite | In Progress | 2 | 2/12 | P2 (needs pure Python parser) |
 | Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | **P2** |
 | Epic 23: OpenVINO | In Progress | 2 | 4/10 | P3 |
-| Epic 24: GGUF | In Progress | 2 | 4/8 | P3 |
+| Epic 24: GGUF | In Progress | 2 | 5/8 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
@@ -51,9 +51,9 @@
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
-| Epic 38: Docker Distribution | Not Started | 1 | 0/5 | P3 |
+| Epic 38: Docker Distribution | In Progress | 1 | 1/5 | P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
-| Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done |
+| Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
 | Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
@@ -136,7 +136,7 @@
 - [x] **Task 19.1.2**: Implement SafeTensorsReader.read() - load tensor dict
 - [x] **Task 19.1.3**: Extract metadata (tensor names, shapes, dtypes)
 - [x] **Task 19.1.4**: Integrate with analysis pipeline (param counts, memory)
-- [ ] **Task 19.1.5**: Test with real SafeTensors model (e.g., HuggingFace LLM weights)
+- [x] **Task 19.1.5**: Test with real SafeTensors model (sentence-transformers/all-MiniLM-L6-v2, 22.7M params)
 - [ ] **Task 19.1.6**: Write unit tests for SafeTensorsReader
 
 ### Story 19.2: SafeTensors Writer
@@ -173,13 +173,13 @@
 
 *TensorFlow Lite for mobile and edge deployment.*
 
-### Story 21.1: TFLite Reader - **COMPLETE**
+### Story 21.1: TFLite Reader - **PARTIAL** (requires tflite-runtime for full parsing)
 - [x] **Task 21.1.1**: Add tflite-runtime dependency (optional) - in `[formats]` extra
-- [x] **Task 21.1.2**: Implement TFLiteReader.read() - load .tflite
-- [x] **Task 21.1.3**: Parse FlatBuffer schema for ops and tensors
-- [x] **Task 21.1.4**: Map TFLite ops to op_type_counts
-- [x] **Task 21.1.5**: Extract quantization info (int8, float16)
-- [ ] **Task 21.1.6**: Test with real TFLite model (e.g., TF Model Garden mobile model)
+- [x] **Task 21.1.2**: Implement TFLiteReader.read() - load .tflite (full impl requires tflite-runtime)
+- [ ] **Task 21.1.3**: Parse FlatBuffer schema for ops and tensors - **STUB** (pure Python fallback returns empty)
+- [ ] **Task 21.1.4**: Map TFLite ops to op_type_counts - **STUB** (only works with tflite-runtime)
+- [ ] **Task 21.1.5**: Extract quantization info (int8, float16) - **STUB** (only works with tflite-runtime)
+- [ ] **Task 21.1.6**: Test with real TFLite model (Linux CI with tflite-runtime)
 - [ ] **Task 21.1.7**: Write unit tests for TFLiteReader
 
 ### Story 21.2: TFLite Writer
@@ -277,7 +277,7 @@
 - [x] **Task 24.1.2**: Extract model metadata (arch, context_length, etc.)
 - [x] **Task 24.1.3**: Extract quantization type per tensor
 - [x] **Task 24.1.4**: Estimate memory footprint (VRAM estimation)
-- [ ] **Task 24.1.5**: Test with real GGUF model (e.g., llama.cpp quantized model)
+- [x] **Task 24.1.5**: Test with real GGUF model (TinyLlama-1.1B Q2_K, 1.1B params, 458MB)
 - [ ] **Task 24.1.6**: Write unit tests for GGUFReader
 
 ### Story 24.2: GGUF Analysis Features
@@ -712,7 +712,7 @@
 *Containerized deployment for CI/CD pipelines and non-Python users.*
 
 ### Story 38.1: Pre-built Docker Image
-- [ ] **Task 38.1.1**: Create Dockerfile with all dependencies
+- [x] **Task 38.1.1**: Create Dockerfile with all dependencies (`Dockerfile.test` for format reader testing)
 - [ ] **Task 38.1.2**: Optimize image size (multi-stage build)
 - [ ] **Task 38.1.3**: Add GPU support variant (CUDA base image)
 - [ ] **Task 38.1.4**: Publish to Docker Hub / GitHub Container Registry
@@ -778,6 +778,12 @@
 - [x] **Task 40.5.8**: Convert `compare*.py`, `eval/*.py` (12 classes)
 - [x] **Task 40.5.9**: Convert visualization/graph helpers (11 classes)
 - [x] **Task 40.5.10**: Run tests (317 passed) and mypy (clean)
+
+### Story 40.6: Deployment and Cleanup - **COMPLETE**
+- [x] **Task 40.6.1**: Deploy v0.5.0 to PyPI (Dec 6, 2025)
+- [x] **Task 40.6.2**: Push to GitHub main (triggers HF Spaces rebuild)
+- [x] **Task 40.6.3**: Verify zero `@dataclass` remaining in codebase
+- [x] **Task 40.6.4**: Verify zero `from dataclasses import` remaining
 
 ---
 

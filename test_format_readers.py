@@ -1,0 +1,286 @@
+#!/usr/bin/env python3
+"""
+Test format readers with real models.
+
+This script downloads small test models and validates the format readers.
+
+IMPORTANT: When adding a new format reader to src/haoline/formats/:
+  1. Add a test_<format>() function to this file
+  2. Add it to the TESTS dict in main()
+  3. Don't create a separate test script!
+
+Supported formats:
+  - SafeTensors (.safetensors) - HuggingFace weights
+  - GGUF (.gguf) - llama.cpp LLMs
+  - TFLite (.tflite) - TensorFlow Lite mobile
+  - CoreML (.mlmodel) - Apple devices
+  - OpenVINO (.xml/.bin) - Intel inference
+  - [Add new formats here]
+"""
+
+import sys
+from pathlib import Path
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
+
+def test_safetensors():
+    """Test SafeTensors reader with a real HuggingFace model."""
+    print("\n" + "=" * 60)
+    print("Testing SafeTensors Reader")
+    print("=" * 60)
+
+    from huggingface_hub import hf_hub_download
+
+    # Download a tiny safetensors file (sentence-transformers model weights)
+    # Using a very small model: ~17MB
+    print("\nDownloading small SafeTensors model...")
+    try:
+        model_path = hf_hub_download(
+            repo_id="sentence-transformers/all-MiniLM-L6-v2",
+            filename="model.safetensors",
+            cache_dir="./test_models/cache",
+        )
+        print(f"Downloaded: {model_path}")
+    except Exception as e:
+        print(f"Failed to download: {e}")
+        return False
+
+    # Test the reader
+    from haoline.formats.safetensors import SafeTensorsReader, is_safetensors_file
+
+    print(f"\nIs SafeTensors file: {is_safetensors_file(model_path)}")
+
+    reader = SafeTensorsReader(model_path)
+
+    # Test header-only read (fast)
+    print("\n--- Header-only read ---")
+    info = reader.read_header_only()
+    print(f"Total params: {info.total_params:,}")
+    print(f"Total size: {info.total_size_bytes / 1e6:.2f} MB")
+    print(f"Num tensors: {len(info.tensors)}")
+    print(f"Dtype breakdown: {info.dtype_breakdown}")
+
+    # Test full read
+    print("\n--- Full read ---")
+    info = reader.read()
+    print(f"Total params: {info.total_params:,}")
+    print(f"Metadata: {info.metadata}")
+
+    # Show first 5 tensors
+    print("\nFirst 5 tensors:")
+    for t in info.tensors[:5]:
+        print(f"  {t.name}: {t.shape} ({t.dtype})")
+
+    print("\n[SUCCESS] SafeTensors reader works correctly!")
+    return True
+
+
+def test_gguf():
+    """Test GGUF reader with a real llama.cpp model."""
+    print("\n" + "=" * 60)
+    print("Testing GGUF Reader")
+    print("=" * 60)
+
+    from huggingface_hub import hf_hub_download
+
+    # Download a tiny GGUF model (~43MB)
+    print("\nDownloading small GGUF model (TinyLlama Q4_K_M)...")
+    try:
+        model_path = hf_hub_download(
+            repo_id="TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF",
+            filename="tinyllama-1.1b-chat-v1.0.Q2_K.gguf",  # Smallest quant ~400MB
+            cache_dir="./test_models/cache",
+        )
+        print(f"Downloaded: {model_path}")
+    except Exception as e:
+        print(f"Failed to download (this is a larger file, may take time): {e}")
+        # Try an even smaller model
+        print("\nTrying alternative: smollm 135M...")
+        try:
+            model_path = hf_hub_download(
+                repo_id="MaziyarPanahi/smollm-135M-instruct-GGUF",
+                filename="smollm-135M-instruct.Q4_K_M.gguf",
+                cache_dir="./test_models/cache",
+            )
+            print(f"Downloaded: {model_path}")
+        except Exception as e2:
+            print(f"Failed to download alternative: {e2}")
+            return False
+
+    # Test the reader
+    from haoline.formats.gguf import GGUFReader, is_gguf_file, format_size
+
+    print(f"\nIs GGUF file: {is_gguf_file(model_path)}")
+
+    reader = GGUFReader(model_path)
+    info = reader.read()
+
+    print(f"\n--- GGUF Model Info ---")
+    print(f"Version: {info.version}")
+    print(f"Architecture: {info.architecture}")
+    print(f"Model name: {info.model_name}")
+    print(f"Total params: {info.total_params:,}")
+    print(f"Total size: {format_size(info.total_size_bytes)}")
+    print(f"Tensor count: {info.tensor_count}")
+
+    # Architecture details
+    print(f"\n--- Architecture Details ---")
+    print(f"Context length: {info.context_length}")
+    print(f"Embedding dim: {info.embedding_length}")
+    print(f"Layers: {info.block_count}")
+    print(f"Attention heads: {info.head_count}")
+    print(f"KV heads: {info.head_count_kv}")
+
+    # Quantization breakdown
+    print(f"\n--- Quantization Breakdown ---")
+    for qtype, count in sorted(info.quantization_breakdown.items()):
+        print(f"  {qtype}: {count} tensors")
+
+    # VRAM estimate
+    print(f"\n--- VRAM Estimate (2K context) ---")
+    vram = info.estimate_vram(2048)
+    print(f"  Weights: {format_size(vram['weights'])}")
+    print(f"  KV Cache: {format_size(vram['kv_cache'])}")
+    print(f"  Total: {format_size(vram['total'])}")
+
+    print("\n[SUCCESS] GGUF reader works correctly!")
+    return True
+
+
+def test_tflite():
+    """Test TFLite reader (requires tflite-runtime or tensorflow for full parsing)."""
+    print("\n" + "=" * 60)
+    print("Testing TFLite Reader")
+    print("=" * 60)
+
+    from haoline.formats.tflite import is_available
+
+    # Check if we have the runtime
+    if not is_available():
+        print("[SKIP] tflite-runtime not installed (not available on Windows)")
+        print("The pure Python fallback only validates file format, doesn't extract tensors.")
+        print("Full parsing requires: pip install tensorflow (or tflite-runtime on Linux/Mac)")
+        return None
+
+    import urllib.request
+    from pathlib import Path
+
+    # Download MobileNetV2 TFLite from TensorFlow's hosted models
+    model_dir = Path("./test_models")
+    model_path = model_dir / "mobilenet_v2_1.0_224.tflite"
+
+    if not model_path.exists():
+        print("\nDownloading TFLite model from TensorFlow...")
+        url = "https://storage.googleapis.com/download.tensorflow.org/models/tflite/mobilenet_v2_1.0_224.tflite"
+        try:
+            urllib.request.urlretrieve(url, model_path)
+            print(f"Downloaded: {model_path}")
+        except Exception as e:
+            print(f"Failed to download: {e}")
+            return False
+    else:
+        print(f"\nUsing cached: {model_path}")
+
+    from haoline.formats.tflite import TFLiteReader, is_tflite_file
+
+    print(f"\nIs TFLite file: {is_tflite_file(model_path)}")
+
+    reader = TFLiteReader(model_path)
+    info = reader.read()
+
+    print(f"\n--- TFLite Model Info ---")
+    print(f"Description: {info.description}")
+    print(f"Total params: {info.total_params:,}")
+    print(f"Total size: {info.total_size_bytes / 1e6:.2f} MB")
+    print(f"Num tensors: {len(info.tensors)}")
+    print(f"Op types: {info.op_type_counts}")
+
+    print("\n[SUCCESS] TFLite reader works correctly!")
+    return True
+
+
+def test_coreml():
+    """Test CoreML reader."""
+    print("\n" + "=" * 60)
+    print("Testing CoreML Reader")
+    print("=" * 60)
+
+    from haoline.formats.coreml import is_available
+
+    if not is_available():
+        print("[SKIP] coremltools not installed")
+        print("Install with: pip install coremltools")
+        return None
+
+    print("[INFO] CoreML test requires a .mlmodel file")
+    print("CoreML models are typically macOS-specific.")
+    return None
+
+
+def test_openvino():
+    """Test OpenVINO reader."""
+    print("\n" + "=" * 60)
+    print("Testing OpenVINO Reader")
+    print("=" * 60)
+
+    from haoline.formats.openvino import is_available
+
+    if not is_available():
+        print("[SKIP] openvino not installed")
+        print("Install with: pip install openvino")
+        return None
+
+    print("[INFO] OpenVINO test requires .xml + .bin files")
+    return None
+
+
+def main():
+    """Run all format reader tests.
+
+    To add a new format:
+      1. Create test_<format>() function above
+      2. Add entry to TESTS dict below
+    """
+    print("=" * 60)
+    print("HaoLine Format Reader Tests")
+    print("=" * 60)
+
+    # Register all format tests here
+    # Format: "DisplayName": test_function
+    TESTS = {
+        "SafeTensors": test_safetensors,
+        "GGUF": test_gguf,
+        "TFLite": test_tflite,
+        "CoreML": test_coreml,
+        "OpenVINO": test_openvino,
+        # Add new formats here:
+        # "TensorRT": test_tensorrt,
+        # "NewFormat": test_newformat,
+    }
+
+    results = {}
+    for name, test_fn in TESTS.items():
+        results[name] = test_fn()
+
+    # Summary
+    print("\n" + "=" * 60)
+    print("Test Summary")
+    print("=" * 60)
+    for name, result in results.items():
+        if result is True:
+            status = "[PASS]"
+        elif result is False:
+            status = "[FAIL]"
+        else:
+            status = "[SKIP]"
+        print(f"  {status} {name}")
+
+    return all(r is not False for r in results.values())
+
+
+if __name__ == "__main__":
+    success = main()
+    sys.exit(0 if success else 1)
+

@@ -1,0 +1,34 @@
+# Dockerfile for running format reader tests with all dependencies
+# Build: docker build -f Dockerfile.test -t haoline-test .
+# Run:   docker run --rm haoline-test
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project files
+COPY pyproject.toml README.md LICENSE ./
+COPY src/ ./src/
+COPY test_format_readers.py ./
+
+# Install haoline with all optional dependencies
+RUN pip install --no-cache-dir -e ".[full]"
+
+# Install format-specific dependencies that work on Linux
+RUN pip install --no-cache-dir \
+    tflite-runtime \
+    openvino \
+    coremltools \
+    huggingface_hub
+
+# Create test_models directory
+RUN mkdir -p test_models
+
+# Run format reader tests
+CMD ["python", "test_format_readers.py"]
+

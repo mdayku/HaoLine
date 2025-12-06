@@ -1875,6 +1875,9 @@ This creates a complete **optimize → analyze → deploy** workflow.
 
 | Date | Change | 
 |------|--------|
+| Dec 6, 2025 | **Dependency Extras Audit** - Added `jax`, `ultralytics` extras. Documented all extras in README. Added cursor rule for dependency management. Created `Dockerfile.test` and CI job for format reader testing. |
+| Dec 6, 2025 | **Format Reader Testing** - Validated SafeTensors (22.7M params) and GGUF (TinyLlama 1.1B). Fixed TFLite backlog (was falsely marked complete - pure Python fallback is stub only). |
+| Dec 6, 2025 | **v0.5.0 Released to PyPI** - Complete Pydantic migration deployed. Zero `@dataclass` or `from dataclasses import` remaining. HuggingFace Spaces auto-rebuild triggered. |
 | Dec 6, 2025 | **Epic 40 COMPLETE** - Full Pydantic migration (58 classes). Zero `@dataclass` remaining. Converted: formats/*, report_sections.py, quantization_*.py, compare*.py, eval/*.py, visualization helpers. 317 tests pass, mypy clean. |
 | Dec 6, 2025 | **v0.4.0 Released** - Epic 33 complete, mypy fixes, documentation archival system |
 | Dec 6, 2025 | **Documentation** - Added archival cursor rule, slimmed PRD/BACKLOG by 50%+ |

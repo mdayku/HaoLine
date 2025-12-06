@@ -73,12 +73,31 @@ gpu = [
 web = [
     "streamlit>=1.28.0",
 ]
+# Framework converters (for --from-pytorch, --from-tensorflow, etc.)
+pytorch = [
+    "torch>=2.0.0",
+]
+tensorflow = [
+    "tf2onnx>=1.16.0",
+    # Note: tensorflow itself is huge, tf2onnx will pull minimal deps
+]
+ultralytics = [
+    "ultralytics>=8.0.0",
+    # YOLO models - includes torch as dependency
+]
+jax = [
+    "jax>=0.4.0",
+    "jaxlib>=0.4.0",
+    "flax>=0.7.0",
+    # For --from-jax conversion
+]
 # Format adapters (Epics 19-24)
 safetensors = [
     "safetensors>=0.4.0",
 ]
 tflite = [
-    "tflite-runtime>=2.14.0",
+    "tflite-runtime>=2.14.0;platform_system!='Windows'",
+    # tflite-runtime not available on Windows, use tensorflow instead
 ]
 coreml = [
     "coremltools>=7.0",
@@ -86,12 +105,15 @@ coreml = [
 openvino = [
     "openvino>=2024.0.0",
 ]
+# GGUF is pure Python, no deps needed
 formats = [
-    "haoline[safetensors,tflite]",
-    # coreml and openvino have platform-specific deps, install separately
+    "haoline[safetensors]",
+    # tflite, coreml, openvino have platform-specific deps, install separately
 ]
 full = [
-    "haoline[runtime,viz,llm,pdf,gpu,web,formats]",
+    "haoline[runtime,viz,llm,pdf,gpu,web,pytorch,tensorflow,ultralytics,jax,safetensors,coreml,openvino]",
+    # Note: tflite excluded from full because it's not available on Windows
+    # Install separately on Linux/Mac: pip install haoline[tflite]
 ]
 dev = [
     "pytest>=7.0.0",

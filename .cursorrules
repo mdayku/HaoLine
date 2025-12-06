@@ -87,6 +87,40 @@ mypy src/haoline/ --ignore-missing-imports
 - Eval import: `src/haoline/eval/`
 - Docs: `README.md`, `PRD.md`, `BACKLOG.md`, `Architecture.md`, `DEPLOYMENT.md`, `PRIVACY.md`
 
+## Format Reader Testing (IMPORTANT)
+
+**Single test script rule:** All format reader tests go in `test_format_readers.py` at repo root.
+
+**When adding a new format reader:**
+1. Create the reader in `src/haoline/formats/<format>.py`
+2. Add a `test_<format>()` function to `test_format_readers.py`
+3. Register it in the `TESTS` dict in `main()`
+4. **DO NOT** create a separate test script
+
+This keeps format testing consolidated and prevents script sprawl.
+
+## Dependency Management (IMPORTANT)
+
+**When adding a new optional dependency:**
+
+1. Add it to `pyproject.toml` under `[project.optional-dependencies]`
+2. Create a dedicated extra if it's format/feature-specific (e.g., `ultralytics`, `pytorch`)
+3. Add to `full` extra if it works cross-platform
+4. **Update README.md** - add to the "Format-Specific Extras" or "Other Extras" table
+5. If it's a format reader, also update `test_format_readers.py`
+
+**Current extras structure:**
+- Framework converters: `pytorch`, `tensorflow`, `ultralytics`, `jax`
+- Format readers: `safetensors`, `tflite`, `coreml`, `openvino`
+- Features: `llm`, `web`, `pdf`, `gpu`, `runtime`
+- Bundle: `full` (everything cross-platform)
+
+**Checklist when adding dependency:**
+- [ ] Added to pyproject.toml extras
+- [ ] Added to `full` extra (if cross-platform)
+- [ ] Updated README.md extras table
+- [ ] Updated test script (if format reader)
+
 ## Version Compatibility (IMPORTANT)
 
 **HuggingFace Spaces Deployment:**

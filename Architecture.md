@@ -266,12 +266,12 @@ class RiskAnalyzer:
 **Risk Signal Schema:**
 
 ```python
-@dataclass
-class RiskSignal:
+class RiskSignal(BaseModel):
+    """Risk signal detected in model architecture."""
     id: str              # e.g., "no_skip_connections"
     severity: str        # "info" | "warning" | "high"
     description: str     # Human-readable explanation
-    nodes: List[str]     # Affected nodes
+    nodes: list[str]     # Affected nodes
     recommendation: str  # Suggested action
 ```
 
@@ -935,16 +935,14 @@ To add a new model format in `formats/`:
 
 ```python
 # In formats/myformat.py
-from dataclasses import dataclass
-from typing import Dict, List, Optional
+from pydantic import BaseModel
 from pathlib import Path
 
-@dataclass
-class MyFormatInfo:
+class MyFormatInfo(BaseModel):
     """Metadata extracted from MyFormat files."""
     total_params: int
     total_size_bytes: int
-    tensors: List[MyFormatTensorInfo]
+    tensors: list[MyFormatTensorInfo]
     # Format-specific fields...
 
 class MyFormatReader:
@@ -1356,3 +1354,4 @@ class MyFormatAdapter:
 |---------|------|--------|---------|
 | 1.0 | Dec 2025 | Marcus | Initial architecture document |
 | 1.1 | Dec 6, 2025 | Marcus | Added Universal IR (Epic 18), Quantization Linter (Epic 33), Report Sections (Epic 41), updated file structure |
+| 1.2 | Dec 6, 2025 | Marcus | **v0.5.0** - Full Pydantic migration complete. All 58 dataclasses converted to Pydantic BaseModel. Zero `@dataclass` remaining. |

@@ -5,6 +5,7 @@
 [![PyPI version](https://badge.fury.io/py/haoline.svg)](https://badge.fury.io/py/haoline)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-317%20passed-brightgreen.svg)]()
 
 HaoLine analyzes neural network architectures and generates comprehensive reports with metrics, visualizations, and AI-powered summaries. Works with ONNX, PyTorch, and TensorFlow models.
 
@@ -121,9 +122,35 @@ This opens an interactive dashboard at `http://localhost:8501` with:
 
 | Command | What You Get |
 |---------|--------------|
-| `pip install haoline` | Core analysis + charts |
+| `pip install haoline` | Core analysis (ONNX, GGUF) + charts |
 | `pip install haoline[llm]` | + AI-powered summaries |
-| `pip install haoline[full]` | + PDF export, GPU metrics, runtime profiling |
+| `pip install haoline[full]` | **Everything** - all formats, LLM, PDF, GPU, web UI |
+
+### Format-Specific Extras
+
+Install only what you need:
+
+| Extra | Command | Adds Support For |
+|-------|---------|------------------|
+| `pytorch` | `pip install haoline[pytorch]` | `.pt`, `.pth` model conversion |
+| `tensorflow` | `pip install haoline[tensorflow]` | SavedModel, `.h5`, `.keras` conversion |
+| `ultralytics` | `pip install haoline[ultralytics]` | YOLO models (v5, v8, v11) |
+| `jax` | `pip install haoline[jax]` | JAX/Flax model conversion |
+| `safetensors` | `pip install haoline[safetensors]` | `.safetensors` (HuggingFace weights) |
+| `tflite` | `pip install haoline[tflite]` | `.tflite` (Linux/Mac only) |
+| `coreml` | `pip install haoline[coreml]` | `.mlmodel`, `.mlpackage` (Apple) |
+| `openvino` | `pip install haoline[openvino]` | `.xml`/`.bin` (Intel) |
+| `gguf` | *included by default* | `.gguf` (llama.cpp) - pure Python |
+
+### Other Extras
+
+| Extra | Command | What It Adds |
+|-------|---------|--------------|
+| `llm` | `pip install haoline[llm]` | OpenAI, Anthropic, Google AI summaries |
+| `web` | `pip install haoline[web]` | Streamlit web interface |
+| `pdf` | `pip install haoline[pdf]` | PDF report generation |
+| `gpu` | `pip install haoline[gpu]` | NVIDIA GPU metrics via pynvml |
+| `runtime` | `pip install haoline[runtime]` | ONNX Runtime for benchmarking |
 
 ---
 
