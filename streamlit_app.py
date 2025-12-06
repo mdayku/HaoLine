@@ -1385,9 +1385,20 @@ def main():
                 else:
                     profile = get_profile(selected_hardware)
 
-                if profile and report.flop_counts:
-                    estimator = HardwareEstimator(profile)
-                    report.performance_estimates = estimator.estimate(report.flop_counts)
+                if (
+                    profile
+                    and report.param_counts
+                    and report.flop_counts
+                    and report.memory_estimates
+                ):
+                    estimator = HardwareEstimator()
+                    report.hardware_profile = profile
+                    report.hardware_estimates = estimator.estimate(
+                        model_params=report.param_counts.total,
+                        model_flops=report.flop_counts.total,
+                        peak_activation_bytes=report.memory_estimates.peak_activation_bytes,
+                        hardware=profile,
+                    )
 
                 # Add to history
                 import os
