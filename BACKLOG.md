@@ -46,7 +46,7 @@
 | **OPTIMIZATION** ||||
 | Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
-| Epic 33: QAT Linters | In Progress | 5 | 20/41 | **P1** |
+| Epic 33: QAT Linters | In Progress | 5 | 23/41 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
@@ -1124,10 +1124,10 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 ### Story 33.3: Quantization Readiness Score
 *Emit an overall "QAT readiness score" with breakdown.*
-- [ ] **Task 33.3.1**: Define scoring rubric (op support, graph structure, precision mix)
-- [ ] **Task 33.3.2**: Calculate per-layer quantization risk scores
-- [ ] **Task 33.3.3**: Aggregate into overall readiness score (0-100)
-- [ ] **Task 33.3.4**: Generate "problem layers" list with reasons
+- [x] **Task 33.3.1**: Define scoring rubric (op support, graph structure, precision mix) — `_calculate_score()` method
+- [ ] **Task 33.3.2**: Calculate per-layer quantization risk scores (0-100 per layer)
+- [x] **Task 33.3.3**: Aggregate into overall readiness score (0-100) — `readiness_score` field
+- [x] **Task 33.3.4**: Generate "problem layers" list with reasons — `_identify_problem_layers()` method
 - [x] **Task 33.3.5**: Add `--lint-quantization` CLI flag — `--lint-quantization` and `--quant-report` in `cli.py`
 
 ### Story 33.4: Actionable Recommendations
