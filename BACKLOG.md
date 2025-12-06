@@ -55,7 +55,7 @@
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
-| Epic 42: Format Conversion Testing | In Progress | 6 | 1/38 | **P1** (22 unblocked, 8 need GPU) |
+| Epic 42: Format Conversion Testing | In Progress | 6 | 8/38 | **P1** (22 unblocked, 8 need GPU) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
@@ -950,21 +950,21 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 **ONNX → Other Formats:**
 - [x] **Task 42.1.1**: Test ONNX → TensorRT conversion ✅ **COMPLETE** (4 tests pass)
 - [ ] **Task 42.1.2**: Test ONNX → TFLite conversion 🔒 **BLOCKED** (needs Epic 21 TFLite writer)
-- [ ] **Task 42.1.3**: Test ONNX → CoreML conversion ✅ **UNBLOCKED**
-- [ ] **Task 42.1.4**: Test ONNX → OpenVINO conversion ✅ **UNBLOCKED**
+- [x] **Task 42.1.3**: Test ONNX → CoreML conversion ✅ **COMPLETE** (test written, skips if no coremltools)
+- [x] **Task 42.1.4**: Test ONNX → OpenVINO conversion ✅ **COMPLETE** (test written, skips if no openvino)
 
 **Other Formats → ONNX:**
 - [ ] **Task 42.1.5**: Test TFLite → ONNX conversion 🔒 **BLOCKED** (needs Epic 21 tflite2onnx)
-- [ ] **Task 42.1.6**: Test CoreML → ONNX conversion ✅ **UNBLOCKED** (lossy path)
-- [ ] **Task 42.1.7**: Test OpenVINO → ONNX conversion ✅ **UNBLOCKED**
+- [x] **Task 42.1.6**: Test CoreML → ONNX conversion ✅ **COMPLETE** (test written, skips if no coremltools)
+- [x] **Task 42.1.7**: Test OpenVINO → ONNX conversion ✅ **COMPLETE** (test written, skips if no openvino)
 
 ### Story 42.2: Framework-to-ONNX Conversions ✅ **FULLY UNBLOCKED**
 *Test native framework exports to ONNX.*
 
 **PyTorch → ONNX:**
-- [ ] **Task 42.2.1**: Test PyTorch → ONNX with simple CNN model
+- [x] **Task 42.2.1**: Test PyTorch → ONNX with simple CNN model ✅ **COMPLETE**
 - [ ] **Task 42.2.2**: Test PyTorch → ONNX with Ultralytics YOLO model
-- [ ] **Task 42.2.3**: Test PyTorch → ONNX with transformer model (attention patterns)
+- [x] **Task 42.2.3**: Test PyTorch → ONNX with transformer model (attention patterns) ✅ **COMPLETE**
 
 **TensorFlow/Keras → ONNX:**
 - [ ] **Task 42.2.4**: Test TensorFlow SavedModel → ONNX conversion
@@ -982,7 +982,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [ ] **Task 42.3.1**: Test PyTorch → TFLite (via ONNX) 🔒 **BLOCKED**
 - [ ] **Task 42.3.2**: Test PyTorch → CoreML (via coremltools direct) ✅ **UNBLOCKED**
 - [ ] **Task 42.3.3**: Test PyTorch → OpenVINO (via ONNX) ✅ **UNBLOCKED**
-- [ ] **Task 42.3.4**: Test PyTorch → TensorRT (via ONNX) ✅ **UNBLOCKED** (requires GPU)
+- [x] **Task 42.3.4**: Test PyTorch → TensorRT (via ONNX) ✅ **COMPLETE** (2 tests pass)
 
 **TensorFlow Multi-Hop:**
 - [ ] **Task 42.3.5**: Test TensorFlow → TFLite (direct tf.lite.TFLiteConverter) ✅ **UNBLOCKED**
