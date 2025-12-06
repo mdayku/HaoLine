@@ -1705,11 +1705,10 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
 
     # Layer summary
     print(f"Layer Count: {info.layer_count}")
-    fused_count = len([layer for layer in info.layers if "+" in layer.name])
-    if fused_count > 0:
-        print(
-            f"Fused Layers: {fused_count}/{info.layer_count} ({100 * fused_count // info.layer_count}%)"
-        )
+    if info.fused_layer_count > 0:
+        fused_pct = int(info.fusion_ratio * 100)
+        print(f"Fused Layers: {info.fused_layer_count}/{info.layer_count} ({fused_pct}%)")
+        print(f"Original Ops Fused: ~{info.original_ops_fused} → {info.fused_layer_count} kernels")
     print()
 
     # Layer type distribution
@@ -1748,7 +1747,9 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
                 "has_implicit_batch": cfg.has_implicit_batch,
             },
             "layer_count": info.layer_count,
-            "fused_layer_count": fused_count,
+            "fused_layer_count": info.fused_layer_count,
+            "fusion_ratio": info.fusion_ratio,
+            "original_ops_fused": info.original_ops_fused,
             "layer_type_counts": info.layer_type_counts,
             "precision_breakdown": info.precision_breakdown,
             "bindings": [
@@ -1761,7 +1762,14 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
                 for b in info.bindings
             ],
             "layers": [
-                {"name": layer.name, "type": layer.type, "precision": layer.precision}
+                {
+                    "name": layer.name,
+                    "type": layer.type,
+                    "precision": layer.precision,
+                    "is_fused": layer.is_fused,
+                    "fused_ops": layer.fused_ops,
+                    "tactic": layer.tactic,
+                }
                 for layer in info.layers
             ],
         }
@@ -1785,7 +1793,8 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
             f"| Compute Capability | SM {info.compute_capability[0]}.{info.compute_capability[1]} |",
             f"| Device Memory | {format_bytes(info.device_memory_bytes)} |",
             f"| Layer Count | {info.layer_count} |",
-            f"| Fused Layers | {fused_count} ({100 * fused_count // info.layer_count}%) |",
+            f"| Fused Layers | {info.fused_layer_count} ({int(info.fusion_ratio * 100)}%) |",
+            f"| Original Ops Fused | ~{info.original_ops_fused} ops → {info.fused_layer_count} kernels |",
             "",
             "## Builder Configuration",
             "",

@@ -37,6 +37,13 @@ class TRTLayerInfo(BaseModel):
     output_shapes: list[tuple[int, ...]] = Field(default_factory=list)
     # Tactic/kernel info if available
     tactic: str | None = None
+    # Fusion info
+    is_fused: bool = False
+    fused_ops: list[str] = Field(default_factory=list)  # Original ops that were fused
+    # Timing info (if profiling enabled)
+    avg_time_ms: float | None = None
+    # Origin info for ONNX mapping
+    origin: str | None = None  # Original ONNX node name
 
 
 class TRTBindingInfo(BaseModel):
@@ -117,6 +124,30 @@ class TRTEngineInfo(BaseModel):
         for layer in self.layers:
             breakdown[layer.precision] = breakdown.get(layer.precision, 0) + 1
         return breakdown
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def fused_layer_count(self) -> int:
+        """Count of fused layers."""
+        return sum(1 for layer in self.layers if layer.is_fused)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def fusion_ratio(self) -> float:
+        """Ratio of fused layers (0.0-1.0)."""
+        if not self.layers:
+            return 0.0
+        return self.fused_layer_count / len(self.layers)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def original_ops_fused(self) -> int:
+        """Estimated count of original ops that were fused into single kernels."""
+        count = 0
+        for layer in self.layers:
+            if layer.is_fused:
+                count += len(layer.fused_ops) if layer.fused_ops else 2  # Minimum 2 ops per fusion
+        return count
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -344,24 +375,47 @@ class TRTEngineReader:
                     layer_data = json.loads(layer_json)
                     layer_list = layer_data.get("Layers", [])
 
-                    for layer_entry in layer_list:
+                    for idx, layer_entry in enumerate(layer_list):
                         # TRT 10: layer_entry is a string (layer name)
                         # TRT 8.x: layer_entry might be a dict with more info
                         if isinstance(layer_entry, str):
                             name = layer_entry
                             layer_type = self._infer_layer_type(name)
                             precision = self._infer_precision(name)
+                            tactic = None
+                            origin = None
                         else:
-                            # Dict format (older TRT versions)
+                            # Dict format (older TRT versions) with more details
                             name = layer_entry.get("Name", "Unknown")
                             layer_type = layer_entry.get("LayerType", self._infer_layer_type(name))
                             precision = layer_entry.get("Precision", "FP32")
+                            tactic = layer_entry.get("TacticName") or layer_entry.get("Tactic")
+                            origin = layer_entry.get("Origin")
+
+                        # Check if this is a fused layer
+                        is_fused = "+" in name
+                        fused_ops = self._extract_fused_ops(name) if is_fused else []
+
+                        # Try to get per-layer detailed info (TRT 10+)
+                        layer_detail = self._get_layer_detail(inspector, idx, trt)
+                        if layer_detail:
+                            # Override with detailed info if available
+                            if "Precision" in layer_detail:
+                                precision = layer_detail["Precision"]
+                            if "TacticName" in layer_detail:
+                                tactic = layer_detail["TacticName"]
+                            if "Origin" in layer_detail:
+                                origin = layer_detail["Origin"]
 
                         layers.append(
                             TRTLayerInfo(
                                 name=name,
                                 type=layer_type,
                                 precision=precision,
+                                tactic=tactic,
+                                is_fused=is_fused,
+                                fused_ops=fused_ops,
+                                origin=origin,
                             )
                         )
                     return layers
@@ -379,6 +433,42 @@ class TRTEngineReader:
             )
 
         return layers
+
+    def _get_layer_detail(self, inspector: Any, layer_idx: int, trt: Any) -> dict[str, Any] | None:
+        """Get detailed info for a specific layer if available."""
+        try:
+            # TRT 10+ has get_layer_information
+            if hasattr(inspector, "get_layer_information"):
+                import json
+
+                detail_json = inspector.get_layer_information(
+                    layer_idx, trt.LayerInformationFormat.JSON
+                )
+                if detail_json:
+                    return json.loads(detail_json)
+        except Exception:
+            pass
+        return None
+
+    def _extract_fused_ops(self, layer_name: str) -> list[str]:
+        """Extract the list of ops that were fused from layer name."""
+        # TRT uses '+' to indicate fused ops in layer names
+        # e.g., "conv1 + bn1 + relu1" or "PWN(Conv_0 + Relu_1)"
+        ops = []
+        # Remove common TRT prefixes
+        clean_name = layer_name
+        for prefix in ["PWN(", "CudnnConvolution(", "Reformatter("]:
+            if clean_name.startswith(prefix):
+                clean_name = clean_name[len(prefix) :]
+                if clean_name.endswith(")"):
+                    clean_name = clean_name[:-1]
+
+        # Split by '+'
+        parts = [p.strip() for p in clean_name.split("+")]
+        for part in parts:
+            if part:
+                ops.append(part)
+        return ops
 
     def _infer_layer_type(self, name: str) -> str:
         """Infer layer type from layer name."""

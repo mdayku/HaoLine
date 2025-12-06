@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 19/42 | **P2** |
+| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 23/42 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -247,15 +247,15 @@
 - [x] **Task 22.1.6**: Support both `.engine` and `.plan` file extensions
 - [x] **Task 22.1.7**: Add `is_tensorrt_file()` and `is_available()` helper functions
 
-### Story 22.2: Fused Graph Reconstruction [Phase 2]
+### Story 22.2: Fused Graph Reconstruction [Phase 2] - **PARTIAL**
 *Parse the optimized TRT graph and reconstruct the execution plan.*
 
-- [ ] **Task 22.2.1**: Extract layer list from engine (names, types, shapes)
-- [ ] **Task 22.2.2**: Identify fused operations (Conv+BN+ReLU → single kernel)
+- [x] **Task 22.2.1**: Extract layer list from engine (names, types, shapes)
+- [x] **Task 22.2.2**: Identify fused operations (Conv+BN+ReLU → single kernel)
 - [ ] **Task 22.2.3**: Detect removed/optimized-away layers
-- [ ] **Task 22.2.4**: Extract kernel substitutions (cuDNN vs custom kernels)
+- [x] **Task 22.2.4**: Extract kernel substitutions (cuDNN vs custom kernels) - tactic field
 - [ ] **Task 22.2.5**: Parse timing cache if present
-- [ ] **Task 22.2.6**: Identify precision per layer (FP32/FP16/INT8/TF32)
+- [x] **Task 22.2.6**: Identify precision per layer (FP32/FP16/INT8/TF32)
 
 ### Story 22.3: ONNX ↔ TRT Diff View [Phase 3]
 *Visual comparison between source ONNX and compiled TRT engine.*

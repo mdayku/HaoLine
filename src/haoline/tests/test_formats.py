@@ -506,10 +506,14 @@ class TestTRTEngineReader:
             name="conv1_fwd + bn1_fwd + relu1_fwd",
             type="Fused:BatchNorm+Convolution+ReLU",
             precision="FP16",
+            is_fused=True,
+            fused_ops=["conv1_fwd", "bn1_fwd", "relu1_fwd"],
         )
         assert layer.name == "conv1_fwd + bn1_fwd + relu1_fwd"
         assert layer.type == "Fused:BatchNorm+Convolution+ReLU"
         assert layer.precision == "FP16"
+        assert layer.is_fused is True
+        assert len(layer.fused_ops) == 3
 
     def test_trt_builder_config_fields(self) -> None:
         """Test TRTBuilderConfig fields."""
@@ -569,6 +573,34 @@ class TestTRTEngineReader:
         assert len(info.input_bindings) == 1
         assert len(info.output_bindings) == 1
         assert info.builder_config.max_batch_size == 4
+
+    def test_trt_engine_info_fusion_computed_fields(self) -> None:
+        """Test fusion-related computed fields on TRTEngineInfo."""
+        from haoline.formats.tensorrt import TRTEngineInfo, TRTLayerInfo
+
+        info = TRTEngineInfo(
+            path=Path("test.engine"),
+            trt_version="10.14.0",
+            layers=[
+                TRTLayerInfo(
+                    name="conv1 + bn1 + relu1",
+                    type="Fused",
+                    is_fused=True,
+                    fused_ops=["conv1", "bn1", "relu1"],
+                ),
+                TRTLayerInfo(
+                    name="conv2 + bn2",
+                    type="Fused",
+                    is_fused=True,
+                    fused_ops=["conv2", "bn2"],
+                ),
+                TRTLayerInfo(name="pool1", type="Pooling", is_fused=False),
+                TRTLayerInfo(name="fc1", type="FullyConnected", is_fused=False),
+            ],
+        )
+        assert info.fused_layer_count == 2
+        assert info.fusion_ratio == 0.5  # 2 out of 4
+        assert info.original_ops_fused == 5  # 3 + 2
 
     def test_format_bytes(self) -> None:
         """Test format_bytes helper."""

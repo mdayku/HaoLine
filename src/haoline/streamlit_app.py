@@ -1051,8 +1051,8 @@ def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str)
     with col1:
         st.metric("Layers", info.layer_count)
     with col2:
-        fused = len([layer for layer in info.layers if "+" in layer.name])
-        st.metric("Fused", f"{fused}/{info.layer_count}", f"{100 * fused // info.layer_count}%")
+        fused_pct = int(info.fusion_ratio * 100)
+        st.metric("Fused", f"{info.fused_layer_count}/{info.layer_count}", f"{fused_pct}%")
     with col3:
         st.metric("Memory", format_bytes(info.device_memory_bytes))
     with col4:
@@ -1114,25 +1114,39 @@ def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str)
 
     with col2:
         st.markdown("### Optimization Summary")
-        fused_layers = [layer for layer in info.layers if "+" in layer.name]
-        if fused_layers:
-            # Count original ops that got fused
-            original_ops = sum(layer.name.count("+") + 1 for layer in fused_layers)
+        if info.fused_layer_count > 0:
             st.success(
                 f"""
-                **{len(fused_layers)} fused layers** combining **~{original_ops} original ops**
+                **{info.fused_layer_count} fused layers** combining **~{info.original_ops_fused} original ops**
 
                 TensorRT optimized this model by fusing operations like Conv+BatchNorm+ReLU
                 into single kernels for faster inference.
+
+                **Fusion ratio:** {int(info.fusion_ratio * 100)}% of layers are fused
                 """
             )
+
+            # Show some example fusions
+            fused_examples = [layer for layer in info.layers if layer.is_fused][:3]
+            if fused_examples:
+                st.markdown("**Example fusions:**")
+                for layer in fused_examples:
+                    if layer.fused_ops:
+                        st.caption(f"• {' + '.join(layer.fused_ops[:4])}")
         else:
             st.info("No layer fusions detected in this engine.")
 
     # All layers expandable
     with st.expander("📋 All Layers", expanded=False):
         all_layers = [
-            {"#": i + 1, "Name": layer.name[:80], "Type": layer.type, "Precision": layer.precision}
+            {
+                "#": i + 1,
+                "Name": layer.name[:60],
+                "Type": layer.type,
+                "Precision": layer.precision,
+                "Fused": "✓" if layer.is_fused else "",
+                "Tactic": layer.tactic[:30] if layer.tactic else "",
+            }
             for i, layer in enumerate(info.layers)
         ]
         st.dataframe(all_layers, use_container_width=True, hide_index=True)
@@ -1147,7 +1161,9 @@ def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str)
         "compute_capability": list(info.compute_capability),
         "device_memory_bytes": info.device_memory_bytes,
         "layer_count": info.layer_count,
-        "fused_layer_count": len(fused_layers) if fused_layers else 0,
+        "fused_layer_count": info.fused_layer_count,
+        "fusion_ratio": info.fusion_ratio,
+        "original_ops_fused": info.original_ops_fused,
         "layer_type_counts": info.layer_type_counts,
         "bindings": [
             {"name": b.name, "shape": list(b.shape), "dtype": b.dtype, "is_input": b.is_input}
