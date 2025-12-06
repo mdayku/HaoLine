@@ -261,8 +261,9 @@ jobs:
               git \
               && rm -rf /var/lib/apt/lists/*
 
-          # Pin exact version to bust cache on each release
-          RUN pip install --no-cache-dir "haoline[web,llm]==${{ steps.get_version.outputs.version }}"
+          # Try exact version first, fall back to latest available if not yet on PyPI
+          RUN pip install --no-cache-dir "haoline[web,llm]==${{ steps.get_version.outputs.version }}" || \
+              pip install --no-cache-dir "haoline[web,llm]"
 
           COPY streamlit_app.py .
           COPY .streamlit/config.toml .streamlit/config.toml
