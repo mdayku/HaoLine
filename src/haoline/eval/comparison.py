@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import dataclass, field
 from io import StringIO
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .deployment import (
     DeploymentCostEstimate,
@@ -30,13 +31,14 @@ from .deployment import (
 from .schemas import CombinedReport
 
 
-@dataclass
-class ModelComparisonRow:
+class ModelComparisonRow(BaseModel):
     """
     A single row in the comparison table.
 
     Represents one model with all its metrics for comparison.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     model_id: str
     model_path: str = ""
@@ -60,7 +62,7 @@ class ModelComparisonRow:
     cost_per_1k_inferences_usd: float = 0.0
 
     # Additional metrics (for detailed comparison)
-    extra_metrics: dict[str, float] = field(default_factory=dict)
+    extra_metrics: dict[str, float] = Field(default_factory=dict)
 
     # Source data references
     combined_report: CombinedReport | None = None
@@ -132,8 +134,7 @@ class ModelComparisonRow:
         return row
 
 
-@dataclass
-class ModelComparisonTable:
+class ModelComparisonTable(BaseModel):
     """
     Multi-model comparison table.
 
@@ -141,7 +142,9 @@ class ModelComparisonTable:
     various output formats.
     """
 
-    rows: list[ModelComparisonRow] = field(default_factory=list)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    rows: list[ModelComparisonRow] = Field(default_factory=list)
     scenario: DeploymentScenario | None = None
 
     # Table metadata

@@ -15,9 +15,10 @@ Reference: https://www.tensorflow.org/lite/guide
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 # TFLite FlatBuffer identifier
 TFLITE_IDENTIFIER = b"TFL3"
@@ -101,9 +102,10 @@ TFLITE_BUILTINS: dict[int, str] = {
 }
 
 
-@dataclass
-class TFLiteTensorInfo:
+class TFLiteTensorInfo(BaseModel):
     """Information about a TFLite tensor."""
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     shape: tuple[int, ...]
@@ -111,16 +113,19 @@ class TFLiteTensorInfo:
     buffer_idx: int
     quantization: dict[str, Any] | None = None
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def type_name(self) -> str:
         """Human-readable type name."""
         return TFLITE_TYPES.get(self.type_id, ("UNKNOWN", 4))[0]
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def bytes_per_element(self) -> int:
         """Bytes per element."""
         return TFLITE_TYPES.get(self.type_id, ("UNKNOWN", 4))[1]
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def n_elements(self) -> int:
         """Total number of elements."""
@@ -129,6 +134,7 @@ class TFLiteTensorInfo:
             result *= d
         return result
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def size_bytes(self) -> int:
         """Estimated size in bytes."""
@@ -138,45 +144,51 @@ class TFLiteTensorInfo:
         return self.n_elements * bpe
 
 
-@dataclass
-class TFLiteOperatorInfo:
+class TFLiteOperatorInfo(BaseModel):
     """Information about a TFLite operator."""
+
+    model_config = ConfigDict(frozen=True)
 
     opcode_index: int
     builtin_code: int
     inputs: list[int]
     outputs: list[int]
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def op_name(self) -> str:
         """Human-readable operator name."""
         return TFLITE_BUILTINS.get(self.builtin_code, f"CUSTOM_{self.builtin_code}")
 
 
-@dataclass
-class TFLiteInfo:
+class TFLiteInfo(BaseModel):
     """Parsed TFLite file information."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     path: Path
     version: int
     description: str
-    tensors: list[TFLiteTensorInfo] = field(default_factory=list)
-    operators: list[TFLiteOperatorInfo] = field(default_factory=list)
-    inputs: list[int] = field(default_factory=list)
-    outputs: list[int] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    tensors: list[TFLiteTensorInfo] = Field(default_factory=list)
+    operators: list[TFLiteOperatorInfo] = Field(default_factory=list)
+    inputs: list[int] = Field(default_factory=list)
+    outputs: list[int] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def total_params(self) -> int:
         """Total parameter count (non-input tensors)."""
         input_set = set(self.inputs)
         return sum(t.n_elements for i, t in enumerate(self.tensors) if i not in input_set)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def total_size_bytes(self) -> int:
         """Total model size in bytes."""
         return sum(t.size_bytes for t in self.tensors)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def op_counts(self) -> dict[str, int]:
         """Count of operators by type."""
@@ -186,6 +198,7 @@ class TFLiteInfo:
             counts[name] = counts.get(name, 0) + 1
         return counts
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def type_breakdown(self) -> dict[str, int]:
         """Count of tensors by type."""
@@ -195,6 +208,7 @@ class TFLiteInfo:
             breakdown[type_name] = breakdown.get(type_name, 0) + 1
         return breakdown
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def is_quantized(self) -> bool:
         """Check if model uses quantized types."""
@@ -203,20 +217,7 @@ class TFLiteInfo:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
-            "path": str(self.path),
-            "version": self.version,
-            "description": self.description,
-            "tensor_count": len(self.tensors),
-            "operator_count": len(self.operators),
-            "total_params": self.total_params,
-            "total_size_bytes": self.total_size_bytes,
-            "is_quantized": self.is_quantized,
-            "op_counts": self.op_counts,
-            "type_breakdown": self.type_breakdown,
-            "inputs": self.inputs,
-            "outputs": self.outputs,
-        }
+        return self.model_dump(mode="json")
 
 
 class TFLiteReader:

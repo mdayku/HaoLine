@@ -26,9 +26,10 @@ Usage:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from haoline.analyzer import GraphInfo, NodeInfo
@@ -60,9 +61,10 @@ class QuantIssueType(Enum):
     NO_QUANT_KERNEL = "no_quant_kernel"
 
 
-@dataclass
-class QuantWarning:
+class QuantWarning(BaseModel):
     """A single quantization-related warning."""
+
+    model_config = ConfigDict(frozen=True)
 
     severity: Severity
     issue_type: QuantIssueType
@@ -70,9 +72,9 @@ class QuantWarning:
     node_name: str | None = None
     op_type: str | None = None
     recommendation: str | None = None
-    details: dict | None = None
+    details: dict[str, Any] | None = None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "severity": self.severity.value,
@@ -85,9 +87,10 @@ class QuantWarning:
         }
 
 
-@dataclass
-class LayerRiskScore:
+class LayerRiskScore(BaseModel):
     """Risk assessment for a single layer's quantization impact."""
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     op_type: str
@@ -95,9 +98,9 @@ class LayerRiskScore:
     risk_level: str  # "critical", "high", "medium", "low"
     reason: str
     recommendation: str
-    factors: dict  # Breakdown of risk factors
+    factors: dict[str, Any]  # Breakdown of risk factors
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "name": self.name,
@@ -110,9 +113,10 @@ class LayerRiskScore:
         }
 
 
-@dataclass
-class OpQuantInfo:
+class OpQuantInfo(BaseModel):
     """Quantization characteristics for an operator type."""
+
+    model_config = ConfigDict(frozen=True)
 
     op_type: str
     has_int8_kernel: bool = True  # Has optimized INT8 implementation
@@ -308,9 +312,10 @@ _OP_QUANT_INFO: dict[str, OpQuantInfo] = {
 }
 
 
-@dataclass
-class QuantizationLintResult:
+class QuantizationLintResult(BaseModel):
     """Result of quantization linting analysis."""
+
+    model_config = ConfigDict(frozen=False)  # Allow mutation during lint
 
     # Overall assessment
     readiness_score: int = 100  # 0-100, higher is better
@@ -318,30 +323,30 @@ class QuantizationLintResult:
     has_critical_issues: bool = False
 
     # Warnings by severity
-    warnings: list[QuantWarning] = field(default_factory=list)
+    warnings: list[QuantWarning] = Field(default_factory=list)
 
     # Op analysis
-    unsupported_ops: dict[str, int] = field(default_factory=dict)  # op_type -> count
-    accuracy_sensitive_ops: dict[str, int] = field(default_factory=dict)
-    quant_friendly_ops: dict[str, int] = field(default_factory=dict)
-    custom_ops: list[str] = field(default_factory=list)
-    quantization_ops: dict[str, int] = field(default_factory=dict)
+    unsupported_ops: dict[str, int] = Field(default_factory=dict)  # op_type -> count
+    accuracy_sensitive_ops: dict[str, int] = Field(default_factory=dict)
+    quant_friendly_ops: dict[str, int] = Field(default_factory=dict)
+    custom_ops: list[str] = Field(default_factory=list)
+    quantization_ops: dict[str, int] = Field(default_factory=dict)
 
     # Shape analysis
-    dynamic_shape_nodes: list[str] = field(default_factory=list)
+    dynamic_shape_nodes: list[str] = Field(default_factory=list)
 
     # Problem layers (for targeted recommendations)
-    problem_layers: list[dict] = field(default_factory=list)
+    problem_layers: list[dict[str, Any]] = Field(default_factory=list)
 
     # Per-layer risk scores (Task 33.3.2)
-    layer_risk_scores: list[LayerRiskScore] = field(default_factory=list)
+    layer_risk_scores: list[LayerRiskScore] = Field(default_factory=list)
 
     # QAT validation results
     is_qat_model: bool = False  # True if model has fake-quant nodes
-    missing_fake_quant_nodes: list[str] = field(default_factory=list)
-    inconsistent_fake_quant: list[dict] = field(default_factory=list)
-    scale_mismatches: list[dict] = field(default_factory=list)
-    wide_activation_ranges: list[dict] = field(default_factory=list)
+    missing_fake_quant_nodes: list[str] = Field(default_factory=list)
+    inconsistent_fake_quant: list[dict[str, Any]] = Field(default_factory=list)
+    scale_mismatches: list[dict[str, Any]] = Field(default_factory=list)
+    wide_activation_ranges: list[dict[str, Any]] = Field(default_factory=list)
 
     # Summary stats
     total_ops: int = 0

@@ -15,12 +15,12 @@ Deploy to HuggingFace Spaces or Streamlit Cloud for public access.
 
 import os
 import tempfile
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
+from pydantic import BaseModel, ConfigDict, computed_field
 
 # Page config must be first Streamlit command
 st.set_page_config(
@@ -31,15 +31,17 @@ st.set_page_config(
 )
 
 
-@dataclass
-class AnalysisResult:
+class AnalysisResult(BaseModel):
     """Stored analysis result for session history."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
     timestamp: datetime
     report: Any  # InspectionReport
     file_size: int
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def summary(self) -> str:
         """Get a brief summary for display."""

@@ -14,36 +14,24 @@ from __future__ import annotations
 import json
 import logging
 import pathlib
-from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from pydantic import BaseModel, ConfigDict, Field
+
 if TYPE_CHECKING:
     from .analyzer import (
-        FlopCounts,
-        MemoryEstimates,
         MetricsEngine,
         ONNXGraphLoader,
-        ParamCounts,
     )
-    from .hardware import (
-        HardwareEstimates,
-        HardwareProfile,
-    )
-    from .operational_profiling import (
-        BatchSizeSweep,
-        ResolutionSweep,
-        SystemRequirements,
-    )
-    from .patterns import Block, PatternAnalyzer
-    from .quantization_linter import QuantizationLintResult
-    from .risks import RiskAnalyzer, RiskSignal
-    from .universal_ir import UniversalGraph
+    from .patterns import PatternAnalyzer
+    from .risks import RiskAnalyzer
 
 
-@dataclass
-class ModelMetadata:
+class ModelMetadata(BaseModel):
     """Basic model metadata extracted from ONNX proto."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     path: str
     ir_version: int
@@ -55,9 +43,10 @@ class ModelMetadata:
     opsets: dict[str, int]  # domain -> version
 
 
-@dataclass
-class GraphSummary:
+class GraphSummary(BaseModel):
     """Summary statistics about the ONNX graph."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     num_nodes: int
     num_inputs: int
@@ -68,13 +57,14 @@ class GraphSummary:
     op_type_counts: dict[str, int]  # op_type -> count
 
 
-@dataclass
-class DatasetInfo:
+class DatasetInfo(BaseModel):
     """Dataset and class information extracted from model metadata."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     task: str | None = None  # "detect", "classify", "segment", etc.
     num_classes: int | None = None
-    class_names: list[str] = field(default_factory=list)
+    class_names: list[str] = Field(default_factory=list)
     source: str | None = None  # "ultralytics", "output_shape", etc.
 
 
@@ -208,8 +198,7 @@ def infer_num_classes_from_output(
     return None
 
 
-@dataclass
-class InspectionReport:
+class InspectionReport(BaseModel):
     """
     Complete inspection report for an ONNX model.
 
@@ -218,34 +207,36 @@ class InspectionReport:
     or Markdown rendering.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     # Metadata
     metadata: ModelMetadata
-    generated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
+    generated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     autodoc_version: str = "0.1.0"
 
     # Graph structure
     graph_summary: GraphSummary | None = None
 
     # Metrics
-    param_counts: ParamCounts | None = None
-    flop_counts: FlopCounts | None = None
-    memory_estimates: MemoryEstimates | None = None
+    param_counts: Any | None = None  # ParamCounts (not yet Pydantic)
+    flop_counts: Any | None = None  # FlopCounts (not yet Pydantic)
+    memory_estimates: Any | None = None  # MemoryEstimates (not yet Pydantic)
 
     # Patterns
-    detected_blocks: list[Block] = field(default_factory=list)
+    detected_blocks: list[Any] = Field(default_factory=list)  # list[Block]
     architecture_type: str = "unknown"  # "transformer", "cnn", "mlp", "hybrid", "unknown"
 
     # Risks
-    risk_signals: list[RiskSignal] = field(default_factory=list)
+    risk_signals: list[Any] = Field(default_factory=list)  # list[RiskSignal]
 
     # Hardware estimates (optional, set by CLI if --hardware specified)
-    hardware_profile: HardwareProfile | None = None
-    hardware_estimates: HardwareEstimates | None = None
+    hardware_profile: Any | None = None  # HardwareProfile (not yet Pydantic)
+    hardware_estimates: Any | None = None  # HardwareEstimates (not yet Pydantic)
 
     # System Requirements & Scaling (Epic 6C)
-    system_requirements: SystemRequirements | None = None
-    batch_size_sweep: BatchSizeSweep | None = None
-    resolution_sweep: ResolutionSweep | None = None
+    system_requirements: Any | None = None  # SystemRequirements
+    batch_size_sweep: Any | None = None  # BatchSizeSweep
+    resolution_sweep: Any | None = None  # ResolutionSweep
 
     # LLM summary (optional, set by CLI if --llm-summary specified)
     llm_summary: dict[str, Any] | None = None
@@ -258,29 +249,20 @@ class InspectionReport:
 
     # Universal IR (optional, format-agnostic graph representation)
     # Enables cross-format comparison, structural diff, and advanced visualization
-    universal_graph: UniversalGraph | None = None
+    universal_graph: Any | None = None  # UniversalGraph
 
     # Quantization analysis (optional, set by CLI if --lint-quantization specified)
-    quantization_lint: QuantizationLintResult | None = None
+    quantization_lint: Any | None = None  # QuantizationLintResult
 
     def to_dict(self) -> dict[str, Any]:
         """Convert report to a JSON-serializable dictionary."""
         import numpy as np
 
-        # Track visited objects to prevent circular references
-        visited: set = set()
-
         def _serialize(obj: Any, depth: int = 0) -> Any:
+            """Recursively serialize objects to JSON-compatible types."""
             # Prevent infinite recursion
             if depth > 50:
                 return str(obj)
-
-            # Check for circular references using object id
-            obj_id = id(obj)
-            if obj_id in visited:
-                return "<circular reference>"
-            if not isinstance(obj, (str, int, float, bool, type(None))):
-                visited.add(obj_id)
 
             if obj is None:
                 return None
@@ -294,12 +276,14 @@ class InspectionReport:
             if hasattr(obj, "to_dict") and hasattr(obj, "num_nodes"):
                 # This is a UniversalGraph - serialize without weights
                 return obj.to_dict(include_weights=False)
-            # Handle dataclasses (but not by calling to_dict which would recurse)
+            # Handle Pydantic models (including self and nested models)
+            if hasattr(obj, "model_dump"):
+                # Use model_dump but recursively serialize for numpy/special types
+                dumped = obj.model_dump()
+                return _serialize(dumped, depth + 1)
+            # Handle dataclasses (for types not yet converted to Pydantic)
             if hasattr(obj, "__dataclass_fields__"):
                 return {k: _serialize(getattr(obj, k), depth + 1) for k in obj.__dataclass_fields__}
-            # Handle Pydantic models
-            if hasattr(obj, "model_dump"):
-                return obj.model_dump()
             if isinstance(obj, list):
                 return [_serialize(item, depth + 1) for item in obj]
             if isinstance(obj, dict):
@@ -307,16 +291,18 @@ class InspectionReport:
             # Fallback: convert to string
             return str(obj)
 
-        result = _serialize(self)
-        # _serialize on a dataclass always returns a dict
-        assert isinstance(result, dict)
+        # Start serialization from this model's fields
+        result: dict[str, Any] = {}
+        for field_name in type(self).model_fields:
+            value = getattr(self, field_name)
+            result[field_name] = _serialize(value)
         return result
 
     def to_json(self, indent: int = 2) -> str:
         """Serialize report to JSON string."""
         return json.dumps(self.to_dict(), indent=indent)
 
-    def validate(self) -> tuple[bool, list[str]]:
+    def validate_schema(self) -> tuple[bool, list[str]]:
         """
         Validate this report against the JSON schema.
 
@@ -326,7 +312,7 @@ class InspectionReport:
 
         Example:
             report = inspector.inspect("model.onnx")
-            is_valid, errors = report.validate()
+            is_valid, errors = report.validate_schema()
             if not is_valid:
                 for error in errors:
                     print(f"Validation error: {error}")
@@ -335,7 +321,7 @@ class InspectionReport:
 
         return validate_report(self.to_dict())
 
-    def validate_strict(self) -> None:
+    def validate_schema_strict(self) -> None:
         """
         Validate this report, raising ValidationError on failure.
 
@@ -345,7 +331,7 @@ class InspectionReport:
         Example:
             report = inspector.inspect("model.onnx")
             try:
-                report.validate_strict()
+                report.validate_schema_strict()
                 print("Report is valid!")
             except ValidationError as e:
                 print(f"Invalid report: {e.errors}")

@@ -13,8 +13,9 @@ This module implements:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 from .hardware import (
     HARDWARE_PROFILES,
@@ -24,9 +25,10 @@ from .hardware import (
 )
 
 
-@dataclass
-class BatchSweepPoint:
+class BatchSweepPoint(BaseModel):
     """Metrics for a single batch size point."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     batch_size: int
     vram_required_bytes: int
@@ -37,9 +39,10 @@ class BatchSweepPoint:
     fits_in_vram: bool
 
 
-@dataclass
-class GPUMetrics:
+class GPUMetrics(BaseModel):
     """Real-time GPU metrics from pynvml."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     vram_used_bytes: int
     vram_total_bytes: int
@@ -59,9 +62,10 @@ class GPUMetrics:
         }
 
 
-@dataclass
-class LayerProfile:
+class LayerProfile(BaseModel):
     """Profiling data for a single layer/operator."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
     op_type: str
@@ -85,9 +89,10 @@ class LayerProfile:
         }
 
 
-@dataclass
-class ProfilingResult:
+class ProfilingResult(BaseModel):
     """Complete profiling results from ONNX Runtime."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     total_time_ms: float
     layer_profiles: list[LayerProfile]
@@ -115,9 +120,10 @@ class ProfilingResult:
         }
 
 
-@dataclass
-class BottleneckAnalysis:
+class BottleneckAnalysis(BaseModel):
     """Analysis of model performance bottlenecks."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     bottleneck_type: str  # "compute-bound", "memory-bound", "balanced"
     compute_time_ms: float
@@ -143,9 +149,10 @@ class BottleneckAnalysis:
         }
 
 
-@dataclass
-class ResolutionPoint:
+class ResolutionPoint(BaseModel):
     """Metrics for a single resolution point."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     resolution: tuple[int, int]
     resolution_str: str  # e.g., "224x224"
@@ -157,9 +164,10 @@ class ResolutionPoint:
     fits_in_vram: bool
 
 
-@dataclass
-class ResolutionSweep:
+class ResolutionSweep(BaseModel):
     """Results of a resolution sweep analysis."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     resolutions: list[str]  # ["224x224", "384x384", ...]
     flops: list[int]
@@ -183,9 +191,10 @@ class ResolutionSweep:
         }
 
 
-@dataclass
-class BatchSizeSweep:
+class BatchSizeSweep(BaseModel):
     """Results of a batch size sweep analysis."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     batch_sizes: list[int]
     latencies: list[float]
@@ -203,8 +212,7 @@ class BatchSizeSweep:
         }
 
 
-@dataclass
-class SystemRequirements:
+class SystemRequirements(BaseModel):
     """Recommended hardware tiers for deployment.
 
     This is a lightweight, report-friendly wrapper around :class:`HardwareEstimates`.
@@ -213,10 +221,12 @@ class SystemRequirements:
     existing report/HTML code (and mental model) continue to work.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     # Core estimates for each tier
-    minimum: HardwareEstimates | None  # The lowest spec that runs it
-    recommended: HardwareEstimates | None  # Good balance of cost/perf
-    optimal: HardwareEstimates | None  # Maximum performance
+    minimum: HardwareEstimates | None = None  # The lowest spec that runs it
+    recommended: HardwareEstimates | None = None  # Good balance of cost/perf
+    optimal: HardwareEstimates | None = None  # Maximum performance
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -882,7 +892,7 @@ class OperationalProfiler:
             candidates.append((profile, est))
 
         if not candidates:
-            return SystemRequirements(None, None, None)
+            return SystemRequirements(minimum=None, recommended=None, optimal=None)
 
         # --- Find Minimum ---
         # Sort by VRAM (ascending), then FLOPs (ascending)

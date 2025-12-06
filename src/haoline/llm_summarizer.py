@@ -21,8 +21,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar
+
+from pydantic import BaseModel, ConfigDict
 
 if TYPE_CHECKING:
     from .report import InspectionReport
@@ -49,9 +50,10 @@ def has_api_key() -> bool:
     return bool(os.environ.get("OPENAI_API_KEY"))
 
 
-@dataclass
-class LLMSummary:
+class LLMSummary(BaseModel):
     """Container for LLM-generated summaries."""
+
+    model_config = ConfigDict(frozen=True)
 
     short_summary: str  # 1-2 sentences
     detailed_summary: str  # Full paragraph

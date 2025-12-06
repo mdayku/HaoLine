@@ -11,9 +11,10 @@ colors, and size scaling based on computational intensity.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
 from enum import Enum
 from typing import ClassVar
+
+from pydantic import BaseModel, ConfigDict
 
 
 class OpCategory(Enum):
@@ -53,9 +54,10 @@ class OpCategory(Enum):
     UNKNOWN = "unknown"  # Unrecognized ops
 
 
-@dataclass
-class OpIcon:
+class OpIcon(BaseModel):
     """Visual representation for an operator category."""
+
+    model_config = ConfigDict(frozen=True)
 
     category: OpCategory
     shape: str  # SVG shape: "rect", "circle", "diamond", "hexagon", etc.
@@ -76,161 +78,161 @@ class OpIcon:
 # Icon definitions for each category
 CATEGORY_ICONS: dict[OpCategory, OpIcon] = {
     OpCategory.CONV: OpIcon(
-        OpCategory.CONV,
+        category=OpCategory.CONV,
         shape="rect",
         symbol="▦",
         color="#4A90D9",  # Blue
         description="Convolution",
     ),
     OpCategory.LINEAR: OpIcon(
-        OpCategory.LINEAR,
+        category=OpCategory.LINEAR,
         shape="diamond",
         symbol="◆",
         color="#9B59B6",  # Purple
         description="Linear/MatMul",
     ),
     OpCategory.ATTENTION: OpIcon(
-        OpCategory.ATTENTION,
+        category=OpCategory.ATTENTION,
         shape="hexagon",
         symbol="◎",
         color="#E67E22",  # Orange
         description="Attention",
     ),
     OpCategory.NORM: OpIcon(
-        OpCategory.NORM,
+        category=OpCategory.NORM,
         shape="rect",
         symbol="▬",
         color="#7F8C8D",  # Gray
         description="Normalization",
     ),
     OpCategory.ACTIVATION: OpIcon(
-        OpCategory.ACTIVATION,
+        category=OpCategory.ACTIVATION,
         shape="circle",
         symbol="⚡",
         color="#F1C40F",  # Yellow
         description="Activation",
     ),
     OpCategory.POOL: OpIcon(
-        OpCategory.POOL,
+        category=OpCategory.POOL,
         shape="trapezoid",
         symbol="▼",
         color="#1ABC9C",  # Teal
         description="Pooling",
     ),
     OpCategory.DROPOUT: OpIcon(
-        OpCategory.DROPOUT,
+        category=OpCategory.DROPOUT,
         shape="circle",
         symbol="◌",
         color="#95A5A6",  # Light gray
         description="Dropout",
     ),
     OpCategory.RESHAPE: OpIcon(
-        OpCategory.RESHAPE,
+        category=OpCategory.RESHAPE,
         shape="parallelogram",
         symbol="⬔",
         color="#3498DB",  # Light blue
         description="Reshape",
     ),
     OpCategory.TRANSPOSE: OpIcon(
-        OpCategory.TRANSPOSE,
+        category=OpCategory.TRANSPOSE,
         shape="parallelogram",
         symbol="↔",
         color="#3498DB",
         description="Transpose",
     ),
     OpCategory.SLICE: OpIcon(
-        OpCategory.SLICE,
+        category=OpCategory.SLICE,
         shape="rect",
         symbol="✂",
         color="#E74C3C",  # Red
         description="Slice/Index",
     ),
     OpCategory.CONCAT: OpIcon(
-        OpCategory.CONCAT,
+        category=OpCategory.CONCAT,
         shape="rect",
         symbol="⊕",
         color="#2ECC71",  # Green
         description="Concat",
     ),
     OpCategory.SPLIT: OpIcon(
-        OpCategory.SPLIT,
+        category=OpCategory.SPLIT,
         shape="rect",
         symbol="⊖",
         color="#E74C3C",
         description="Split",
     ),
     OpCategory.PAD: OpIcon(
-        OpCategory.PAD,
+        category=OpCategory.PAD,
         shape="rect",
         symbol="▭",
         color="#BDC3C7",  # Silver
         description="Padding",
     ),
     OpCategory.ELEMENTWISE: OpIcon(
-        OpCategory.ELEMENTWISE,
+        category=OpCategory.ELEMENTWISE,
         shape="circle",
         symbol="±",
         color="#9B59B6",  # Purple
         description="Elementwise",
     ),
     OpCategory.REDUCE: OpIcon(
-        OpCategory.REDUCE,
+        category=OpCategory.REDUCE,
         shape="triangle",
         symbol="Σ",
         color="#E74C3C",  # Red
         description="Reduce",
     ),
     OpCategory.COMPARE: OpIcon(
-        OpCategory.COMPARE,
+        category=OpCategory.COMPARE,
         shape="diamond",
         symbol="?",
         color="#F39C12",  # Dark yellow
         description="Compare",
     ),
     OpCategory.EMBED: OpIcon(
-        OpCategory.EMBED,
+        category=OpCategory.EMBED,
         shape="rect",
         symbol="📖",
         color="#8E44AD",  # Dark purple
         description="Embedding",
     ),
     OpCategory.RECURRENT: OpIcon(
-        OpCategory.RECURRENT,
+        category=OpCategory.RECURRENT,
         shape="rect",
         symbol="↻",
         color="#16A085",  # Dark teal
         description="Recurrent",
     ),
     OpCategory.QUANTIZE: OpIcon(
-        OpCategory.QUANTIZE,
+        category=OpCategory.QUANTIZE,
         shape="octagon",
         symbol="Q",
         color="#27AE60",  # Dark green
         description="Quantization",
     ),
     OpCategory.CAST: OpIcon(
-        OpCategory.CAST,
+        category=OpCategory.CAST,
         shape="circle",
         symbol="⇄",
         color="#95A5A6",
         description="Cast",
     ),
     OpCategory.CONTROL: OpIcon(
-        OpCategory.CONTROL,
+        category=OpCategory.CONTROL,
         shape="diamond",
         symbol="◇",
         color="#E74C3C",
         description="Control Flow",
     ),
     OpCategory.CONSTANT: OpIcon(
-        OpCategory.CONSTANT,
+        category=OpCategory.CONSTANT,
         shape="circle",
         symbol="•",
         color="#BDC3C7",
         description="Constant",
     ),
     OpCategory.UNKNOWN: OpIcon(
-        OpCategory.UNKNOWN,
+        category=OpCategory.UNKNOWN,
         shape="rect",
         symbol="?",
         color="#7F8C8D",
@@ -471,9 +473,10 @@ def compute_node_size(flops: int, min_size: float = 20, max_size: float = 80) ->
 
 
 # Color intensity based on compute/memory
-@dataclass
-class ColorMapping:
+class ColorMapping(BaseModel):
     """Color mapping configuration for nodes."""
+
+    model_config = ConfigDict(frozen=True)
 
     # Precision-based colors
     PRECISION_COLORS: ClassVar[dict[str, str]] = {

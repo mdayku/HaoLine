@@ -14,15 +14,15 @@ Detects common architectural patterns in ONNX graphs:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar
+
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from .analyzer import GraphInfo, NodeInfo
 
 
-@dataclass
-class Block:
+class Block(BaseModel):
     """
     A detected architectural block (group of related nodes).
 
@@ -30,14 +30,16 @@ class Block:
     "TransformerLayer" that consist of multiple ONNX nodes.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     block_type: str  # e.g., "ConvBNRelu", "ResidualBlock", "TransformerBlock"
     name: str
     nodes: list[str]  # Node names in this block
     start_node: str
     end_node: str
-    attributes: dict = field(default_factory=dict)  # Block-specific metadata
+    attributes: dict[str, Any] = Field(default_factory=dict)  # Block-specific metadata
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "block_type": self.block_type,
             "name": self.name,

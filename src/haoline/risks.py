@@ -15,16 +15,16 @@ Applies heuristics to detect potentially problematic patterns:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from .analyzer import GraphInfo
     from .patterns import Block
 
 
-@dataclass
-class RiskSignal:
+class RiskSignal(BaseModel):
     """
     A detected risk or concern about the model architecture.
 
@@ -32,13 +32,15 @@ class RiskSignal:
     may cause issues but don't necessarily indicate problems.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     id: str  # e.g., "no_skip_connections", "oversized_dense"
     severity: str  # "info" | "warning" | "high"
     description: str
-    nodes: list[str] = field(default_factory=list)
+    nodes: list[str] = Field(default_factory=list)
     recommendation: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "severity": self.severity,
@@ -48,13 +50,14 @@ class RiskSignal:
         }
 
 
-@dataclass
-class RiskThresholds:
+class RiskThresholds(BaseModel):
     """
     Configurable thresholds for risk detection.
 
     Allows tuning sensitivity based on model type and use case.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     # Minimum thresholds - don't bother analyzing tiny models
     min_params_for_analysis: int = 100_000  # 100K params minimum

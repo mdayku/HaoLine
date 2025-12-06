@@ -18,9 +18,10 @@ Reference: https://github.com/huggingface/safetensors
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 # Bytes per dtype
 DTYPE_SIZES: dict[str, int] = {
@@ -37,14 +38,16 @@ DTYPE_SIZES: dict[str, int] = {
 }
 
 
-@dataclass
-class SafeTensorInfo:
+class SafeTensorInfo(BaseModel):
     """Information about a single tensor."""
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     dtype: str
     shape: tuple[int, ...]
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def n_elements(self) -> int:
         """Total number of elements."""
@@ -53,30 +56,35 @@ class SafeTensorInfo:
             result *= d
         return result
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def size_bytes(self) -> int:
         """Size in bytes."""
         return self.n_elements * DTYPE_SIZES.get(self.dtype, 4)
 
 
-@dataclass
-class SafeTensorsInfo:
+class SafeTensorsInfo(BaseModel):
     """Parsed SafeTensors file information."""
 
-    path: Path
-    tensors: list[SafeTensorInfo] = field(default_factory=list)
-    metadata: dict[str, str] = field(default_factory=dict)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    path: Path
+    tensors: list[SafeTensorInfo] = Field(default_factory=list)
+    metadata: dict[str, str] = Field(default_factory=dict)
+
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def total_params(self) -> int:
         """Total parameter count."""
         return sum(t.n_elements for t in self.tensors)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def total_size_bytes(self) -> int:
         """Total size in bytes."""
         return sum(t.size_bytes for t in self.tensors)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def dtype_breakdown(self) -> dict[str, int]:
         """Count of tensors by dtype."""
@@ -85,6 +93,7 @@ class SafeTensorsInfo:
             breakdown[t.dtype] = breakdown.get(t.dtype, 0) + 1
         return breakdown
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def size_breakdown(self) -> dict[str, int]:
         """Size in bytes by dtype."""
@@ -95,16 +104,7 @@ class SafeTensorsInfo:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
-            "path": str(self.path),
-            "tensor_count": len(self.tensors),
-            "total_params": self.total_params,
-            "total_size_bytes": self.total_size_bytes,
-            "dtype_breakdown": self.dtype_breakdown,
-            "size_breakdown": self.size_breakdown,
-            "metadata": self.metadata,
-            "tensors": [{"name": t.name, "dtype": t.dtype, "shape": t.shape} for t in self.tensors],
-        }
+        return self.model_dump(mode="json")
 
 
 class SafeTensorsReader:
