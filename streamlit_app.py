@@ -58,6 +58,8 @@ def init_session_state():
         st.session_state.compare_models = {"model_a": None, "model_b": None}
     if "current_mode" not in st.session_state:
         st.session_state.current_mode = "analyze"  # "analyze" or "compare"
+    if "current_result" not in st.session_state:
+        st.session_state.current_result = None  # Currently displayed analysis
 
 
 def add_to_history(name: str, report: Any, file_size: int):
@@ -1018,17 +1020,29 @@ def main():
                 time_str = result.timestamp.strftime("%H:%M")
                 col1, col2 = st.columns([3, 1])
                 with col1:
-                    st.markdown(
-                        f"""
-                    <div style="font-size: 0.85rem; color: #f5f5f5; margin-bottom: 0.1rem;">
-                        {result.name[:20]}{"..." if len(result.name) > 20 else ""}
-                    </div>
-                    <div style="font-size: 0.7rem; color: #737373;">
-                        {result.summary} · {time_str}
-                    </div>
-                    """,
-                        unsafe_allow_html=True,
-                    )
+                    # Make the whole item clickable in analyze mode
+                    if st.session_state.current_mode == "analyze":
+                        if st.button(
+                            f"{result.name[:18]}{'...' if len(result.name) > 18 else ''}",
+                            key=f"hist_view_{i}",
+                            help=f"View {result.name}",
+                            use_container_width=True,
+                        ):
+                            st.session_state.current_result = result
+                            st.rerun()
+                        st.caption(f"{result.summary} · {time_str}")
+                    else:
+                        st.markdown(
+                            f"""
+                        <div style="font-size: 0.85rem; color: #f5f5f5; margin-bottom: 0.1rem;">
+                            {result.name[:20]}{"..." if len(result.name) > 20 else ""}
+                        </div>
+                        <div style="font-size: 0.7rem; color: #737373;">
+                            {result.summary} · {time_str}
+                        </div>
+                        """,
+                            unsafe_allow_html=True,
+                        )
                 with col2:
                     if st.session_state.current_mode == "compare":
                         if st.button("A", key=f"hist_a_{i}", help="Set as Model A"):
@@ -1400,10 +1414,11 @@ def main():
                         hardware=profile,
                     )
 
-                # Add to history
+                # Add to history and set as current
                 import os
                 file_size = os.path.getsize(demo_path)
                 result = add_to_history(f"{demo_name}.onnx", report, file_size)
+                st.session_state.current_result = result
 
                 st.success(f"Loaded {demo_name} - {demo_info['desc']}")
                 st.rerun()
@@ -1411,8 +1426,121 @@ def main():
             except Exception as e:
                 st.error(f"Failed to download {demo_name}: {e}")
 
-    # Analysis
-    if uploaded_file is not None:
+    # Display current result from history/demo
+    if st.session_state.current_result is not None and uploaded_file is None:
+        result = st.session_state.current_result
+        report = result.report
+        model_name = result.name
+
+        # Clear button
+        if st.button("← Back to upload", type="secondary"):
+            st.session_state.current_result = None
+            st.rerun()
+
+        st.markdown("---")
+        st.markdown(f"## Analysis Results: {model_name}")
+
+        # Metrics cards
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            params = report.param_counts.total if report.param_counts else 0
+            st.metric("Parameters", format_number(params))
+
+        with col2:
+            flops = report.flop_counts.total if report.flop_counts else 0
+            st.metric("FLOPs", format_number(flops))
+
+        with col3:
+            memory = (
+                report.memory_estimates.peak_activation_bytes
+                if report.memory_estimates
+                else 0
+            )
+            st.metric("Memory", format_bytes(memory))
+
+        with col4:
+            st.metric("Operators", str(report.graph_summary.num_nodes))
+
+        # Tabs for different views
+        tab1, tab2, tab3 = st.tabs(["Overview", "Details", "Export"])
+
+        with tab1:
+            st.markdown("### Model Information")
+
+            info_col1, info_col2 = st.columns(2)
+
+            with info_col1:
+                st.markdown(f"""
+                | Property | Value |
+                |----------|-------|
+                | **Model** | `{model_name}` |
+                | **IR Version** | {report.metadata.ir_version} |
+                | **Producer** | {report.metadata.producer_name or "Unknown"} |
+                | **Opset** | {list(report.metadata.opsets.values())[0] if report.metadata.opsets else "Unknown"} |
+                """)
+
+            with info_col2:
+                params_total = report.param_counts.total if report.param_counts else 0
+                flops_total = report.flop_counts.total if report.flop_counts else 0
+                peak_mem = (
+                    report.memory_estimates.peak_activation_bytes
+                    if report.memory_estimates
+                    else 0
+                )
+                model_size = (
+                    report.memory_estimates.model_size_bytes
+                    if report.memory_estimates
+                    else 0
+                )
+
+                st.markdown(f"""
+                | Metric | Value |
+                |--------|-------|
+                | **Total Parameters** | {params_total:,} |
+                | **Total FLOPs** | {flops_total:,} |
+                | **Peak Memory** | {format_bytes(peak_mem)} |
+                | **Model Size** | {format_bytes(model_size)} |
+                """)
+
+            # Op distribution chart
+            if report.graph_summary and report.graph_summary.op_type_counts:
+                st.markdown("### Operator Distribution")
+                op_counts = report.graph_summary.op_type_counts
+                sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+
+                import pandas as pd
+                df = pd.DataFrame(sorted_ops, columns=["Operator", "Count"])
+                st.bar_chart(df.set_index("Operator"))
+
+        with tab2:
+            st.markdown("### Layer Details")
+            if report.layers:
+                layer_data = []
+                for layer in report.layers[:50]:  # Show first 50
+                    layer_data.append({
+                        "Name": layer.name[:30] + "..." if len(layer.name) > 30 else layer.name,
+                        "Type": layer.op_type,
+                        "Params": format_number(layer.params) if layer.params else "-",
+                        "FLOPs": format_number(layer.flops) if layer.flops else "-",
+                    })
+                st.dataframe(layer_data, use_container_width=True)
+            else:
+                st.info("No layer details available.")
+
+        with tab3:
+            st.markdown("### Export Report")
+            # JSON export
+            report_dict = report.to_dict() if hasattr(report, "to_dict") else {"error": "Export not available"}
+            st.download_button(
+                "Download JSON Report",
+                data=json.dumps(report_dict, indent=2, default=str),
+                file_name=f"{model_name.replace('.onnx', '')}_report.json",
+                mime="application/json",
+            )
+
+    # Analysis (file upload)
+    elif uploaded_file is not None:
         file_ext = Path(uploaded_file.name).suffix.lower()
         tmp_path = None
 
