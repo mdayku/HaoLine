@@ -276,6 +276,12 @@ Or use the web UI's comparison mode for an interactive experience.
 | `--quant-report-html PATH` | Write quantization report (HTML) |
 | `--quant-llm-advice` | Get LLM-powered quantization recommendations |
 
+### TensorRT Options
+
+| Flag | Description |
+|------|-------------|
+| `--compare-trt ENGINE` | Compare ONNX model with its compiled TensorRT engine |
+
 ### Universal IR Export
 
 | Flag | Description |
@@ -395,28 +401,30 @@ The Universal IR includes:
 | TFLite (.tflite) | ✅ Read | Mobile/edge, Linux/Mac (`pip install haoline[tflite]`) |
 | CoreML (.mlmodel, .mlpackage) | ✅ Read | Apple devices (`pip install haoline[coreml]`) |
 | OpenVINO (.xml) | ✅ Read | Intel inference (`pip install haoline[openvino]`) |
-| TensorRT Engine | 🔜 Coming | NVIDIA optimized engines |
+| TensorRT (.engine, .plan) | ✅ Read | NVIDIA optimized engines (`pip install haoline[tensorrt]`) |
 
 ### Format Capabilities Matrix
 
 Not all formats support all features. Here's what you get with each:
 
-| Feature | ONNX | PyTorch | TFLite | CoreML | OpenVINO | GGUF | SafeTensors |
-|---------|------|---------|--------|--------|----------|------|-------------|
-| **Parameter Count** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Memory Estimate** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **FLOPs Estimate** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Interactive Graph** | ✅ | ✅ | 🔜 | 🔜 | 🔜 | ❌ | ❌ |
-| **Layer-by-Layer Table** | ✅ | ✅ | 🔜 | 🔜 | 🔜 | ❌ | ❌ |
-| **Op Type Breakdown** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Quantization Analysis** | ✅ | ✅ | ✅ | ❓ | ✅ | ✅ | ❌ |
-| **Runtime Benchmarking** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Feature | ONNX | PyTorch | TFLite | CoreML | OpenVINO | TensorRT | GGUF | SafeTensors |
+|---------|------|---------|--------|--------|----------|----------|------|-------------|
+| **Parameter Count** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
+| **Memory Estimate** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **FLOPs Estimate** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Interactive Graph** | ✅ | ✅ | 🔜 | 🔜 | 🔜 | ❌ | ❌ | ❌ |
+| **Layer-by-Layer Table** | ✅ | ✅ | 🔜 | 🔜 | 🔜 | ✅ | ❌ | ❌ |
+| **Op Type Breakdown** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Quantization Analysis** | ✅ | ✅ | ✅ | ❓ | ✅ | ✅ | ✅ | ❌ |
+| **Runtime Benchmarking** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **ONNX Comparison** | N/A | N/A | 🔜 | 🔜 | 🔜 | ✅ | ❌ | ❌ |
 
 **Legend:** ✅ = Supported | 🔜 = Planned | ❌ = Not available | ❓ = Partial
 
 **Why the differences?**
 
 - **ONNX/PyTorch**: Full graph structure with UniversalGraph adapters → all features work
+- **TensorRT**: Optimized fused graph with layer info, precision breakdown, and ONNX comparison (requires NVIDIA GPU)
 - **TFLite/CoreML/OpenVINO**: Graph structure exists; convert to ONNX for full analysis (coming soon)
 - **GGUF**: LLM architecture metadata (layers, heads, quantization) but no computational graph - weights only
 - **SafeTensors**: Weights only - tensor shapes and dtypes, no graph structure

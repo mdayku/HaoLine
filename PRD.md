@@ -1941,6 +1941,7 @@ The CLI and Streamlit UI adapt to format capabilities:
 
 | Date | Change | 
 |------|--------|
+| Dec 6, 2025 | **TensorRT Introspection (Epic 22)** - Added TRTEngineReader, ONNX↔TRT comparison, fused graph reconstruction, memory metrics. 34/42 tasks complete. CLI `--compare-trt` flag, Streamlit integration with GPU disclaimers. |
 | Dec 6, 2025 | **Format Reader Tests Complete** - Added test_formats.py with 33 unit tests. SafeTensors (19.1.6) and CoreML (20.1.6, 20.1.7) reader stories complete. 350 tests total. |
 | Dec 6, 2025 | **Dependency Extras Audit** - Added `jax`, `ultralytics` extras. Documented all extras in README. Added cursor rule for dependency management. Created `Dockerfile.test` and CI job for format reader testing. |
 | Dec 6, 2025 | **Format Reader Testing** - Validated SafeTensors (22.7M params) and GGUF (TinyLlama 1.1B). Fixed TFLite backlog (was falsely marked complete - pure Python fallback is stub only). |

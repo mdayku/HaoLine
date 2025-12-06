@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 33/42 | **P2** |
+| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 34/42 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -285,7 +285,7 @@
 - [x] **Task 22.5.3**: Display hardware binding info (GPU arch, compute capability)
 - [x] **Task 22.5.4**: List builder configuration (max batch, workspace, DLA cores)
 
-### Story 22.6: ONNX vs TRT Comparison Mode [Phase 3] - **PARTIAL**
+### Story 22.6: ONNX vs TRT Comparison Mode [Phase 3] - **COMPLETE**
 *Side-by-side analysis showing what changed and performance impact.*
 
 - [x] **Task 22.6.1**: Add `haoline model.onnx --compare-trt model.engine` CLI support

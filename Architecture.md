@@ -996,6 +996,8 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | `report_sections.py` | Reusable report dataclasses (ExtractedReportSections) |
 | `quantization_linter.py` | QuantizationLinter, QuantWarning, readiness scoring |
 | `quantization_advisor.py` | LLM-powered quantization recommendations |
+| `formats/tensorrt.py` | TRTEngineReader, TRTEngineInfo, layer/binding extraction |
+| `formats/trt_comparison.py` | TRTONNXComparator, ONNX↔TRT diff view |
 
 ---
 
@@ -1217,7 +1219,7 @@ class FormatAdapter(Protocol):
 |--------|-----------|---------|------|-------|
 | ONNX | `.onnx` | `OnnxAdapter` | Yes | Yes |
 | PyTorch | `.pt`, `.pth` | `PyTorchAdapter` | Yes | Via ONNX |
-| TensorRT | `.engine`, `.plan` | `TensorRTAdapter` | Partial | No |
+| TensorRT | `.engine`, `.plan` | `TRTEngineReader` | Yes (layers, bindings, precision) | No |
 | CoreML | `.mlmodel`, `.mlpackage` | `CoreMLAdapter` | Yes | No |
 | TFLite | `.tflite` | `TFLiteAdapter` | Yes | No |
 | SafeTensors | `.safetensors` | `SafeTensorsAdapter` | Weights only | No |
