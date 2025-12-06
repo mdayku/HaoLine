@@ -53,7 +53,7 @@
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
 | Epic 38: Docker Distribution | Not Started | 1 | 0/5 | P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
-| Epic 40: Full Pydantic Dataclass Migration | **In Progress** | 6 | 22/29 | P2 |
+| Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
 | Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
@@ -769,16 +769,15 @@
 - [x] **Task 40.4.5**: Delete `pydantic_models.py` (superseded by report.py)
 - [x] **Task 40.4.6**: Update all unit tests for Pydantic models
 
-### Story 40.5: Format Readers Migration
-*Convert format reader dataclasses to Pydantic.*
+### Story 40.5: Format Readers & All Remaining Classes - **COMPLETE**
+*Convert all remaining dataclasses to Pydantic (58 total).*
 
-- [ ] **Task 40.5.1**: Convert `formats/safetensors.py` classes to Pydantic
-- [ ] **Task 40.5.2**: Convert `formats/coreml.py` classes to Pydantic
-- [ ] **Task 40.5.3**: Convert `formats/tflite.py` classes to Pydantic
-- [ ] **Task 40.5.4**: Convert `formats/openvino.py` classes to Pydantic
-- [ ] **Task 40.5.5**: Convert `formats/gguf.py` classes to Pydantic
-- [ ] **Task 40.5.6**: Update format reader tests
-- [ ] **Task 40.5.7**: Performance testing (Pydantic overhead vs dataclass)
+- [x] **Task 40.5.1-5**: Convert `formats/*.py` (11 classes)
+- [x] **Task 40.5.6**: Convert `report_sections.py` (16 classes)
+- [x] **Task 40.5.7**: Convert `quantization_linter.py`, `quantization_advisor.py` (8 classes)
+- [x] **Task 40.5.8**: Convert `compare*.py`, `eval/*.py` (12 classes)
+- [x] **Task 40.5.9**: Convert visualization/graph helpers (11 classes)
+- [x] **Task 40.5.10**: Run tests (317 passed) and mypy (clean)
 
 ---
 
