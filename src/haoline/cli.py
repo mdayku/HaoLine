@@ -14,7 +14,10 @@ import logging
 import os
 import pathlib
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .quantization_linter import QuantizationLintResult
 
 from . import ModelInspector
 from .edge_analysis import EdgeAnalyzer
@@ -494,6 +497,22 @@ Examples:
         default=None,
         metavar="PATH",
         help="Directory for plot PNG files (default: same directory as output files, or 'assets/').",
+    )
+
+    # Quantization Linting options
+    quant_group = parser.add_argument_group("Quantization Linting Options")
+    quant_group.add_argument(
+        "--lint-quantization",
+        action="store_true",
+        help="Analyze model for INT8 quantization readiness. "
+        "Detects problematic ops, dynamic shapes, and provides recommendations.",
+    )
+    quant_group.add_argument(
+        "--quant-report",
+        type=pathlib.Path,
+        default=None,
+        metavar="PATH",
+        help="Output path for quantization lint report (Markdown). Default: prints to console.",
     )
 
     # LLM options
@@ -1509,6 +1528,93 @@ def _convert_jax_to_onnx(
     return onnx_path, temp_file
 
 
+def _generate_quant_report_markdown(result: QuantizationLintResult, model_name: str) -> str:
+    """Generate a Markdown report for quantization linting results."""
+    from .quantization_linter import QuantizationLintResult, Severity
+
+    lines = [
+        f"# Quantization Readiness Report: {model_name}",
+        "",
+        "## Summary",
+        "",
+        f"**Readiness Score:** {result.readiness_score}/100",
+        f"**Quant-Friendly Ops:** {result.quant_friendly_pct:.1f}%",
+        f"**Critical Issues:** {result.critical_count}",
+        f"**High Severity Issues:** {result.high_count}",
+        "",
+    ]
+
+    if result.is_already_quantized:
+        lines.extend(
+            [
+                "> **Note:** This model already contains quantization ops.",
+                "",
+            ]
+        )
+
+    # Warnings by severity
+    if result.warnings:
+        lines.extend(["## Issues", ""])
+        for severity in [Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW]:
+            severity_warnings = [w for w in result.warnings if w.severity == severity]
+            if severity_warnings:
+                lines.append(f"### {severity.value.title()} ({len(severity_warnings)})")
+                lines.append("")
+                for w in severity_warnings:
+                    lines.append(f"- **{w.message}**")
+                    if w.recommendation:
+                        lines.append(f"  - *Recommendation:* {w.recommendation}")
+                lines.append("")
+
+    # Op breakdown
+    lines.extend(["## Op Analysis", ""])
+
+    if result.unsupported_ops:
+        lines.append("### Ops Without INT8 Kernel")
+        lines.append("")
+        lines.append("| Op Type | Count |")
+        lines.append("|---------|-------|")
+        for op, count in sorted(result.unsupported_ops.items(), key=lambda x: -x[1]):
+            lines.append(f"| {op} | {count} |")
+        lines.append("")
+
+    if result.accuracy_sensitive_ops:
+        lines.append("### Accuracy-Sensitive Ops")
+        lines.append("")
+        lines.append("| Op Type | Count |")
+        lines.append("|---------|-------|")
+        for op, count in sorted(result.accuracy_sensitive_ops.items(), key=lambda x: -x[1]):
+            lines.append(f"| {op} | {count} |")
+        lines.append("")
+
+    if result.quant_friendly_ops:
+        lines.append("### Quant-Friendly Ops")
+        lines.append("")
+        lines.append("| Op Type | Count |")
+        lines.append("|---------|-------|")
+        for op, count in sorted(result.quant_friendly_ops.items(), key=lambda x: -x[1])[:10]:
+            lines.append(f"| {op} | {count} |")
+        if len(result.quant_friendly_ops) > 10:
+            lines.append(f"| ... | ({len(result.quant_friendly_ops) - 10} more) |")
+        lines.append("")
+
+    # Problem layers
+    if result.problem_layers:
+        lines.extend(["## Problem Layers", ""])
+        lines.append("| Layer Name | Op Type | Reason | Recommendation |")
+        lines.append("|------------|---------|--------|----------------|")
+        for layer in result.problem_layers[:20]:
+            lines.append(
+                f"| {layer['name'][:30]} | {layer['op_type']} | "
+                f"{layer['reason']} | {layer['recommendation']} |"
+            )
+        if len(result.problem_layers) > 20:
+            lines.append(f"| ... | | ({len(result.problem_layers) - 20} more) | |")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def run_inspect():
     """Main entry point for the model_inspect CLI."""
     # Load environment variables from .env file if present
@@ -2284,6 +2390,62 @@ def run_inspect():
                     f"{', '.join(report.dataset_info.class_names[:5])}"
                     f"{'...' if len(report.dataset_info.class_names) > 5 else ''}"
                 )
+
+    # Quantization linting if requested
+    quant_lint_result = None
+    if args.lint_quantization:
+        progress.step("Analyzing quantization readiness")
+        from .quantization_linter import QuantizationLinter
+
+        linter = QuantizationLinter(logger=logger)
+        # Need graph_info for linting
+        from .analyzer import ONNXGraphLoader
+
+        graph_loader = ONNXGraphLoader(logger=logger)
+        _, graph_info = graph_loader.load(model_path)
+        quant_lint_result = linter.lint(graph_info)
+
+        # Print summary to console
+        print("\n" + "=" * 60)
+        print("QUANTIZATION READINESS ANALYSIS")
+        print("=" * 60)
+        print(quant_lint_result.get_summary())
+        print()
+
+        if quant_lint_result.warnings:
+            print(f"Issues Found ({len(quant_lint_result.warnings)}):")
+            print("-" * 40)
+            for w in sorted(quant_lint_result.warnings, key=lambda x: x.severity.value):
+                severity_icon = {
+                    "critical": "[!!]",
+                    "high": "[!] ",
+                    "medium": "[~] ",
+                    "low": "[.] ",
+                    "info": "[i] ",
+                }.get(w.severity.value, "    ")
+                print(f"  {severity_icon} {w.message}")
+                if w.recommendation:
+                    print(f"       -> {w.recommendation}")
+            print()
+
+        # Get recommendations
+        recommendations = linter.get_recommendations(quant_lint_result)
+        if recommendations:
+            print("Recommendations:")
+            print("-" * 40)
+            for i, rec in enumerate(recommendations, 1):
+                print(f"  {i}. {rec}")
+            print()
+        print("=" * 60 + "\n")
+
+        # Write report to file if requested
+        if args.quant_report:
+            report_md = _generate_quant_report_markdown(quant_lint_result, model_path.name)
+            args.quant_report.write_text(report_md, encoding="utf-8")
+            logger.info(f"Quantization report written to {args.quant_report}")
+
+        # Store in report for JSON output
+        report.quantization_lint = quant_lint_result  # type: ignore
 
     # Generate LLM summaries if requested
     llm_summary = None

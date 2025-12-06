@@ -46,7 +46,7 @@
 | **OPTIMIZATION** ||||
 | Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
-| Epic 33: QAT Linters | Not Started | 4 | 0/22 | **P1** |
+| Epic 33: QAT Linters | In Progress | 4 | 6/22 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
@@ -1108,11 +1108,11 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 ### Story 33.1: Quantization-Unfriendly Op Detection
 *Detect ops that are commonly problematic in INT8.*
-- [ ] **Task 33.1.1**: Build list of quantization-unfriendly ops (custom ops, certain activations)
-- [ ] **Task 33.1.2**: Detect dynamic shapes in problematic positions
-- [ ] **Task 33.1.3**: Flag ops with no ONNX quantization support
-- [ ] **Task 33.1.4**: Identify ops that typically cause large accuracy drops (e.g., LayerNorm, Softmax)
-- [ ] **Task 33.1.5**: Generate severity-ranked warning list
+- [x] **Task 33.1.1**: Build list of quantization-unfriendly ops (custom ops, certain activations) — `_NO_INT8_KERNEL_OPS`, `_ACCURACY_SENSITIVE_OPS` in `quantization_linter.py`
+- [x] **Task 33.1.2**: Detect dynamic shapes in problematic positions — `_detect_dynamic_shapes()` method
+- [x] **Task 33.1.3**: Flag ops with no ONNX quantization support — `_NO_INT8_KERNEL_OPS` set
+- [x] **Task 33.1.4**: Identify ops that typically cause large accuracy drops (e.g., LayerNorm, Softmax) — `_ACCURACY_SENSITIVE_OPS` set
+- [x] **Task 33.1.5**: Generate severity-ranked warning list — `QuantWarning` with `Severity` enum
 
 ### Story 33.2: QAT Graph Validation
 *Validate QAT-annotated graphs for correctness.*
@@ -1128,7 +1128,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 33.3.2**: Calculate per-layer quantization risk scores
 - [ ] **Task 33.3.3**: Aggregate into overall readiness score (0-100)
 - [ ] **Task 33.3.4**: Generate "problem layers" list with reasons
-- [ ] **Task 33.3.5**: Add `--lint-quantization` CLI flag
+- [x] **Task 33.3.5**: Add `--lint-quantization` CLI flag — `--lint-quantization` and `--quant-report` in `cli.py`
 
 ### Story 33.4: Actionable Recommendations
 *Don't just warn - tell users what to do.*
