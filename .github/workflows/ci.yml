@@ -113,11 +113,11 @@ jobs:
       - name: Install package with format dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[full]"
-          # Install format-specific deps available on Linux
-          pip install tflite-runtime openvino huggingface_hub
-          # coremltools works on Linux for parsing (just can't run inference)
-          pip install coremltools || echo "coremltools install failed (optional)"
+          # Install base package + only format-specific deps (NOT full - too slow)
+          pip install -e ".[safetensors,coreml,openvino,tflite]"
+          pip install huggingface_hub
+          # tflite-runtime is lighter than full tensorflow
+          pip install tflite-runtime || echo "tflite-runtime install failed (optional)"
 
       - name: Run format reader tests
         run: |
