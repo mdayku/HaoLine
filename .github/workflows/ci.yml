@@ -212,7 +212,7 @@ jobs:
         run: |
           mkdir -p hf_space
 
-          # Create Dockerfile
+          # Create Dockerfile with cache-busting for pip install
           cat > hf_space/Dockerfile << 'EOF'
           FROM python:3.11-slim
 
@@ -223,22 +223,20 @@ jobs:
               git \
               && rm -rf /var/lib/apt/lists/*
 
-          RUN pip install --no-cache-dir "haoline[web,llm]>=0.2.9"
+          # Cache-bust: changes on each deploy to always get latest haoline
+          ARG CACHEBUST=1
+          RUN pip install --no-cache-dir --upgrade "haoline[web,llm]>=0.3.0"
 
-          COPY app.py .
+          COPY streamlit_app.py .
           COPY .streamlit/config.toml .streamlit/config.toml
 
           EXPOSE 7860
 
-          CMD ["python", "-m", "streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0", "--server.headless=true", "--server.enableXsrfProtection=false", "--server.enableCORS=false", "--server.maxUploadSize=500"]
+          CMD ["python", "-m", "streamlit", "run", "streamlit_app.py", "--server.port=7860", "--server.address=0.0.0.0", "--server.headless=true", "--server.enableXsrfProtection=false", "--server.enableCORS=false", "--server.maxUploadSize=500"]
           EOF
 
-          # Create app.py
-          cat > hf_space/app.py << 'EOF'
-          """HaoLine - Universal Model Inspector"""
-          from haoline.streamlit_app import main
-          main()
-          EOF
+          # Copy the actual streamlit_app.py from repo (not from package)
+          cp streamlit_app.py hf_space/streamlit_app.py
 
           # Create Streamlit config for dark theme
           mkdir -p hf_space/.streamlit
