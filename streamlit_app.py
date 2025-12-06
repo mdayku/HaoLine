@@ -1664,6 +1664,9 @@ def main():
                                     Severity,
                                 )
 
+                                # Get model name for reports
+                                model_name = uploaded_file.name.replace(".onnx", "")
+
                                 # Load graph and run linting
                                 graph_loader = ONNXGraphLoader()
                                 _, graph_info = graph_loader.load(tmp_path)
@@ -2119,20 +2122,20 @@ def main():
                                     with result_col1:
                                         st.metric(
                                             "Monthly Cost",
-                                            f"${cost_estimate.monthly_cost:.2f}",
+                                            f"${cost_estimate.cost_per_month_usd:.2f}",
                                         )
 
                                     with result_col2:
                                         st.metric(
                                             "Instances Needed",
-                                            str(cost_estimate.instances_needed),
+                                            str(cost_estimate.num_instances),
                                         )
 
                                     with result_col3:
-                                        if cost_estimate.recommended_hardware:
+                                        if cost_estimate.hardware_tier:
                                             st.metric(
                                                 "Recommended",
-                                                cost_estimate.recommended_hardware.name,
+                                                cost_estimate.hardware_tier.name,
                                             )
 
                                     if cost_estimate.warnings:
