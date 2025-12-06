@@ -46,7 +46,7 @@
 | **OPTIMIZATION** ||||
 | Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
-| Epic 33: QAT Linters | In Progress | 5 | 20/34 | **P1** |
+| Epic 33: QAT Linters | In Progress | 5 | 20/41 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
@@ -1131,13 +1131,26 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [x] **Task 33.3.5**: Add `--lint-quantization` CLI flag — `--lint-quantization` and `--quant-report` in `cli.py`
 
 ### Story 33.4: Actionable Recommendations
-*Don't just warn - tell users what to do.*
+*Don't just warn - tell users what to do. Use LLM for intelligent, context-aware guidance.*
+
+**Static Recommendations (rule-based):**
 - [ ] **Task 33.4.1**: Recommend keeping sensitive layers at FP16 (classifier, final conv)
 - [ ] **Task 33.4.2**: Suggest fake-quant insertion points for QAT
 - [ ] **Task 33.4.3**: Recommend op substitutions (e.g., LayerNorm → RMSNorm for INT8)
 - [ ] **Task 33.4.4**: Suggest per-channel vs per-tensor for specific layers
-- [ ] **Task 33.4.5**: Generate "QAT Readiness Report" (Markdown/HTML)
-- [ ] **Task 33.4.6**: Integrate recommendations into compare mode (FP32 vs INT8)
+
+**LLM-Powered Recommendations:**
+- [ ] **Task 33.4.5**: Create `QuantizationAdvisor` class that uses LLM for contextual advice
+- [ ] **Task 33.4.6**: Generate architecture-specific quantization strategy (CNN vs Transformer vs Hybrid)
+- [ ] **Task 33.4.7**: Provide deployment-target-aware recommendations (TensorRT vs ONNX Runtime vs TFLite)
+- [ ] **Task 33.4.8**: Generate step-by-step QAT workflow based on model structure
+- [ ] **Task 33.4.9**: Estimate expected accuracy loss and suggest mitigation strategies
+
+**Reports & Integration:**
+- [ ] **Task 33.4.10**: Generate "QAT Readiness Report" (Markdown/HTML) with LLM summary
+- [ ] **Task 33.4.11**: Integrate recommendations into compare mode (FP32 vs INT8)
+- [ ] **Task 33.4.12**: Add LLM recommendations to Streamlit UI (optional, uses API key)
+- [ ] **Task 33.4.13**: Add `--quant-llm-advice` CLI flag for LLM-powered guidance
 
 ### Story 33.5: CLI & Streamlit Integration
 *Surface quantization linting features in both interfaces with parity.*
