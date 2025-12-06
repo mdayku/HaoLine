@@ -32,7 +32,7 @@
 | Epic 18: Universal IR | **COMPLETE** | 6 | 25/25 | Done |
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
-| Epic 21: TFLite | In Progress | 3 | 3/18 | P2 (tflite2onnx now supported) |
+| Epic 21: TFLite | In Progress | 3 | 5/18 | P2 (tflite2onnx + onnx2tf) |
 | Epic 22: TensorRT Engine Introspection | **COMPLETE** | 8 | 50/50 | Done |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
@@ -213,10 +213,10 @@
 
 ### Story 21.3: TFLite Writer
 - [ ] **Task 21.3.1**: Implement TFLiteAdapter.write() via tf.lite.TFLiteConverter
-- [ ] **Task 21.3.2**: Support ONNX → TFLite conversion (via TF intermediary)
+- [x] **Task 21.3.2**: Support ONNX → TFLite conversion (via TF intermediary) ✅ **COMPLETE** (onnx2tf in Epic 42)
 - [ ] **Task 21.3.3**: Add quantization options (dynamic, full int8)
 - [ ] **Task 21.3.4**: Add representative dataset hook for calibration
-- [ ] **Task 21.3.5**: Add `--convert-to tflite` CLI flag
+- [x] **Task 21.3.5**: Add `--convert-to tflite` CLI flag ✅ **COMPLETE** (Epic 42)
 
 ---
 
