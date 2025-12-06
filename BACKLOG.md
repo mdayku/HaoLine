@@ -31,11 +31,11 @@
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | **COMPLETE** | 6 | 25/25 | Done |
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
-| Epic 20: CoreML | In Progress | 2 | 7/12 | P2 |
-| Epic 21: TFLite | In Progress | 2 | 2/12 | P2 (needs pure Python parser) |
+| Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
+| Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
 | Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | **P2** |
-| Epic 23: OpenVINO | In Progress | 2 | 4/10 | P3 |
-| Epic 24: GGUF | In Progress | 2 | 5/8 | P3 |
+| Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
+| Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
@@ -161,12 +161,22 @@
 - [x] **Task 20.1.6**: Test with real CoreML model (in test_format_readers.py, CI on Linux)
 - [x] **Task 20.1.7**: Write unit tests for CoreMLReader (6 tests in test_formats.py)
 
-### Story 20.2: CoreML Writer
-- [ ] **Task 20.2.1**: Implement CoreMLAdapter.write() via coremltools conversion
-- [ ] **Task 20.2.2**: Support ONNX → CoreML conversion path
-- [ ] **Task 20.2.3**: Support PyTorch → CoreML conversion path
-- [ ] **Task 20.2.4**: Add iOS/macOS deployment target options
-- [ ] **Task 20.2.5**: Add `--convert-to coreml` CLI flag
+### Story 20.2: CoreML → UniversalGraph Adapter
+*Enable interactive graph visualization and layer-by-layer analysis for CoreML models.*
+
+- [ ] **Task 20.2.1**: Implement `CoreMLAdapter.read()` - convert CoreML to UniversalGraph
+- [ ] **Task 20.2.2**: Map CoreML layer types to universal ops
+- [ ] **Task 20.2.3**: Extract layer shapes and connections from CoreML spec
+- [ ] **Task 20.2.4**: Register adapter in format_adapters.py
+- [ ] **Task 20.2.5**: Add CoreML to Streamlit file_uploader accepted types
+- [ ] **Task 20.2.6**: Test interactive graph generation with CoreML model
+
+### Story 20.3: CoreML Writer
+- [ ] **Task 20.3.1**: Implement CoreMLAdapter.write() via coremltools conversion
+- [ ] **Task 20.3.2**: Support ONNX → CoreML conversion path
+- [ ] **Task 20.3.3**: Support PyTorch → CoreML conversion path
+- [ ] **Task 20.3.4**: Add iOS/macOS deployment target options
+- [ ] **Task 20.3.5**: Add `--convert-to coreml` CLI flag
 
 ---
 
@@ -183,12 +193,22 @@
 - [ ] **Task 21.1.6**: Test with real TFLite model (Linux CI with tflite-runtime)
 - [ ] **Task 21.1.7**: Write unit tests for TFLiteReader
 
-### Story 21.2: TFLite Writer
-- [ ] **Task 21.2.1**: Implement TFLiteAdapter.write() via tf.lite.TFLiteConverter
-- [ ] **Task 21.2.2**: Support ONNX → TFLite conversion (via TF intermediary)
-- [ ] **Task 21.2.3**: Add quantization options (dynamic, full int8)
-- [ ] **Task 21.2.4**: Add representative dataset hook for calibration
-- [ ] **Task 21.2.5**: Add `--convert-to tflite` CLI flag
+### Story 21.2: TFLite → UniversalGraph Adapter
+*Enable interactive graph visualization and layer-by-layer analysis for TFLite models.*
+
+- [ ] **Task 21.2.1**: Implement `TFLiteAdapter.read()` - convert TFLite to UniversalGraph
+- [ ] **Task 21.2.2**: Map TFLite op codes to universal ops
+- [ ] **Task 21.2.3**: Extract tensor shapes and operator connections from FlatBuffer
+- [ ] **Task 21.2.4**: Register adapter in format_adapters.py
+- [ ] **Task 21.2.5**: Add TFLite to Streamlit file_uploader accepted types
+- [ ] **Task 21.2.6**: Test interactive graph generation with TFLite model
+
+### Story 21.3: TFLite Writer
+- [ ] **Task 21.3.1**: Implement TFLiteAdapter.write() via tf.lite.TFLiteConverter
+- [ ] **Task 21.3.2**: Support ONNX → TFLite conversion (via TF intermediary)
+- [ ] **Task 21.3.3**: Add quantization options (dynamic, full int8)
+- [ ] **Task 21.3.4**: Add representative dataset hook for calibration
+- [ ] **Task 21.3.5**: Add `--convert-to tflite` CLI flag
 
 ---
 
@@ -259,13 +279,23 @@
 - [x] **Task 23.1.3**: Map OpenVINO ops to layer_type_counts
 - [x] **Task 23.1.4**: Extract precision breakdown
 - [ ] **Task 23.1.5**: Test with real OpenVINO model (.xml + .bin)
-- [ ] **Task 23.1.6**: Write unit tests for OpenVINOReader
+- [x] **Task 23.1.6**: Write unit tests for OpenVINOReader (5 tests in test_formats.py)
 
-### Story 23.2: OpenVINO Writer
-- [ ] **Task 23.2.1**: Implement OpenVINOAdapter.write()
-- [ ] **Task 23.2.2**: Support ONNX → OpenVINO conversion
-- [ ] **Task 23.2.3**: Add precision options
-- [ ] **Task 23.2.4**: Add `--convert-to openvino` CLI flag
+### Story 23.2: OpenVINO → UniversalGraph Adapter
+*Enable interactive graph visualization and layer-by-layer analysis for OpenVINO models.*
+
+- [ ] **Task 23.2.1**: Implement `OpenVINOAdapter.read()` - convert OpenVINO IR to UniversalGraph
+- [ ] **Task 23.2.2**: Map OpenVINO op types to universal ops
+- [ ] **Task 23.2.3**: Extract layer shapes and connections from IR
+- [ ] **Task 23.2.4**: Register adapter in format_adapters.py
+- [ ] **Task 23.2.5**: Add OpenVINO (.xml) to Streamlit file_uploader accepted types
+- [ ] **Task 23.2.6**: Test interactive graph generation with OpenVINO model
+
+### Story 23.3: OpenVINO Writer
+- [ ] **Task 23.3.1**: Implement OpenVINOAdapter.write()
+- [ ] **Task 23.3.2**: Support ONNX → OpenVINO conversion
+- [ ] **Task 23.3.3**: Add precision options
+- [ ] **Task 23.3.4**: Add `--convert-to openvino` CLI flag
 
 ---
 
@@ -273,17 +303,22 @@
 
 *llama.cpp format for running LLMs locally.*
 
+**Note:** GGUF is a weights-only format with architecture metadata. It does NOT contain a computational graph, so interactive graph visualization is not possible. However, we can display quantization breakdown, VRAM estimates, and architecture details.
+
 ### Story 24.1: GGUF Reader - **COMPLETE**
 - [x] **Task 24.1.1**: Implement GGUF header parser (pure Python, no deps)
 - [x] **Task 24.1.2**: Extract model metadata (arch, context_length, etc.)
 - [x] **Task 24.1.3**: Extract quantization type per tensor
 - [x] **Task 24.1.4**: Estimate memory footprint (VRAM estimation)
 - [x] **Task 24.1.5**: Test with real GGUF model (TinyLlama-1.1B Q2_K, 1.1B params, 458MB)
-- [ ] **Task 24.1.6**: Write unit tests for GGUFReader
+- [x] **Task 24.1.6**: Write unit tests for GGUFReader (8 tests in test_formats.py)
 
-### Story 24.2: GGUF Analysis Features
-- [ ] **Task 24.2.1**: Show quantization breakdown (data available, needs UI)
-- [ ] **Task 24.2.2**: Estimate VRAM for different context lengths (method exists)
+### Story 24.2: GGUF Streamlit UI & Analysis Features
+- [ ] **Task 24.2.1**: Add `.gguf` to Streamlit file_uploader accepted types
+- [ ] **Task 24.2.2**: Display quantization breakdown chart (by tensor count and size)
+- [ ] **Task 24.2.3**: Display architecture details (layers, heads, context length, etc.)
+- [ ] **Task 24.2.4**: Add VRAM calculator with context length slider
+- [ ] **Task 24.2.5**: Show tensor-level quantization table
 
 ---
 

@@ -406,20 +406,20 @@ Not all formats support all features. Here's what you get with each:
 | **Parameter Count** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Memory Estimate** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **FLOPs Estimate** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Interactive Graph** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Layer-by-Layer Table** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Interactive Graph** | ✅ | ✅ | 🔜 | 🔜 | 🔜 | ❌ | ❌ |
+| **Layer-by-Layer Table** | ✅ | ✅ | 🔜 | 🔜 | 🔜 | ❌ | ❌ |
 | **Op Type Breakdown** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **Quantization Analysis** | ✅ | ✅ | ✅ | ❓ | ✅ | ✅ | ❌ |
 | **Runtime Benchmarking** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-**Legend:** ✅ = Supported | ❌ = Not available | ❓ = Partial
+**Legend:** ✅ = Supported | 🔜 = Planned | ❌ = Not available | ❓ = Partial
 
 **Why the differences?**
 
-- **ONNX/PyTorch**: Full graph structure available → all features work
-- **TFLite/CoreML/OpenVINO**: Graph structure available, but FLOPs formulas not yet implemented for their op types
-- **GGUF**: Architecture metadata (layers, heads, context length) but no computational graph
-- **SafeTensors**: Weights only - no graph, no architecture. Use `--from-huggingface` to load the full model
+- **ONNX/PyTorch**: Full graph structure with UniversalGraph adapters → all features work
+- **TFLite/CoreML/OpenVINO**: Readers exist with op counts, but UniversalGraph adapters pending for interactive visualization
+- **GGUF**: LLM architecture metadata (layers, heads, context length, quantization) but no computational graph - weights only
+- **SafeTensors**: Weights only - tensor shapes and dtypes, no graph structure
 
 **Tip:** For full analysis of HuggingFace models stored as SafeTensors, load the complete model:
 ```bash
