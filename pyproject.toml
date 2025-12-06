@@ -80,8 +80,7 @@ pytorch = [
 tensorflow = [
     "tensorflow>=2.14.0",
     "tf2onnx>=1.16.0",
-    "tf_keras>=2.14.0",
-    # tensorflow is large (~500MB), only install if needed
+    # For TensorFlow/Keras -> ONNX conversion
 ]
 ultralytics = [
     "ultralytics>=8.0.0",
@@ -99,16 +98,11 @@ safetensors = [
 ]
 tflite = [
     "tflite-runtime>=2.14.0;platform_system!='Windows'",
-    # tflite-runtime not available on Windows, use tensorflow instead
+    # tflite-runtime not available on Windows
     "tflite2onnx>=0.4.0",
-    # For TFLite -> ONNX conversion
-    "onnx2tf>=1.17.0,<1.18.0",
-    # For ONNX -> TFLite conversion (pinned - 1.20+ has broken deps)
-    "tensorflow>=2.14.0",
-    "tf_keras>=2.14.0",
-    "onnx_graphsurgeon>=0.3.0",
-    "sng4onnx>=1.0.0",
-    # onnx2tf requires: tensorflow, tf_keras, onnx_graphsurgeon, sng4onnx
+    # For TFLite -> ONNX conversion (works!)
+    # Note: ONNX -> TFLite is UNAVAILABLE due to TF 2.16+ / Keras 3.x compat issues
+    # Both onnx2tf and onnx-tf are broken with modern TensorFlow
 ]
 coreml = [
     "coremltools>=7.0",

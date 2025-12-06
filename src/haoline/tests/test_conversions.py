@@ -1569,7 +1569,11 @@ class TestOnnxRoundTripValidation:
 
 
 def is_onnx2tf_available() -> bool:
-    """Check if onnx2tf is available for ONNX → TFLite conversion."""
+    """Check if onnx2tf is available for ONNX → TFLite conversion.
+
+    Note: onnx2tf and onnx-tf are both broken with TF 2.16+ / Keras 3.x.
+    This function will return False in most modern environments.
+    """
     try:
         import onnx2tf  # noqa: F401
 
@@ -1580,19 +1584,17 @@ def is_onnx2tf_available() -> bool:
 
 @pytest.mark.skipif(
     not is_tflite2onnx_available() or not is_onnx2tf_available(),
-    reason="tflite2onnx and onnx2tf required for round-trip",
+    reason="ONNX→TFLite unavailable (onnx2tf broken with TF 2.16+/Keras 3.x)",
 )
 class TestOnnxTfliteRoundTrip:
     """
     Task 42.5.2: Test ONNX → TFLite → ONNX round-trip conversion.
 
-    Validates that converting ONNX to TFLite and back preserves:
-    - Node/op counts (within tolerance due to op fusion/expansion)
-    - Parameter counts (exact for weights)
-    - Input/output shapes
+    STATUS: BLOCKED - Both onnx2tf and onnx-tf are broken with TF 2.16+ / Keras 3.x.
+    The ONNX→TFLite CLI feature has been disabled until upstream fixes this.
 
-    Note: onnx2tf has compatibility issues with TensorFlow 2.16+/Keras 3.x.
-    Tests may fail on certain environments - this is a known upstream issue.
+    These tests exist to validate the round-trip once the ecosystem stabilizes.
+    They currently skip with a clear message about the compatibility issue.
     """
 
     def test_simple_mlp_roundtrip(self) -> None:
