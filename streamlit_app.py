@@ -77,7 +77,6 @@ def add_to_history(name: str, report: Any, file_size: int):
 import streamlit.components.v1 as components
 
 from haoline import ModelInspector, __version__
-from haoline.analyzer import ONNXGraphLoader
 from haoline.edge_analysis import EdgeAnalyzer
 from haoline.hardware import (
     HARDWARE_PROFILES,
@@ -1548,11 +1547,11 @@ def main():
                     if include_quant_analysis:
                         with st.expander("INT8 Quantization Readiness", expanded=True):
                             try:
+                                from haoline.analyzer import ONNXGraphLoader
                                 from haoline.quantization_linter import (
                                     QuantizationLinter,
                                     Severity,
                                 )
-                                from haoline.analyzer import ONNXGraphLoader
 
                                 # Load graph and run linting
                                 graph_loader = ONNXGraphLoader()
@@ -1699,6 +1698,102 @@ def main():
                                     file_name=f"{model_name}_quant_report.md",
                                     mime="text/markdown",
                                 )
+
+                                # LLM-powered advice (Task 33.4.12)
+                                st.markdown("---")
+                                st.markdown("#### Quantization Recommendations")
+
+                                # Check for API key
+                                use_llm_for_quant = st.session_state.get(
+                                    "enable_llm", False
+                                ) and st.session_state.get("openai_api_key_value", "")
+
+                                try:
+                                    from haoline.quantization_advisor import (
+                                        advise_quantization,
+                                        generate_qat_readiness_report,
+                                    )
+
+                                    advice = advise_quantization(
+                                        quant_result,
+                                        graph_info,
+                                        api_key=st.session_state.get("openai_api_key_value", "")
+                                        if use_llm_for_quant
+                                        else None,
+                                        use_llm=use_llm_for_quant,
+                                    )
+
+                                    # Architecture badge
+                                    arch_colors = {
+                                        "cnn": "#22c55e",
+                                        "transformer": "#8b5cf6",
+                                        "rnn": "#f97316",
+                                        "hybrid": "#06b6d4",
+                                        "unknown": "#737373",
+                                    }
+                                    arch_color = arch_colors.get(
+                                        advice.architecture_type.value, "#737373"
+                                    )
+                                    st.markdown(
+                                        f"""
+                                        <div style="display: inline-block; padding: 0.25rem 0.75rem; 
+                                             background: {arch_color}22; border: 1px solid {arch_color};
+                                             border-radius: 999px; margin-bottom: 0.5rem;">
+                                            <span style="color: {arch_color}; font-weight: 600;">
+                                                {advice.architecture_type.value.upper()}
+                                            </span>
+                                        </div>
+                                        """,
+                                        unsafe_allow_html=True,
+                                    )
+
+                                    # Strategy
+                                    st.markdown(f"> {advice.strategy}")
+
+                                    # Expected accuracy impact
+                                    st.info(
+                                        f"Expected Accuracy Impact: {advice.expected_accuracy_impact}"
+                                    )
+
+                                    # Op Substitutions
+                                    if advice.op_substitutions:
+                                        st.markdown("**Recommended Op Substitutions:**")
+                                        for sub in advice.op_substitutions:
+                                            st.markdown(
+                                                f"- `{sub.original_op}` → `{sub.replacement_op}` "
+                                                f"({sub.accuracy_impact} accuracy impact)"
+                                            )
+
+                                    # QAT Workflow (collapsed)
+                                    with st.expander("QAT Workflow Steps"):
+                                        for i, step in enumerate(advice.qat_workflow, 1):
+                                            st.markdown(f"{i}. {step}")
+                                        st.markdown("")
+                                        st.markdown(
+                                            f"**Calibration Tips:** {advice.calibration_tips}"
+                                        )
+
+                                    # Runtime recommendations (collapsed)
+                                    with st.expander("Runtime-Specific Recommendations"):
+                                        for runtime, rec in advice.runtime_recommendations.items():
+                                            st.markdown(f"**{runtime.upper()}**")
+                                            st.markdown(rec)
+                                            st.markdown("")
+
+                                    # Download full QAT report
+                                    full_report = generate_qat_readiness_report(
+                                        quant_result, advice, model_name, format="markdown"
+                                    )
+                                    st.download_button(
+                                        "Download Full QAT Report",
+                                        data=full_report,
+                                        file_name=f"{model_name}_qat_readiness.md",
+                                        mime="text/markdown",
+                                        key="download_qat_report",
+                                    )
+
+                                except Exception as e:
+                                    st.warning(f"Could not generate recommendations: {e}")
 
                             except Exception as e:
                                 st.warning(f"Could not run quantization analysis: {e}")

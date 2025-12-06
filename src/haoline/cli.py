@@ -17,6 +17,7 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from .quantization_advisor import QuantizationAdvice
     from .quantization_linter import QuantizationLintResult
 
 from . import ModelInspector
@@ -513,6 +514,26 @@ Examples:
         default=None,
         metavar="PATH",
         help="Output path for quantization lint report (Markdown). Default: prints to console.",
+    )
+    quant_group.add_argument(
+        "--quant-report-html",
+        type=pathlib.Path,
+        default=None,
+        metavar="PATH",
+        help="Output path for quantization lint report (HTML format).",
+    )
+    quant_group.add_argument(
+        "--quant-llm-advice",
+        action="store_true",
+        help="Use LLM to generate intelligent quantization recommendations. "
+        "Requires OPENAI_API_KEY env var or --llm-model.",
+    )
+    quant_group.add_argument(
+        "--quant-advice-report",
+        type=pathlib.Path,
+        default=None,
+        metavar="PATH",
+        help="Output path for QAT readiness report with LLM advice (Markdown).",
     )
 
     # LLM options
@@ -2443,6 +2464,71 @@ def run_inspect():
             report_md = _generate_quant_report_markdown(quant_lint_result, model_path.name)
             args.quant_report.write_text(report_md, encoding="utf-8")
             logger.info(f"Quantization report written to {args.quant_report}")
+
+        # Generate HTML report if requested
+        if args.quant_report_html:
+            from .quantization_advisor import (
+                advise_quantization,
+                generate_qat_readiness_report,
+            )
+
+            advice = advise_quantization(quant_lint_result, graph_info, use_llm=False)
+            html_report = generate_qat_readiness_report(
+                quant_lint_result, advice, model_path.name, format="html"
+            )
+            args.quant_report_html.write_text(html_report, encoding="utf-8")
+            logger.info(f"HTML quantization report written to {args.quant_report_html}")
+
+        # Generate LLM-powered advice if requested
+        quant_advice: QuantizationAdvice | None = None
+        if args.quant_llm_advice:
+            from .quantization_advisor import QuantizationAdvisor, generate_qat_readiness_report
+
+            if not has_llm_api_key():
+                print("\n[WARNING] --quant-llm-advice requires OPENAI_API_KEY env var")
+                print("Using heuristic-based advice instead.\n")
+                advisor = QuantizationAdvisor(use_llm=False)
+            else:
+                progress.step("Generating LLM quantization advice")
+                advisor = QuantizationAdvisor(model=args.llm_model, use_llm=True)
+
+            quant_advice = advisor.advise(quant_lint_result, graph_info)
+
+            # Print advice to console
+            print("\n" + "=" * 60)
+            print("QUANTIZATION RECOMMENDATIONS")
+            print("=" * 60)
+            print(f"\nArchitecture: {quant_advice.architecture_type.value.upper()}")
+            print(f"Strategy: {quant_advice.strategy}")
+            print(f"\nExpected Accuracy Impact: {quant_advice.expected_accuracy_impact}")
+            print()
+
+            if quant_advice.sensitive_layers:
+                print("Sensitive Layers (keep at FP16):")
+                for layer in quant_advice.sensitive_layers[:5]:
+                    print(f"  - {layer}")
+            print()
+
+            if quant_advice.op_substitutions:
+                print("Recommended Op Substitutions:")
+                for sub in quant_advice.op_substitutions:
+                    print(f"  - {sub.original_op} -> {sub.replacement_op}: {sub.reason}")
+            print()
+
+            print("QAT Workflow:")
+            for i, step in enumerate(quant_advice.qat_workflow[:4], 1):
+                print(f"  {i}. {step}")
+            if len(quant_advice.qat_workflow) > 4:
+                print(f"  ... ({len(quant_advice.qat_workflow) - 4} more steps)")
+            print("=" * 60 + "\n")
+
+            # Write QAT readiness report if requested
+            if args.quant_advice_report:
+                advice_report = generate_qat_readiness_report(
+                    quant_lint_result, quant_advice, model_path.name, format="markdown"
+                )
+                args.quant_advice_report.write_text(advice_report, encoding="utf-8")
+                logger.info(f"QAT readiness report written to {args.quant_advice_report}")
 
         # Store in report for JSON output
         report.quantization_lint = quant_lint_result  # type: ignore

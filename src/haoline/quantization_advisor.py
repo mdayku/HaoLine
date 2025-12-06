@@ -66,6 +66,38 @@ class DeploymentRuntime(Enum):
 
 
 @dataclass
+class FakeQuantInsertionPoint:
+    """Recommended fake-quantization insertion point for QAT."""
+
+    node_name: str
+    op_type: str
+    position: str  # "before_input", "after_output", "weights"
+    reason: str
+    priority: str  # "required", "recommended", "optional"
+
+
+@dataclass
+class OpSubstitution:
+    """Recommended operator substitution for better INT8 performance."""
+
+    original_op: str
+    replacement_op: str
+    affected_layers: list[str]
+    reason: str
+    accuracy_impact: str  # "none", "minimal", "moderate"
+
+
+@dataclass
+class QuantGranularityRec:
+    """Per-channel vs per-tensor quantization recommendation."""
+
+    layer_name: str
+    op_type: str
+    recommendation: str  # "per_channel", "per_tensor"
+    reason: str
+
+
+@dataclass
 class QuantizationAdvice:
     """Container for LLM-generated quantization recommendations."""
 
@@ -89,11 +121,25 @@ class QuantizationAdvice:
     expected_accuracy_impact: str  # e.g., "Low (<1% degradation)"
     mitigation_strategies: list[str]  # Ways to preserve accuracy
 
+    # NEW: Static recommendations (Tasks 33.4.2-4)
+    fake_quant_insertions: list[FakeQuantInsertionPoint] = None  # type: ignore
+    op_substitutions: list[OpSubstitution] = None  # type: ignore
+    granularity_recommendations: list[QuantGranularityRec] = None  # type: ignore
+
     # Metadata
     model_used: str = ""
     tokens_used: int = 0
     success: bool = True
     error_message: str | None = None
+
+    def __post_init__(self) -> None:
+        """Initialize mutable defaults."""
+        if self.fake_quant_insertions is None:
+            self.fake_quant_insertions = []
+        if self.op_substitutions is None:
+            self.op_substitutions = []
+        if self.granularity_recommendations is None:
+            self.granularity_recommendations = []
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -107,6 +153,35 @@ class QuantizationAdvice:
             "calibration_tips": self.calibration_tips,
             "runtime_recommendations": self.runtime_recommendations,
             "expected_accuracy_impact": self.expected_accuracy_impact,
+            "fake_quant_insertions": [
+                {
+                    "node_name": fq.node_name,
+                    "op_type": fq.op_type,
+                    "position": fq.position,
+                    "reason": fq.reason,
+                    "priority": fq.priority,
+                }
+                for fq in self.fake_quant_insertions
+            ],
+            "op_substitutions": [
+                {
+                    "original_op": sub.original_op,
+                    "replacement_op": sub.replacement_op,
+                    "affected_layers": sub.affected_layers,
+                    "reason": sub.reason,
+                    "accuracy_impact": sub.accuracy_impact,
+                }
+                for sub in self.op_substitutions
+            ],
+            "granularity_recommendations": [
+                {
+                    "layer_name": gr.layer_name,
+                    "op_type": gr.op_type,
+                    "recommendation": gr.recommendation,
+                    "reason": gr.reason,
+                }
+                for gr in self.granularity_recommendations
+            ],
             "mitigation_strategies": self.mitigation_strategies,
             "model_used": self.model_used,
             "tokens_used": self.tokens_used,
@@ -246,6 +321,151 @@ def _get_op_counts(lint_result: QuantizationLintResult) -> dict[str, int]:
     return op_counts
 
 
+# =============================================================================
+# STATIC RECOMMENDATION GENERATORS (Tasks 33.4.2-4)
+# =============================================================================
+
+# Ops that benefit from fake-quant nodes for QAT
+_QUANT_TARGET_OPS = {"Conv", "MatMul", "Gemm", "ConvTranspose"}
+
+# Ops with known INT8-friendly alternatives
+_OP_SUBSTITUTIONS = {
+    "LayerNormalization": ("RMSNorm", "RMSNorm has simpler computation, better INT8 perf"),
+    "Softmax": ("ScaledSoftmax", "Pre-scaled softmax avoids large dynamic range"),
+    "GELU": ("GELUApprox", "Approximate GELU is more quantization-friendly"),
+    "Mish": ("ReLU", "ReLU quantizes perfectly; Mish has numerical sensitivity"),
+    "SiLU": ("ReLU", "ReLU quantizes perfectly; SiLU has numerical sensitivity"),
+    "HardSwish": ("ReLU6", "ReLU6 is bounded and quantization-friendly"),
+}
+
+# Ops that benefit from per-channel quantization
+_PER_CHANNEL_OPS = {"Conv", "ConvTranspose", "Gemm", "MatMul"}
+
+
+def _generate_fake_quant_insertions(
+    graph_info: GraphInfo,
+    lint_result: QuantizationLintResult,
+) -> list[FakeQuantInsertionPoint]:
+    """Identify where fake-quant nodes should be inserted for QAT (Task 33.4.2)."""
+    insertions = []
+
+    for node in graph_info.nodes:
+        if node.op_type in _QUANT_TARGET_OPS:
+            # Weight quantization (required for all quant-target ops)
+            insertions.append(
+                FakeQuantInsertionPoint(
+                    node_name=node.name,
+                    op_type=node.op_type,
+                    position="weights",
+                    reason=f"{node.op_type} weights should be quantized for INT8",
+                    priority="required",
+                )
+            )
+
+            # Input activation quantization
+            insertions.append(
+                FakeQuantInsertionPoint(
+                    node_name=node.name,
+                    op_type=node.op_type,
+                    position="before_input",
+                    reason="Input activations need fake-quant for proper range learning",
+                    priority="required",
+                )
+            )
+
+        # Output quantization for accuracy-sensitive ops
+        if node.op_type in lint_result.accuracy_sensitive_ops:
+            insertions.append(
+                FakeQuantInsertionPoint(
+                    node_name=node.name,
+                    op_type=node.op_type,
+                    position="after_output",
+                    reason="Accuracy-sensitive op benefits from output fake-quant",
+                    priority="recommended",
+                )
+            )
+
+    return insertions
+
+
+def _generate_op_substitutions(
+    graph_info: GraphInfo,
+) -> list[OpSubstitution]:
+    """Recommend operator substitutions for better INT8 performance (Task 33.4.3)."""
+    substitutions = []
+    op_to_layers: dict[str, list[str]] = {}
+
+    # Group layers by op type
+    for node in graph_info.nodes:
+        if node.op_type in _OP_SUBSTITUTIONS:
+            if node.op_type not in op_to_layers:
+                op_to_layers[node.op_type] = []
+            op_to_layers[node.op_type].append(node.name)
+
+    # Generate substitution recommendations
+    for op_type, layers in op_to_layers.items():
+        replacement, reason = _OP_SUBSTITUTIONS[op_type]
+        accuracy_impact = "minimal" if op_type in ("GELU", "Mish", "SiLU") else "moderate"
+
+        substitutions.append(
+            OpSubstitution(
+                original_op=op_type,
+                replacement_op=replacement,
+                affected_layers=layers,
+                reason=reason,
+                accuracy_impact=accuracy_impact,
+            )
+        )
+
+    return substitutions
+
+
+def _generate_granularity_recommendations(
+    graph_info: GraphInfo,
+    arch_type: ArchitectureType,
+) -> list[QuantGranularityRec]:
+    """Recommend per-channel vs per-tensor quantization (Task 33.4.4)."""
+    recommendations = []
+
+    for node in graph_info.nodes:
+        if node.op_type not in _PER_CHANNEL_OPS:
+            continue
+
+        # Default to per-channel for weights
+        if node.op_type in ("Conv", "ConvTranspose"):
+            recommendations.append(
+                QuantGranularityRec(
+                    layer_name=node.name,
+                    op_type=node.op_type,
+                    recommendation="per_channel",
+                    reason="Conv weights benefit from per-channel (per-output-channel) quantization",
+                )
+            )
+        elif node.op_type in ("Gemm", "MatMul"):
+            # Transformers benefit from per-channel; CNNs can use per-tensor for FC
+            if arch_type == ArchitectureType.TRANSFORMER:
+                recommendations.append(
+                    QuantGranularityRec(
+                        layer_name=node.name,
+                        op_type=node.op_type,
+                        recommendation="per_channel",
+                        reason="Transformer MatMul weights need per-channel for accuracy",
+                    )
+                )
+            else:
+                # Check if this is likely a classifier (late in graph)
+                recommendations.append(
+                    QuantGranularityRec(
+                        layer_name=node.name,
+                        op_type=node.op_type,
+                        recommendation="per_channel",
+                        reason="Per-channel recommended for weight quantization",
+                    )
+                )
+
+    return recommendations
+
+
 def _generate_fallback_advice(
     lint_result: QuantizationLintResult,
     graph_info: GraphInfo,
@@ -355,6 +575,11 @@ def _generate_fallback_advice(
     if critical_count > 0:
         mitigations.insert(0, "Keep critical ops at FP16 (see sensitive_layers)")
 
+    # Generate static recommendations (Tasks 33.4.2-4)
+    fake_quant_insertions = _generate_fake_quant_insertions(graph_info, lint_result)
+    op_substitutions = _generate_op_substitutions(graph_info)
+    granularity_recs = _generate_granularity_recommendations(graph_info, arch_type)
+
     return QuantizationAdvice(
         architecture_type=arch_type,
         architecture_summary=f"Detected {arch_type.value} architecture with {len(graph_info.nodes)} nodes",
@@ -366,6 +591,9 @@ def _generate_fallback_advice(
         runtime_recommendations=runtime_recs,
         expected_accuracy_impact=accuracy_impact,
         mitigation_strategies=mitigations,
+        fake_quant_insertions=fake_quant_insertions,
+        op_substitutions=op_substitutions,
+        granularity_recommendations=granularity_recs,
         success=True,
     )
 
@@ -505,6 +733,11 @@ class QuantizationAdvisor:
         total_tokens += runtime_response.get("tokens", 0)
         runtime_data = self._parse_json_response(runtime_response.get("content", "{}"))
 
+        # Generate static recommendations (always available, even with LLM)
+        fake_quant_insertions = _generate_fake_quant_insertions(graph_info, lint_result)
+        op_substitutions = _generate_op_substitutions(graph_info)
+        granularity_recs = _generate_granularity_recommendations(graph_info, arch_type)
+
         return QuantizationAdvice(
             architecture_type=arch_type,
             architecture_summary=arch_summary,
@@ -516,6 +749,9 @@ class QuantizationAdvisor:
             runtime_recommendations=runtime_data,
             expected_accuracy_impact=strategy_data.get("expected_accuracy_impact", "Unknown"),
             mitigation_strategies=strategy_data.get("mitigation_strategies", []),
+            fake_quant_insertions=fake_quant_insertions,
+            op_substitutions=op_substitutions,
+            granularity_recommendations=granularity_recs,
             model_used=self.model,
             tokens_used=total_tokens,
             success=True,
@@ -577,3 +813,320 @@ def advise_quantization(
     """
     advisor = QuantizationAdvisor(api_key=api_key, use_llm=use_llm)
     return advisor.advise(lint_result, graph_info)
+
+
+# =============================================================================
+# REPORT GENERATION (Task 33.4.10)
+# =============================================================================
+
+
+def generate_qat_readiness_report(
+    lint_result: QuantizationLintResult,
+    advice: QuantizationAdvice,
+    model_name: str = "Model",
+    format: str = "markdown",
+) -> str:
+    """
+    Generate a comprehensive QAT Readiness Report.
+
+    Args:
+        lint_result: Results from QuantizationLinter
+        advice: Results from QuantizationAdvisor
+        model_name: Name of the model for the report title
+        format: "markdown" or "html"
+
+    Returns:
+        Formatted report string
+    """
+    if format == "html":
+        return _generate_html_report(lint_result, advice, model_name)
+    return _generate_markdown_report(lint_result, advice, model_name)
+
+
+def _generate_markdown_report(
+    lint_result: QuantizationLintResult,
+    advice: QuantizationAdvice,
+    model_name: str,
+) -> str:
+    """Generate Markdown QAT readiness report."""
+    # Grade based on score
+    score = lint_result.readiness_score
+    if score >= 90:
+        grade, grade_desc = "A", "Excellent - PTQ should work well"
+    elif score >= 80:
+        grade, grade_desc = "B", "Good - PTQ likely to work with minor issues"
+    elif score >= 70:
+        grade, grade_desc = "C", "Fair - Consider QAT for best results"
+    elif score >= 60:
+        grade, grade_desc = "D", "Poor - QAT recommended"
+    else:
+        grade, grade_desc = "F", "Critical issues - Significant work needed"
+
+    lines = [
+        f"# QAT Readiness Report: {model_name}",
+        "",
+        "## Executive Summary",
+        "",
+        f"**Readiness Score:** {score}/100 (Grade: {grade})",
+        f"**Assessment:** {grade_desc}",
+        f"**Architecture:** {advice.architecture_type.value.upper()}",
+        "",
+        f"> {advice.strategy}",
+        "",
+        "---",
+        "",
+        "## Quantization Analysis",
+        "",
+        "### Overview",
+        "",
+        "| Metric | Value |",
+        "|--------|-------|",
+        f"| Total Ops | {lint_result.total_ops} |",
+        f"| Quant-Friendly | {lint_result.quant_friendly_pct:.1f}% |",
+        f"| Critical Issues | {sum(1 for w in lint_result.warnings if w.severity.value == 'critical')} |",
+        f"| High-Risk Layers | {len([lr for lr in lint_result.layer_risk_scores if lr.risk_level == 'high'])} |",
+        "",
+    ]
+
+    # High-risk layers
+    high_risk = [
+        lr for lr in lint_result.layer_risk_scores if lr.risk_level in ("critical", "high")
+    ]
+    if high_risk:
+        lines.extend(
+            [
+                "### High-Risk Layers",
+                "",
+                "| Layer | Op Type | Risk Score | Reason |",
+                "|-------|---------|------------|--------|",
+            ]
+        )
+        for lr in high_risk[:10]:
+            lines.append(f"| {lr.name} | {lr.op_type} | {lr.risk_score}/100 | {lr.reason} |")
+        lines.append("")
+
+    # Op substitutions
+    if advice.op_substitutions:
+        lines.extend(
+            [
+                "### Recommended Op Substitutions",
+                "",
+                "| Original | Replacement | Impact | Reason |",
+                "|----------|-------------|--------|--------|",
+            ]
+        )
+        for sub in advice.op_substitutions:
+            lines.append(
+                f"| {sub.original_op} | {sub.replacement_op} | {sub.accuracy_impact} | {sub.reason} |"
+            )
+        lines.append("")
+
+    # Granularity recommendations
+    if advice.granularity_recommendations:
+        lines.extend(
+            [
+                "### Quantization Granularity",
+                "",
+                "| Layer | Recommendation | Reason |",
+                "|-------|----------------|--------|",
+            ]
+        )
+        for gr in advice.granularity_recommendations[:10]:
+            lines.append(f"| {gr.layer_name} | {gr.recommendation} | {gr.reason[:50]}... |")
+        lines.append("")
+
+    # QAT workflow
+    lines.extend(
+        [
+            "---",
+            "",
+            "## QAT Workflow",
+            "",
+        ]
+    )
+    for i, step in enumerate(advice.qat_workflow, 1):
+        lines.append(f"{i}. {step}")
+    lines.append("")
+
+    # Calibration tips
+    lines.extend(
+        [
+            "### Calibration Guidelines",
+            "",
+            f"> {advice.calibration_tips}",
+            "",
+        ]
+    )
+
+    # Runtime recommendations
+    lines.extend(
+        [
+            "---",
+            "",
+            "## Runtime-Specific Recommendations",
+            "",
+        ]
+    )
+    for runtime, rec in advice.runtime_recommendations.items():
+        lines.extend(
+            [
+                f"### {runtime.upper()}",
+                "",
+                rec,
+                "",
+            ]
+        )
+
+    # Fake-quant insertions summary
+    if advice.fake_quant_insertions:
+        required = [fq for fq in advice.fake_quant_insertions if fq.priority == "required"]
+        recommended = [fq for fq in advice.fake_quant_insertions if fq.priority == "recommended"]
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Fake-Quantization Insertion Points",
+                "",
+                f"**Required:** {len(required)} insertion points",
+                f"**Recommended:** {len(recommended)} insertion points",
+                "",
+            ]
+        )
+
+    # Accuracy impact
+    lines.extend(
+        [
+            "---",
+            "",
+            "## Expected Accuracy Impact",
+            "",
+            f"**Estimate:** {advice.expected_accuracy_impact}",
+            "",
+            "### Mitigation Strategies",
+            "",
+        ]
+    )
+    for strategy in advice.mitigation_strategies:
+        lines.append(f"- {strategy}")
+    lines.append("")
+
+    # Footer
+    lines.extend(
+        [
+            "---",
+            "",
+            "*Report generated by HaoLine Quantization Advisor*",
+        ]
+    )
+    if advice.model_used:
+        lines.append(f"*LLM: {advice.model_used} ({advice.tokens_used} tokens)*")
+
+    return "\n".join(lines)
+
+
+def _generate_html_report(
+    lint_result: QuantizationLintResult,
+    advice: QuantizationAdvice,
+    model_name: str,
+) -> str:
+    """Generate HTML QAT readiness report."""
+    # Convert markdown to basic HTML
+    md_report = _generate_markdown_report(lint_result, advice, model_name)
+
+    # Simple markdown-to-HTML conversion
+    html_lines = [
+        "<!DOCTYPE html>",
+        "<html>",
+        "<head>",
+        f"<title>QAT Readiness Report: {model_name}</title>",
+        "<style>",
+        "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; ",
+        "       max-width: 900px; margin: 0 auto; padding: 20px; line-height: 1.6; }",
+        "h1 { color: #1a1a2e; border-bottom: 2px solid #16213e; padding-bottom: 10px; }",
+        "h2 { color: #16213e; margin-top: 30px; }",
+        "h3 { color: #0f3460; }",
+        "table { border-collapse: collapse; width: 100%; margin: 15px 0; }",
+        "th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }",
+        "th { background: #16213e; color: white; }",
+        "tr:nth-child(even) { background: #f9f9f9; }",
+        "blockquote { background: #e8f4f8; border-left: 4px solid #0f3460; ",
+        "             padding: 15px; margin: 15px 0; }",
+        "hr { border: none; border-top: 1px solid #ddd; margin: 30px 0; }",
+        ".grade-A { color: #22c55e; } .grade-B { color: #84cc16; }",
+        ".grade-C { color: #eab308; } .grade-D { color: #f97316; }",
+        ".grade-F { color: #ef4444; }",
+        "code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }",
+        "</style>",
+        "</head>",
+        "<body>",
+    ]
+
+    # Convert markdown to HTML (simple conversion)
+    in_table = False
+    in_list = False
+
+    for line in md_report.split("\n"):
+        # Headers
+        if line.startswith("# "):
+            html_lines.append(f"<h1>{line[2:]}</h1>")
+        elif line.startswith("## "):
+            html_lines.append(f"<h2>{line[3:]}</h2>")
+        elif line.startswith("### "):
+            html_lines.append(f"<h3>{line[4:]}</h3>")
+        # Horizontal rule
+        elif line == "---":
+            html_lines.append("<hr>")
+        # Blockquote
+        elif line.startswith("> "):
+            html_lines.append(f"<blockquote>{line[2:]}</blockquote>")
+        # Table
+        elif line.startswith("|"):
+            if not in_table:
+                html_lines.append("<table>")
+                in_table = True
+            cells = [c.strip() for c in line.split("|")[1:-1]]
+            if all(c.startswith("-") for c in cells):
+                continue  # Skip separator row
+            tag = "th" if not any("<tr>" in line_item for line_item in html_lines[-5:]) else "td"
+            row = "".join(f"<{tag}>{c}</{tag}>" for c in cells)
+            html_lines.append(f"<tr>{row}</tr>")
+        elif in_table and not line.startswith("|"):
+            html_lines.append("</table>")
+            in_table = False
+        # List
+        elif line.startswith("- "):
+            if not in_list:
+                html_lines.append("<ul>")
+                in_list = True
+            html_lines.append(f"<li>{line[2:]}</li>")
+        elif line.startswith(("1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.")):
+            if not in_list:
+                html_lines.append("<ol>")
+                in_list = True
+            html_lines.append(f"<li>{line[3:]}</li>")
+        elif in_list and not line.startswith(("-", "1.", "2.", "3.")):
+            html_lines.append("</ul>" if "<ul>" in "".join(html_lines[-10:]) else "</ol>")
+            in_list = False
+        # Bold
+        elif "**" in line:
+            line = line.replace("**", "<strong>", 1).replace("**", "</strong>", 1)
+            html_lines.append(f"<p>{line}</p>")
+        # Italic (report footer)
+        elif line.startswith("*") and line.endswith("*"):
+            html_lines.append(f"<p><em>{line[1:-1]}</em></p>")
+        # Empty line
+        elif line == "":
+            pass
+        # Plain text
+        else:
+            html_lines.append(f"<p>{line}</p>")
+
+    # Close any open tags
+    if in_table:
+        html_lines.append("</table>")
+    if in_list:
+        html_lines.append("</ul>")
+
+    html_lines.extend(["</body>", "</html>"])
+
+    return "\n".join(html_lines)

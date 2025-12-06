@@ -92,9 +92,13 @@ from .pdf_generator import is_available as is_pdf_available
 from .quantization_advisor import (
     ArchitectureType,
     DeploymentRuntime,
+    FakeQuantInsertionPoint,
+    OpSubstitution,
+    QuantGranularityRec,
     QuantizationAdvice,
     QuantizationAdvisor,
     advise_quantization,
+    generate_qat_readiness_report,
 )
 from .quantization_linter import (
     LayerRiskScore,
@@ -218,6 +222,9 @@ __all__ = [
     "QuantizationAdvice",
     "ArchitectureType",
     "DeploymentRuntime",
+    "FakeQuantInsertionPoint",
+    "OpSubstitution",
+    "QuantGranularityRec",
     "advise_quantization",
     "SystemRequirements",
     "TradeoffPoint",
