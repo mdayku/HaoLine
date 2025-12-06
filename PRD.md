@@ -1875,6 +1875,7 @@ This creates a complete **optimize → analyze → deploy** workflow.
 
 | Date | Change | 
 |------|--------|
+| Dec 6, 2025 | **Epic 40 Progress** - Stories 40.1-40.4 complete (22/29 tasks). Pydantic migration for report.py, analyzer.py, hardware.py, risks.py, patterns.py, operational_profiling.py. Deleted pydantic_models.py, consolidated schema validation. 317 tests pass, mypy clean. |
 | Dec 6, 2025 | **v0.4.0 Released** - Epic 33 complete, mypy fixes, documentation archival system |
 | Dec 6, 2025 | **Documentation** - Added archival cursor rule, slimmed PRD/BACKLOG by 50%+ |
 | Dec 6, 2025 | **v0.3.0 Released** - Full CLI-Streamlit parity, 20+ new UI components |

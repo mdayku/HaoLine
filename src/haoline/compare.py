@@ -16,9 +16,10 @@ import argparse
 import json
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 from . import ModelInspector
 from .compare_visualizations import (
@@ -36,18 +37,20 @@ from .compare_visualizations import (
 LOGGER = logging.getLogger("haoline.compare")
 
 
-@dataclass
-class VariantInputs:
+class VariantInputs(BaseModel):
     """Inputs required to build a single variant entry in the compare report."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     model_path: Path
     eval_metrics_path: Path
     precision: str | None = None
 
 
-@dataclass
-class VariantReport:
+class VariantReport(BaseModel):
     """Bundle of inspection + eval metrics for a variant."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     model_path: Path
     precision: str
@@ -57,9 +60,10 @@ class VariantReport:
     metrics: dict[str, Any]
 
 
-@dataclass
-class ArchCompatResult:
+class ArchCompatResult(BaseModel):
     """Result of architecture compatibility check between model variants."""
+
+    model_config = ConfigDict(frozen=True)
 
     is_compatible: bool
     warnings: list[str]

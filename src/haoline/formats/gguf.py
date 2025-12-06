@@ -16,10 +16,11 @@ Reference: https://github.com/ggerganov/ggml/blob/master/docs/gguf.md
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass, field
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, BinaryIO
+
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 # GGUF magic number
 GGUF_MAGIC = b"GGUF"
@@ -121,9 +122,10 @@ class GGUFValueType(IntEnum):
     FLOAT64 = 12
 
 
-@dataclass
-class TensorInfo:
+class TensorInfo(BaseModel):
     """Information about a single tensor in the GGUF file."""
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     n_dims: int
@@ -131,11 +133,13 @@ class TensorInfo:
     type_id: int
     offset: int
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def type_name(self) -> str:
         """Human-readable type name."""
         return ggml_type_name(self.type_id)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def n_elements(self) -> int:
         """Total number of elements."""
@@ -144,32 +148,37 @@ class TensorInfo:
             result *= d
         return result
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def bits_per_element(self) -> float:
         """Bits per element for this tensor's type."""
         return GGML_TYPE_BITS.get(self.type_id, 32.0)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def size_bytes(self) -> int:
         """Estimated size in bytes."""
         return int(self.n_elements * self.bits_per_element / 8)
 
 
-@dataclass
-class GGUFInfo:
+class GGUFInfo(BaseModel):
     """Parsed GGUF file information."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     path: Path
     version: int
     tensor_count: int
-    metadata: dict[str, Any] = field(default_factory=dict)
-    tensors: list[TensorInfo] = field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    tensors: list[TensorInfo] = Field(default_factory=list)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def architecture(self) -> str:
         """Model architecture (e.g., 'llama', 'mistral')."""
         return str(self.metadata.get("general.architecture", "unknown"))
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def model_name(self) -> str:
         """Model name from metadata."""
@@ -211,16 +220,19 @@ class GGUFInfo:
         arch = self.architecture
         return self.metadata.get(f"{arch}.vocab_size")
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def total_params(self) -> int:
         """Total parameter count."""
         return sum(t.n_elements for t in self.tensors)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def total_size_bytes(self) -> int:
         """Total model size in bytes."""
         return sum(t.size_bytes for t in self.tensors)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def quantization_breakdown(self) -> dict[str, int]:
         """Count of tensors by quantization type."""
@@ -230,6 +242,7 @@ class GGUFInfo:
             breakdown[type_name] = breakdown.get(type_name, 0) + 1
         return breakdown
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def size_breakdown(self) -> dict[str, int]:
         """Size in bytes by quantization type."""
@@ -271,28 +284,7 @@ class GGUFInfo:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
-            "path": str(self.path),
-            "version": self.version,
-            "architecture": self.architecture,
-            "model_name": self.model_name,
-            "tensor_count": self.tensor_count,
-            "total_params": self.total_params,
-            "total_size_bytes": self.total_size_bytes,
-            "context_length": self.context_length,
-            "embedding_length": self.embedding_length,
-            "block_count": self.block_count,
-            "head_count": self.head_count,
-            "head_count_kv": self.head_count_kv,
-            "vocab_size": self.vocab_size,
-            "quantization_breakdown": self.quantization_breakdown,
-            "size_breakdown": self.size_breakdown,
-            "metadata": {
-                k: v
-                for k, v in self.metadata.items()
-                if not k.startswith("tokenizer.")  # Skip large tokenizer data
-            },
-        }
+        return self.model_dump(mode="json")
 
 
 class GGUFReader:

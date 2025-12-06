@@ -25,10 +25,11 @@ from __future__ import annotations
 import base64
 import logging
 from collections.abc import Sequence
-from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 LOGGER = logging.getLogger("haoline.compare_viz")
 
@@ -47,9 +48,10 @@ except ImportError:
     Figure = None  # type: ignore
 
 
-@dataclass
-class TradeoffPoint:
+class TradeoffPoint(BaseModel):
     """A single point on the accuracy vs speedup tradeoff curve."""
+
+    model_config = ConfigDict(frozen=True)
 
     precision: str
     speedup: float  # Relative to baseline (1.0 = same speed)
@@ -58,9 +60,10 @@ class TradeoffPoint:
     memory_ratio: float  # Relative to baseline (< 1.0 = smaller)
 
 
-@dataclass
-class LayerPrecisionBreakdown:
+class LayerPrecisionBreakdown(BaseModel):
     """Precision breakdown for a single layer."""
+
+    model_config = ConfigDict(frozen=True)
 
     layer_name: str
     op_type: str
@@ -70,9 +73,10 @@ class LayerPrecisionBreakdown:
     memory_bytes: int
 
 
-@dataclass
-class CalibrationRecommendation:
+class CalibrationRecommendation(BaseModel):
     """Recommendation for quantization calibration."""
+
+    model_config = ConfigDict(frozen=True)
 
     recommendation: str
     reason: str
@@ -676,9 +680,10 @@ def analyze_tradeoffs(
     return analysis
 
 
-@dataclass
-class NormalizedMetrics:
+class NormalizedMetrics(BaseModel):
     """Normalized efficiency metrics for a model variant."""
+
+    model_config = ConfigDict(frozen=True)
 
     precision: str
     flops_per_param: float  # Compute intensity

@@ -14,40 +14,45 @@ Reference: https://coremltools.readme.io/
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-@dataclass
-class CoreMLLayerInfo:
+
+class CoreMLLayerInfo(BaseModel):
     """Information about a CoreML layer."""
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     type: str
-    inputs: list[str] = field(default_factory=list)
-    outputs: list[str] = field(default_factory=list)
+    inputs: list[str] = Field(default_factory=list)
+    outputs: list[str] = Field(default_factory=list)
 
 
-@dataclass
-class CoreMLInfo:
+class CoreMLInfo(BaseModel):
     """Parsed CoreML model information."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     path: Path
     spec_version: int
     description: str
     author: str
     license: str
-    layers: list[CoreMLLayerInfo] = field(default_factory=list)
-    inputs: list[dict[str, Any]] = field(default_factory=list)
-    outputs: list[dict[str, Any]] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    layers: list[CoreMLLayerInfo] = Field(default_factory=list)
+    inputs: list[dict[str, Any]] = Field(default_factory=list)
+    outputs: list[dict[str, Any]] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer_count(self) -> int:
         """Number of layers."""
         return len(self.layers)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer_type_counts(self) -> dict[str, int]:
         """Count of layers by type."""
@@ -56,6 +61,7 @@ class CoreMLInfo:
             counts[layer.type] = counts.get(layer.type, 0) + 1
         return counts
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def model_type(self) -> str:
         """Detected model type."""
@@ -63,19 +69,7 @@ class CoreMLInfo:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
-            "path": str(self.path),
-            "spec_version": self.spec_version,
-            "description": self.description,
-            "author": self.author,
-            "license": self.license,
-            "model_type": self.model_type,
-            "layer_count": self.layer_count,
-            "layer_type_counts": self.layer_type_counts,
-            "inputs": self.inputs,
-            "outputs": self.outputs,
-            "metadata": self.metadata,
-        }
+        return self.model_dump(mode="json")
 
 
 class CoreMLReader:

@@ -12,21 +12,23 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from .analyzer import GraphInfo
     from .patterns import Block
 
 
-@dataclass
-class HierarchicalNode:
+class HierarchicalNode(BaseModel):
     """
     A node in the hierarchical graph that can contain children.
 
     Task 5.7.1: Create HierarchicalNode with children.
     """
+
+    model_config = ConfigDict(frozen=False)  # Allow mutation for collapse/expand
 
     id: str
     name: str
@@ -34,7 +36,7 @@ class HierarchicalNode:
     op_type: str | None = None  # ONNX op type for leaf nodes
 
     # Hierarchy
-    children: list[HierarchicalNode] = field(default_factory=list)
+    children: list[HierarchicalNode] = Field(default_factory=list)
     parent_id: str | None = None
     depth: int = 0
 
@@ -50,11 +52,11 @@ class HierarchicalNode:
     node_count: int = 1
 
     # Inputs/outputs for edges
-    inputs: list[str] = field(default_factory=list)
-    outputs: list[str] = field(default_factory=list)
+    inputs: list[str] = Field(default_factory=list)
+    outputs: list[str] = Field(default_factory=list)
 
     # Metadata
-    attributes: dict = field(default_factory=dict)
+    attributes: dict = Field(default_factory=dict)
 
     def is_leaf(self) -> bool:
         """Check if this is a leaf node (no children)."""
@@ -137,12 +139,13 @@ class HierarchicalNode:
         return result
 
 
-@dataclass
-class HierarchicalGraph:
+class HierarchicalGraph(BaseModel):
     """Complete hierarchical graph representation."""
 
+    model_config = ConfigDict(frozen=False)  # Allow mutation for collapse/expand
+
     root: HierarchicalNode
-    nodes_by_id: dict[str, HierarchicalNode] = field(default_factory=dict)
+    nodes_by_id: dict[str, HierarchicalNode] = Field(default_factory=dict)
     total_nodes: int = 0
     depth: int = 0
 

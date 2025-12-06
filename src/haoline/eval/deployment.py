@@ -11,9 +11,10 @@ Answers: "What does it cost to run this model at X fps?"
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DeploymentTarget(str, Enum):
@@ -35,14 +36,15 @@ class CloudProvider(str, Enum):
     GENERIC = "generic"  # Use average pricing
 
 
-@dataclass
-class DeploymentScenario:
+class DeploymentScenario(BaseModel):
     """
     Defines a deployment scenario for cost estimation.
 
     This is the input to the cost calculator - describes what the user
     wants to achieve (throughput, uptime, etc.).
     """
+
+    model_config = ConfigDict(frozen=False)  # Allow mutation for presets
 
     # Throughput requirements
     target_fps: float = 30.0  # Target frames/samples per second
@@ -146,13 +148,14 @@ class DeploymentScenario:
 # =============================================================================
 
 
-@dataclass
-class HardwareTier:
+class HardwareTier(BaseModel):
     """
     Defines a hardware tier for deployment.
 
     Maps to cloud instance types or edge device categories.
     """
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     description: str
@@ -315,13 +318,14 @@ def list_hardware_tiers(
 # =============================================================================
 
 
-@dataclass
-class DeploymentCostEstimate:
+class DeploymentCostEstimate(BaseModel):
     """
     Result of deployment cost calculation.
 
     Contains all the computed costs and recommendations.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     # Input scenario
     scenario: DeploymentScenario
@@ -345,7 +349,7 @@ class DeploymentCostEstimate:
     cost_per_1k_inferences_usd: float = 0.0
 
     # Warnings/notes
-    warnings: list[str] = field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""

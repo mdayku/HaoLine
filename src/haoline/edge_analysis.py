@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, ConfigDict
 
 if TYPE_CHECKING:
     from .analyzer import GraphInfo
@@ -43,9 +44,10 @@ DTYPE_SIZES: dict[str, int] = {
 }
 
 
-@dataclass
-class EdgeInfo:
+class EdgeInfo(BaseModel):
     """Information about an edge (tensor) between nodes."""
+
+    model_config = ConfigDict(frozen=False)  # Allow mutation for analysis
 
     tensor_name: str
     source_node: str | None  # None if graph input
@@ -79,9 +81,10 @@ class EdgeInfo:
         }
 
 
-@dataclass
-class EdgeAnalysisResult:
+class EdgeAnalysisResult(BaseModel):
     """Complete edge analysis for a graph."""
+
+    model_config = ConfigDict(frozen=True)
 
     edges: list[EdgeInfo]
     total_activation_bytes: int

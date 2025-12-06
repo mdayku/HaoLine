@@ -12,8 +12,9 @@ Story 41.2: Extract report sections into reusable functions for CLI-Streamlit pa
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from .operational_profiling import BottleneckAnalysis
@@ -46,9 +47,10 @@ def format_bytes(b: int | float) -> str:
     return f"{int(b)} bytes"
 
 
-@dataclass
-class MetricsCard:
+class MetricsCard(BaseModel):
     """A single metrics card for display."""
+
+    model_config = ConfigDict(frozen=True)
 
     label: str
     value: str
@@ -56,11 +58,12 @@ class MetricsCard:
     color: str | None = None  # Optional accent color
 
 
-@dataclass
-class MetricsSummary:
+class MetricsSummary(BaseModel):
     """Summary metrics for a model."""
 
-    cards: list[MetricsCard] = field(default_factory=list)
+    model_config = ConfigDict(frozen=True)
+
+    cards: list[MetricsCard] = Field(default_factory=list)
 
     @classmethod
     def from_report(cls, report: InspectionReport) -> MetricsSummary:
@@ -139,9 +142,10 @@ class MetricsSummary:
         return cls(cards=cards)
 
 
-@dataclass
-class KVCacheSection:
+class KVCacheSection(BaseModel):
     """KV Cache analysis for transformer models."""
+
+    model_config = ConfigDict(frozen=True)
 
     bytes_per_token: int
     bytes_full_context: int
@@ -179,22 +183,24 @@ class KVCacheSection:
         }
 
 
-@dataclass
-class PrecisionBreakdownRow:
+class PrecisionBreakdownRow(BaseModel):
     """A row in the precision breakdown table."""
+
+    model_config = ConfigDict(frozen=True)
 
     dtype: str
     count: int
     percentage: float
 
 
-@dataclass
-class PrecisionBreakdown:
+class PrecisionBreakdown(BaseModel):
     """Precision breakdown for model parameters."""
 
-    rows: list[PrecisionBreakdownRow] = field(default_factory=list)
+    model_config = ConfigDict(frozen=True)
+
+    rows: list[PrecisionBreakdownRow] = Field(default_factory=list)
     is_quantized: bool = False
-    quantized_ops: list[str] = field(default_factory=list)
+    quantized_ops: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_report(cls, report: InspectionReport) -> PrecisionBreakdown | None:
@@ -228,21 +234,23 @@ class PrecisionBreakdown:
         )
 
 
-@dataclass
-class MemoryBreakdownRow:
+class MemoryBreakdownRow(BaseModel):
     """A row in the memory breakdown table."""
+
+    model_config = ConfigDict(frozen=True)
 
     component: str
     size_bytes: int
     percentage: float | None = None
 
 
-@dataclass
-class MemoryBreakdownSection:
+class MemoryBreakdownSection(BaseModel):
     """Memory breakdown by op type."""
 
-    weights_by_op: list[MemoryBreakdownRow] = field(default_factory=list)
-    activations_by_op: list[MemoryBreakdownRow] = field(default_factory=list)
+    model_config = ConfigDict(frozen=True)
+
+    weights_by_op: list[MemoryBreakdownRow] = Field(default_factory=list)
+    activations_by_op: list[MemoryBreakdownRow] = Field(default_factory=list)
     total_weights: int = 0
     total_activations: int = 0
 
@@ -297,9 +305,10 @@ class MemoryBreakdownSection:
         )
 
 
-@dataclass
-class HardwareEstimatesSection:
+class HardwareEstimatesSection(BaseModel):
     """Hardware performance estimates."""
+
+    model_config = ConfigDict(frozen=True)
 
     device: str
     precision: str
@@ -346,15 +355,16 @@ class HardwareEstimatesSection:
         }
 
 
-@dataclass
-class BottleneckSection:
+class BottleneckSection(BaseModel):
     """Bottleneck analysis results."""
+
+    model_config = ConfigDict(frozen=True)
 
     classification: str  # "compute_bound", "memory_bound", "balanced"
     compute_time_ms: float
     memory_time_ms: float
     ratio: float
-    recommendations: list[str] = field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_bottleneck_analysis(cls, analysis: BottleneckAnalysis) -> BottleneckSection:
@@ -368,9 +378,10 @@ class BottleneckSection:
         )
 
 
-@dataclass
-class OperatorDistribution:
+class OperatorDistribution(BaseModel):
     """Operator type distribution."""
+
+    model_config = ConfigDict(frozen=True)
 
     op_counts: dict[str, int]
     total_ops: int
@@ -397,21 +408,23 @@ class OperatorDistribution:
         ]
 
 
-@dataclass
-class RiskSignalItem:
+class RiskSignalItem(BaseModel):
     """A single risk signal for display."""
+
+    model_config = ConfigDict(frozen=True)
 
     id: str
     severity: str  # "high", "medium", "low"
     description: str
-    nodes: list[str] = field(default_factory=list)
+    nodes: list[str] = Field(default_factory=list)
 
 
-@dataclass
-class RiskSignalsSection:
+class RiskSignalsSection(BaseModel):
     """Risk signals summary."""
 
-    signals: list[RiskSignalItem] = field(default_factory=list)
+    model_config = ConfigDict(frozen=True)
+
+    signals: list[RiskSignalItem] = Field(default_factory=list)
     high_count: int = 0
     medium_count: int = 0
     low_count: int = 0
@@ -446,22 +459,24 @@ class RiskSignalsSection:
         )
 
 
-@dataclass
-class BlockSummaryItem:
+class BlockSummaryItem(BaseModel):
     """A single detected block for display."""
+
+    model_config = ConfigDict(frozen=True)
 
     block_type: str
     name: str
     node_count: int
-    nodes: list[str] = field(default_factory=list)
+    nodes: list[str] = Field(default_factory=list)
 
 
-@dataclass
-class DetectedBlocksSection:
+class DetectedBlocksSection(BaseModel):
     """Detected architecture blocks summary."""
 
-    blocks: list[BlockSummaryItem] = field(default_factory=list)
-    block_type_counts: dict[str, int] = field(default_factory=dict)
+    model_config = ConfigDict(frozen=True)
+
+    blocks: list[BlockSummaryItem] = Field(default_factory=list)
+    block_type_counts: dict[str, int] = Field(default_factory=dict)
 
     @classmethod
     def from_report(cls, report: InspectionReport) -> DetectedBlocksSection:
@@ -483,9 +498,10 @@ class DetectedBlocksSection:
         return cls(blocks=blocks, block_type_counts=type_counts)
 
 
-@dataclass
-class SharedWeightsSection:
+class SharedWeightsSection(BaseModel):
     """Shared weights information."""
+
+    model_config = ConfigDict(frozen=True)
 
     num_shared: int
     shared_weights: dict[str, list[str]]  # weight_name -> list of nodes using it
@@ -509,9 +525,10 @@ class SharedWeightsSection:
 # =============================================================================
 
 
-@dataclass
-class ExtractedReportSections:
+class ExtractedReportSections(BaseModel):
     """All extracted sections from an InspectionReport."""
+
+    model_config = ConfigDict(frozen=True)
 
     metrics: MetricsSummary
     kv_cache: KVCacheSection | None

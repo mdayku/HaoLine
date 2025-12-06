@@ -14,23 +14,25 @@ import csv
 import io
 import json
 import logging
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from .analyzer import FlopCounts, GraphInfo, MemoryEstimates, ParamCounts
     from .report import InspectionReport
 
 
-@dataclass
-class LayerMetrics:
+class LayerMetrics(BaseModel):
     """Metrics for a single layer/node."""
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     op_type: str
-    input_shapes: list[str] = field(default_factory=list)
-    output_shapes: list[str] = field(default_factory=list)
+    input_shapes: list[str] = Field(default_factory=list)
+    output_shapes: list[str] = Field(default_factory=list)
     params: int = 0
     flops: int = 0
     memory_bytes: int = 0
@@ -56,11 +58,12 @@ class LayerMetrics:
         }
 
 
-@dataclass
-class LayerSummary:
+class LayerSummary(BaseModel):
     """Complete layer summary for a model."""
 
-    layers: list[LayerMetrics] = field(default_factory=list)
+    model_config = ConfigDict(frozen=True)
+
+    layers: list[LayerMetrics] = Field(default_factory=list)
     total_params: int = 0
     total_flops: int = 0
     total_memory: int = 0

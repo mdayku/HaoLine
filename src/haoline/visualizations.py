@@ -16,9 +16,10 @@ All charts use a consistent dark theme suitable for technical documentation.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, ConfigDict
 
 if TYPE_CHECKING:
     from .analyzer import FlopCounts, GraphInfo, ParamCounts
@@ -45,9 +46,10 @@ def is_available() -> bool:
     return _MATPLOTLIB_AVAILABLE
 
 
-@dataclass
-class ChartTheme:
+class ChartTheme(BaseModel):
     """Consistent theme for all charts."""
+
+    model_config = ConfigDict(frozen=True)
 
     # Colors - dark theme with vibrant accents
     background: str = "#1a1a2e"
@@ -559,7 +561,7 @@ class VisualizationGenerator:
 
         # Create pie with no labels (use legend instead)
         # pie() returns (patches, texts, autotexts) when autopct is provided
-        wedges, _texts, autotexts = ax.pie(
+        wedges, _texts, autotexts = ax.pie(  # type: ignore[misc]
             sizes,
             labels=None,  # No inline labels
             colors=colors,
@@ -1013,7 +1015,7 @@ class VisualizationGenerator:
 
         colors = THEME.palette[: len(values)]
         # pie() returns (patches, texts, autotexts) when autopct is provided
-        wedges, _texts, autotexts = ax.pie(
+        wedges, _texts, autotexts = ax.pie(  # type: ignore[misc]
             values,
             labels=None,
             autopct=lambda pct: f"{pct:.1f}%" if pct > 3 else "",

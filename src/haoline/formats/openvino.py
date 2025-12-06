@@ -14,39 +14,44 @@ Reference: https://docs.openvino.ai/
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-@dataclass
-class OpenVINOLayerInfo:
+
+class OpenVINOLayerInfo(BaseModel):
     """Information about an OpenVINO layer."""
+
+    model_config = ConfigDict(frozen=True)
 
     name: str
     type: str
-    input_shapes: list[tuple[int, ...]] = field(default_factory=list)
-    output_shapes: list[tuple[int, ...]] = field(default_factory=list)
+    input_shapes: list[tuple[int, ...]] = Field(default_factory=list)
+    output_shapes: list[tuple[int, ...]] = Field(default_factory=list)
     precision: str = "FP32"
 
 
-@dataclass
-class OpenVINOInfo:
+class OpenVINOInfo(BaseModel):
     """Parsed OpenVINO model information."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     path: Path
     name: str
     framework: str
-    layers: list[OpenVINOLayerInfo] = field(default_factory=list)
-    inputs: list[dict[str, Any]] = field(default_factory=list)
-    outputs: list[dict[str, Any]] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    layers: list[OpenVINOLayerInfo] = Field(default_factory=list)
+    inputs: list[dict[str, Any]] = Field(default_factory=list)
+    outputs: list[dict[str, Any]] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer_count(self) -> int:
         """Number of layers."""
         return len(self.layers)
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def layer_type_counts(self) -> dict[str, int]:
         """Count of layers by type."""
@@ -55,6 +60,7 @@ class OpenVINOInfo:
             counts[layer.type] = counts.get(layer.type, 0) + 1
         return counts
 
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def precision_breakdown(self) -> dict[str, int]:
         """Count of layers by precision."""
@@ -65,17 +71,7 @@ class OpenVINOInfo:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
-            "path": str(self.path),
-            "name": self.name,
-            "framework": self.framework,
-            "layer_count": self.layer_count,
-            "layer_type_counts": self.layer_type_counts,
-            "precision_breakdown": self.precision_breakdown,
-            "inputs": self.inputs,
-            "outputs": self.outputs,
-            "metadata": self.metadata,
-        }
+        return self.model_dump(mode="json")
 
 
 class OpenVINOReader:

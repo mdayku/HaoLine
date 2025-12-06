@@ -23,9 +23,10 @@ from __future__ import annotations
 import json
 import logging
 import os
-from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from .analyzer import GraphInfo
@@ -65,9 +66,10 @@ class DeploymentRuntime(Enum):
     GENERIC = "generic"
 
 
-@dataclass
-class FakeQuantInsertionPoint:
+class FakeQuantInsertionPoint(BaseModel):
     """Recommended fake-quantization insertion point for QAT."""
+
+    model_config = ConfigDict(frozen=True)
 
     node_name: str
     op_type: str
@@ -76,9 +78,10 @@ class FakeQuantInsertionPoint:
     priority: str  # "required", "recommended", "optional"
 
 
-@dataclass
-class OpSubstitution:
+class OpSubstitution(BaseModel):
     """Recommended operator substitution for better INT8 performance."""
+
+    model_config = ConfigDict(frozen=True)
 
     original_op: str
     replacement_op: str
@@ -87,9 +90,10 @@ class OpSubstitution:
     accuracy_impact: str  # "none", "minimal", "moderate"
 
 
-@dataclass
-class QuantGranularityRec:
+class QuantGranularityRec(BaseModel):
     """Per-channel vs per-tensor quantization recommendation."""
+
+    model_config = ConfigDict(frozen=True)
 
     layer_name: str
     op_type: str
@@ -97,9 +101,10 @@ class QuantGranularityRec:
     reason: str
 
 
-@dataclass
-class QuantizationAdvice:
+class QuantizationAdvice(BaseModel):
     """Container for LLM-generated quantization recommendations."""
+
+    model_config = ConfigDict(frozen=True)
 
     # Architecture analysis
     architecture_type: ArchitectureType
@@ -122,24 +127,15 @@ class QuantizationAdvice:
     mitigation_strategies: list[str]  # Ways to preserve accuracy
 
     # NEW: Static recommendations (Tasks 33.4.2-4)
-    fake_quant_insertions: list[FakeQuantInsertionPoint] = None  # type: ignore
-    op_substitutions: list[OpSubstitution] = None  # type: ignore
-    granularity_recommendations: list[QuantGranularityRec] = None  # type: ignore
+    fake_quant_insertions: list[FakeQuantInsertionPoint] = Field(default_factory=list)
+    op_substitutions: list[OpSubstitution] = Field(default_factory=list)
+    granularity_recommendations: list[QuantGranularityRec] = Field(default_factory=list)
 
     # Metadata
     model_used: str = ""
     tokens_used: int = 0
     success: bool = True
     error_message: str | None = None
-
-    def __post_init__(self) -> None:
-        """Initialize mutable defaults."""
-        if self.fake_quant_insertions is None:
-            self.fake_quant_insertions = []
-        if self.op_substitutions is None:
-            self.op_substitutions = []
-        if self.granularity_recommendations is None:
-            self.granularity_recommendations = []
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
