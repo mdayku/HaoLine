@@ -105,6 +105,11 @@ coreml = [
 openvino = [
     "openvino>=2024.0.0",
 ]
+tensorrt = [
+    "tensorrt>=10.0.0",
+    # Requires NVIDIA GPU + CUDA 12.x
+    # Engine files must match GPU architecture
+]
 # GGUF is pure Python, no deps needed
 formats = [
     "haoline[safetensors]",

@@ -13,6 +13,7 @@ Supported formats:
 - TFLite: TensorFlow Lite models (pure Python header parsing)
 - CoreML: Apple ML models (requires coremltools)
 - OpenVINO: Intel models (requires openvino)
+- TensorRT: NVIDIA optimized engines (requires tensorrt + NVIDIA GPU)
 """
 
 from .coreml import (
@@ -39,6 +40,14 @@ from .safetensors import (
 )
 from .safetensors import (
     is_available as safetensors_available,
+)
+from .tensorrt import (
+    TRTEngineInfo,
+    TRTEngineReader,
+    is_tensorrt_file,
+)
+from .tensorrt import (
+    is_available as tensorrt_available,
 )
 from .tflite import (
     TFLiteInfo,
@@ -74,6 +83,11 @@ __all__ = [
     "OpenVINOInfo",
     "is_openvino_file",
     "openvino_available",
+    # TensorRT (Epic 22)
+    "TRTEngineReader",
+    "TRTEngineInfo",
+    "is_tensorrt_file",
+    "tensorrt_available",
 ]
 
 
@@ -85,7 +99,7 @@ def detect_format(path: str) -> str | None:
         path: Path to model file.
 
     Returns:
-        Format name ('gguf', 'safetensors', 'tflite', 'coreml', 'openvino', 'onnx')
+        Format name ('gguf', 'safetensors', 'tflite', 'coreml', 'openvino', 'tensorrt', 'onnx')
         or None if unknown.
     """
     from pathlib import Path as P
@@ -104,11 +118,13 @@ def detect_format(path: str) -> str | None:
         return "tflite"
     if suffix in (".mlmodel", ".mlpackage"):
         return "coreml"
+    if suffix in (".engine", ".plan"):
+        return "tensorrt"
     if suffix == ".xml":
         if is_openvino_file(path):
             return "openvino"
 
-    # Check by magic bytes
+    # Check by magic bytes / validation
     if is_gguf_file(path):
         return "gguf"
     if is_safetensors_file(path):
@@ -119,5 +135,7 @@ def detect_format(path: str) -> str | None:
         return "coreml"
     if is_openvino_file(path):
         return "openvino"
+    if is_tensorrt_file(path):
+        return "tensorrt"
 
     return None

@@ -110,14 +110,14 @@ def test_gguf():
             return False
 
     # Test the reader
-    from haoline.formats.gguf import GGUFReader, is_gguf_file, format_size
+    from haoline.formats.gguf import GGUFReader, format_size, is_gguf_file
 
     print(f"\nIs GGUF file: {is_gguf_file(model_path)}")
 
     reader = GGUFReader(model_path)
     info = reader.read()
 
-    print(f"\n--- GGUF Model Info ---")
+    print("\n--- GGUF Model Info ---")
     print(f"Version: {info.version}")
     print(f"Architecture: {info.architecture}")
     print(f"Model name: {info.model_name}")
@@ -126,7 +126,7 @@ def test_gguf():
     print(f"Tensor count: {info.tensor_count}")
 
     # Architecture details
-    print(f"\n--- Architecture Details ---")
+    print("\n--- Architecture Details ---")
     print(f"Context length: {info.context_length}")
     print(f"Embedding dim: {info.embedding_length}")
     print(f"Layers: {info.block_count}")
@@ -134,12 +134,12 @@ def test_gguf():
     print(f"KV heads: {info.head_count_kv}")
 
     # Quantization breakdown
-    print(f"\n--- Quantization Breakdown ---")
+    print("\n--- Quantization Breakdown ---")
     for qtype, count in sorted(info.quantization_breakdown.items()):
         print(f"  {qtype}: {count} tensors")
 
     # VRAM estimate
-    print(f"\n--- VRAM Estimate (2K context) ---")
+    print("\n--- VRAM Estimate (2K context) ---")
     vram = info.estimate_vram(2048)
     print(f"  Weights: {format_size(vram['weights'])}")
     print(f"  KV Cache: {format_size(vram['kv_cache'])}")
@@ -190,7 +190,7 @@ def test_tflite():
     reader = TFLiteReader(model_path)
     info = reader.read()
 
-    print(f"\n--- TFLite Model Info ---")
+    print("\n--- TFLite Model Info ---")
     print(f"Description: {info.description}")
     print(f"Total params: {info.total_params:,}")
     print(f"Total size: {info.total_size_bytes / 1e6:.2f} MB")
@@ -239,7 +239,7 @@ def test_coreml():
         reader = CoreMLReader(model_path)
         info = reader.read()
 
-        print(f"\n--- CoreML Model Info ---")
+        print("\n--- CoreML Model Info ---")
         print(f"Spec version: {info.spec_version}")
         print(f"Description: {info.description}")
         print(f"Model type: {info.model_type}")
@@ -270,6 +270,109 @@ def test_openvino():
     return None
 
 
+def test_tensorrt():
+    """Test TensorRT engine reader."""
+    print("\n" + "=" * 60)
+    print("Testing TensorRT Reader")
+    print("=" * 60)
+
+    from haoline.formats.tensorrt import is_available
+
+    if not is_available():
+        print("[SKIP] tensorrt not installed")
+        print("Install with: pip install haoline[tensorrt]")
+        print("Requires: NVIDIA GPU + CUDA 12.x")
+        return None
+
+    from pathlib import Path
+
+    # Check for existing engine or build one
+    engine_path = Path("test_models/resnet18.engine")
+
+    if not engine_path.exists():
+        print("Building TensorRT engine from ONNX (this may take a minute)...")
+        onnx_path = Path("test_models/resnet18.onnx")
+
+        # Download ONNX if needed
+        if not onnx_path.exists():
+            import urllib.request
+
+            print("Downloading ResNet18 ONNX...")
+            url = "https://github.com/onnx/models/raw/main/validated/vision/classification/resnet/model/resnet18-v1-7.onnx"
+            onnx_path.parent.mkdir(exist_ok=True)
+            urllib.request.urlretrieve(url, onnx_path)
+
+        # Build TRT engine
+        import tensorrt as trt
+
+        logger = trt.Logger(trt.Logger.WARNING)
+        builder = trt.Builder(logger)
+        network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+        parser = trt.OnnxParser(network, logger)
+
+        with open(onnx_path, "rb") as f:
+            if not parser.parse(f.read()):
+                print("Failed to parse ONNX")
+                return False
+
+        config = builder.create_builder_config()
+        config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 1 << 30)
+
+        # Add optimization profile for dynamic batch
+        profile = builder.create_optimization_profile()
+        input_name = network.get_input(0).name
+        profile.set_shape(input_name, (1, 3, 224, 224), (1, 3, 224, 224), (8, 3, 224, 224))
+        config.add_optimization_profile(profile)
+
+        # Enable FP16 if available
+        if builder.platform_has_fast_fp16:
+            config.set_flag(trt.BuilderFlag.FP16)
+
+        serialized = builder.build_serialized_network(network, config)
+        if serialized:
+            with open(engine_path, "wb") as f:
+                f.write(bytes(serialized))
+            print(f"Built: {engine_path}")
+        else:
+            print("Failed to build engine")
+            return False
+    else:
+        print(f"Using cached: {engine_path}")
+
+    # Test the reader
+    from haoline.formats.tensorrt import TRTEngineReader, format_bytes, is_tensorrt_file
+
+    print(f"\nIs TensorRT file: {is_tensorrt_file(engine_path)}")
+
+    reader = TRTEngineReader(engine_path)
+    info = reader.read()
+
+    print("\n--- TensorRT Engine Info ---")
+    print(f"TRT Version: {info.trt_version}")
+    print(f"Device: {info.device_name}")
+    print(f"Compute Capability: SM {info.compute_capability[0]}.{info.compute_capability[1]}")
+    print(f"Device Memory: {format_bytes(info.device_memory_bytes)}")
+    print(f"Layer Count: {info.layer_count}")
+
+    print("\n--- Bindings ---")
+    for b in info.input_bindings:
+        print(f"  Input: {b.name} {b.shape} ({b.dtype})")
+    for b in info.output_bindings:
+        print(f"  Output: {b.name} {b.shape} ({b.dtype})")
+
+    print("\n--- Layer Type Distribution ---")
+    for ltype, count in sorted(info.layer_type_counts.items(), key=lambda x: -x[1]):
+        print(f"  {ltype}: {count}")
+
+    # Count fusions
+    fused = len([layer for layer in info.layers if "+" in layer.name])
+    print("\n--- Optimization Summary ---")
+    print(f"  Fused layers: {fused}/{info.layer_count} ({100 * fused / info.layer_count:.0f}%)")
+
+    print("\n[SUCCESS] TensorRT reader works correctly!")
+    return True
+
+
 def main():
     """Run all format reader tests.
 
@@ -289,8 +392,8 @@ def main():
         "TFLite": test_tflite,
         "CoreML": test_coreml,
         "OpenVINO": test_openvino,
+        "TensorRT": test_tensorrt,
         # Add new formats here:
-        # "TensorRT": test_tensorrt,
         # "NewFormat": test_newformat,
     }
 
@@ -317,4 +420,3 @@ def main():
 if __name__ == "__main__":
     success = main()
     sys.exit(0 if success else 1)
-

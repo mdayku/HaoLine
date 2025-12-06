@@ -433,3 +433,115 @@ class TestOpenVINOReader:
         )
         assert info.layer_type_counts == {"Convolution": 2, "ReLU": 1}
         assert info.layer_count == 3
+
+
+# ============================================================================
+# TensorRT Reader Tests
+# ============================================================================
+
+
+def _tensorrt_available() -> bool:
+    """Check if tensorrt is available."""
+    try:
+        import tensorrt  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+class TestTRTEngineReader:
+    """Tests for TRTEngineReader."""
+
+    def test_is_available(self) -> None:
+        """Check if tensorrt availability detection works."""
+        from haoline.formats.tensorrt import is_available
+
+        result = is_available()
+        assert isinstance(result, bool)
+
+    def test_is_tensorrt_file_engine_extension(self, tmp_path: Path) -> None:
+        """is_tensorrt_file should return True for .engine files."""
+        from haoline.formats.tensorrt import is_tensorrt_file
+
+        test_file = tmp_path / "model.engine"
+        test_file.write_bytes(b"\x00" * 100)
+        assert is_tensorrt_file(test_file) is True
+
+    def test_is_tensorrt_file_plan_extension(self, tmp_path: Path) -> None:
+        """is_tensorrt_file should return True for .plan files."""
+        from haoline.formats.tensorrt import is_tensorrt_file
+
+        test_file = tmp_path / "model.plan"
+        test_file.write_bytes(b"\x00" * 100)
+        assert is_tensorrt_file(test_file) is True
+
+    def test_is_tensorrt_file_wrong_extension(self, tmp_path: Path) -> None:
+        """is_tensorrt_file should return False for wrong extension."""
+        from haoline.formats.tensorrt import is_tensorrt_file
+
+        test_file = tmp_path / "model.onnx"
+        test_file.write_bytes(b"\x00" * 100)
+        assert is_tensorrt_file(test_file) is False
+
+    def test_is_tensorrt_file_nonexistent(self) -> None:
+        """is_tensorrt_file should return False for non-existent files."""
+        from haoline.formats.tensorrt import is_tensorrt_file
+
+        assert is_tensorrt_file(Path("/nonexistent/model.engine")) is False
+
+    @pytest.mark.skipif(not _tensorrt_available(), reason="tensorrt not installed")
+    def test_reader_file_not_found_raises(self) -> None:
+        """TRTEngineReader should raise FileNotFoundError for missing files."""
+        from haoline.formats.tensorrt import TRTEngineReader
+
+        with pytest.raises(FileNotFoundError):
+            TRTEngineReader("/nonexistent/model.engine")
+
+    def test_trt_layer_info_computed_fields(self) -> None:
+        """Test TRTLayerInfo fields."""
+        from haoline.formats.tensorrt import TRTLayerInfo
+
+        layer = TRTLayerInfo(
+            name="conv1_fwd + bn1_fwd + relu1_fwd",
+            type="Fused:BatchNorm+Convolution+ReLU",
+            precision="FP16",
+        )
+        assert layer.name == "conv1_fwd + bn1_fwd + relu1_fwd"
+        assert layer.type == "Fused:BatchNorm+Convolution+ReLU"
+        assert layer.precision == "FP16"
+
+    def test_trt_engine_info_computed_fields(self) -> None:
+        """Test computed fields on TRTEngineInfo."""
+        from haoline.formats.tensorrt import TRTBindingInfo, TRTEngineInfo, TRTLayerInfo
+
+        info = TRTEngineInfo(
+            path=Path("test.engine"),
+            trt_version="10.14.0",
+            device_name="RTX 4050",
+            compute_capability=(8, 9),
+            device_memory_bytes=1024 * 1024 * 50,
+            layers=[
+                TRTLayerInfo(name="conv1", type="Convolution", precision="FP16"),
+                TRTLayerInfo(name="conv2", type="Convolution", precision="FP16"),
+                TRTLayerInfo(name="pool1", type="Pooling", precision="FP32"),
+            ],
+            bindings=[
+                TRTBindingInfo(name="input", shape=(1, 3, 224, 224), dtype="FLOAT", is_input=True),
+                TRTBindingInfo(name="output", shape=(1, 1000), dtype="FLOAT", is_input=False),
+            ],
+        )
+        assert info.layer_count == 3
+        assert info.layer_type_counts == {"Convolution": 2, "Pooling": 1}
+        assert info.precision_breakdown == {"FP16": 2, "FP32": 1}
+        assert len(info.input_bindings) == 1
+        assert len(info.output_bindings) == 1
+
+    def test_format_bytes(self) -> None:
+        """Test format_bytes helper."""
+        from haoline.formats.tensorrt import format_bytes
+
+        assert format_bytes(100) == "100.00 B"
+        assert format_bytes(1024) == "1.00 KB"
+        assert format_bytes(1024 * 1024) == "1.00 MB"
+        assert format_bytes(1024 * 1024 * 1024) == "1.00 GB"
