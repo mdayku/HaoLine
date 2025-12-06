@@ -282,6 +282,27 @@ Or use the web UI's comparison mode for an interactive experience.
 | Flag | Description |
 |------|-------------|
 | `--compare-trt ENGINE` | Compare ONNX model with its compiled TensorRT engine |
+| `--quant-bottlenecks` | Show detailed quantization bottleneck analysis |
+
+**TensorRT Engine Analysis (v0.7):** Analyze compiled `.engine` or `.plan` files directly:
+
+```bash
+# Analyze TensorRT engine
+haoline model.engine --out-json report.json
+
+# Compare ONNX source with TRT engine (shows fusions, precision changes)
+haoline model.onnx --compare-trt model.engine --out-html comparison.html
+```
+
+Features include:
+- Layer-by-layer analysis with precision breakdown (INT8/FP16/FP32)
+- Fusion detection (Conv+BN+ReLU, LayerNorm, FlashAttention, etc.)
+- Layer rewrite visualization (attention optimizations, GELU, etc.)
+- Quantization bottleneck zones identification
+- Workspace and device memory allocation tracking
+- Compute vs memory bound layer classification
+- Per-layer timing breakdown charts (when profiling data available)
+- Interactive side-by-side ONNX vs TRT comparison HTML
 
 ### Universal IR Export
 

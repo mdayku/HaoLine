@@ -947,10 +947,12 @@
 
 *Leverage per-layer metrics (layers.csv) for rich analysis visualizations in PDF/HTML reports.*
 
+**Note:** Epic 22 (TensorRT) implemented `generate_timing_chart()` and `generate_bound_type_chart()` - these can be generalized for all formats.
+
 ### Story 36.1: Layer Waterfall Chart
 *Show per-layer latency as stacked horizontal bars (flame graph style).*
-- [ ] **Task 36.1.1**: Create horizontal waterfall chart from layer timing data
-- [ ] **Task 36.1.2**: Color-code by op type (Conv=blue, MatMul=green, etc.)
+- [x] **Task 36.1.1**: Create horizontal waterfall chart from layer timing data *(implemented for TRT in Epic 22)*
+- [x] **Task 36.1.2**: Color-code by op type (Conv=blue, MatMul=green, etc.) *(implemented for TRT - color by precision)*
 - [ ] **Task 36.1.3**: Show cumulative latency on x-axis
 - [ ] **Task 36.1.4**: Add interactive hover for layer details
 - [ ] **Task 36.1.5**: Integrate into PDF report (new page)
@@ -967,8 +969,8 @@
 *Scatter plots and heatmaps for layer-level efficiency.*
 - [ ] **Task 36.3.1**: FLOPs vs Latency scatter plot (identify inefficient layers)
 - [ ] **Task 36.3.2**: Params vs Memory scatter plot
-- [ ] **Task 36.3.3**: Compute/Memory ratio heatmap by layer
-- [ ] **Task 36.3.4**: Per-layer roofline positioning
+- [x] **Task 36.3.3**: Compute/Memory ratio heatmap by layer *(implemented for TRT in Epic 22 - bound_type donut chart)*
+- [x] **Task 36.3.4**: Per-layer roofline positioning *(Epic 22 TRT: compute vs memory bound classification)*
 - [ ] **Task 36.3.5**: Highlight outlier layers (>2σ from mean)
 
 ### Story 36.4: Critical Path Analysis
@@ -1093,7 +1095,7 @@
 - [ ] **Task 43.3.2**: Implement topological execution order estimation
 - [ ] **Task 43.3.3**: Calculate memory "watermark" at each execution point
 - [ ] **Task 43.3.4**: Report true peak activation memory (not worst-case sum)
-- [ ] **Task 43.3.5**: Visualize memory timeline in HTML report
+- [ ] **Task 43.3.5**: Visualize memory timeline in HTML report *(groundwork in Epic 22 TRT: per-layer workspace tracking)*
 
 ---
 

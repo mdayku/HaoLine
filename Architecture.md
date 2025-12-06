@@ -996,8 +996,8 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | `report_sections.py` | Reusable report dataclasses (ExtractedReportSections) |
 | `quantization_linter.py` | QuantizationLinter, QuantWarning, readiness scoring |
 | `quantization_advisor.py` | LLM-powered quantization recommendations |
-| `formats/tensorrt.py` | TRTEngineReader, TRTEngineInfo, layer/binding extraction |
-| `formats/trt_comparison.py` | TRTONNXComparator, ONNX↔TRT diff view |
+| `formats/tensorrt.py` | TRTEngineReader, TRTEngineInfo, TRTPerformanceMetadata, TRTLayerInfo, quantization bottleneck analysis, timing charts |
+| `formats/trt_comparison.py` | TRTONNXComparator, LayerRewrite detection, side-by-side HTML comparison, ONNX↔TRT diff view |
 
 ---
 

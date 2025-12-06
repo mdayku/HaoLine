@@ -1396,7 +1396,7 @@ def generate_bound_type_chart(
     fig, ax = plt.subplots(figsize=(8, 6))
 
     # Donut chart
-    wedges, texts, autotexts = ax.pie(
+    wedges, texts, autotexts = ax.pie(  # type: ignore[misc]
         sizes,
         labels=labels,
         colors=colors,
