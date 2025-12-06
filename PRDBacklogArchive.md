@@ -736,5 +736,86 @@ Complete migration from Python dataclasses to Pydantic BaseModel across the enti
 
 ---
 
+## Epic 22: TensorRT Engine Introspection (COMPLETE - 50/50)
+
+*Completed: December 6, 2025 (v0.7.2)*
+
+Deep analysis of NVIDIA TensorRT compiled engines. Inspired by TRT Engine Explorer.
+
+### Story 22.1: Engine File Loader [Phase 1] - COMPLETE (7/7)
+- [x] Add `tensorrt` extra to pyproject.toml
+- [x] Create `TRTEngineReader` class
+- [x] Implement engine deserialization
+- [x] Extract engine metadata (TRT version, build flags)
+- [x] Handle GPU arch/TRT version compatibility checks
+- [x] Support `.engine` and `.plan` extensions
+- [x] Add `is_tensorrt_file()` and `is_available()` helpers
+
+### Story 22.2: Fused Graph Reconstruction [Phase 2] - COMPLETE (6/6)
+- [x] Extract layer list (names, types, shapes)
+- [x] Identify fused operations (Conv+BN+ReLU → single kernel)
+- [x] Detect removed/optimized-away layers
+- [x] Extract kernel/tactic substitutions
+- [x] Parse timing cache if present
+- [x] Identify precision per layer (FP32/FP16/INT8/TF32)
+
+### Story 22.3: ONNX ↔ TRT Diff View [Phase 3] - COMPLETE (6/6)
+- [x] Map TRT layers back to ONNX nodes
+- [x] Highlight fused operations
+- [x] Show precision auto-selection decisions
+- [x] Visualize layer rewrites (FlashAttention, GELU, LayerNorm)
+- [x] Display shape changes (dynamic → static)
+- [x] Generate side-by-side HTML comparison
+
+### Story 22.4: TRT Performance Metadata Panel [Phase 4] - COMPLETE (6/6)
+- [x] Extract per-layer latency from profiling data
+- [x] Show workspace size allocation per layer
+- [x] Display kernel/tactic selection choices
+- [x] Identify memory-bound vs compute-bound layers
+- [x] Show layer timing breakdown chart
+- [x] Extract device memory footprint
+
+### Story 22.5: TRT Engine Summary Block [Phase 1] - COMPLETE (4/4)
+- [x] Generate engine overview
+- [x] Show optimization summary
+- [x] Display hardware binding info
+- [x] List builder configuration
+
+### Story 22.6: ONNX vs TRT Comparison Mode [Phase 3] - COMPLETE (5/5)
+- [x] Add `--compare-trt` CLI support
+- [x] Compute layer count delta
+- [x] Show precision changes
+- [x] Generate comparison report (JSON/MD/HTML)
+- [x] Visualize memory reduction
+
+### Story 22.7: CLI & Streamlit Integration [Phase 1] - COMPLETE (8/8)
+- [x] Register TensorRT format detection
+- [x] Add `.engine`/`.plan` to CLI
+- [x] Add to Streamlit file_uploader
+- [x] Create TRT-specific report sections
+- [x] Add TensorRT Analysis tab
+- [x] Handle graceful degradation
+- [x] Update HuggingFace Spaces
+- [x] Write unit tests (9 tests)
+
+### Story 22.8: Quantization Bottleneck Analysis [Phase 4] - COMPLETE (8/8)
+- [x] Detect failed fusion zones
+- [x] Group consecutive FP32 bottleneck zones
+- [x] Add per-layer quant status indicators
+- [x] Estimate quant gap vs ideal
+- [x] Generate Quantization Fusion Summary panel
+- [x] Add `--quant-bottlenecks` CLI flag
+- [x] Add bottleneck heatmap to Streamlit
+- [x] Parse timing cache for actual timings
+
+**Key Classes Added:**
+- `TRTEngineReader`, `TRTEngineInfo`, `TRTLayerInfo`, `TRTBindingInfo`
+- `TRTPerformanceMetadata`, `TRTBuilderConfig`
+- `QuantBottleneckAnalysis`, `FailedFusionPattern`, `BottleneckZone`
+- `LayerRewrite`, `TRTComparisonReport`, `TRTONNXComparator`
+- `generate_timing_chart()`, `generate_bound_type_chart()`, `generate_comparison_html()`
+
+---
+
 *End of Archive*
 

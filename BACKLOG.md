@@ -49,7 +49,7 @@
 | Epic 33: QAT Linters | **COMPLETE** | 5 | 41/41 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
-| Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
+| Epic 36: Layer Visualization | In Progress | 5 | 4/25 | **P2** *(4 tasks via Epic 22)* |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
 | Epic 38: Docker Distribution | In Progress | 1 | 1/5 | P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
@@ -218,119 +218,11 @@
 
 ---
 
-## Epic 22: TensorRT Engine Introspection (P2)
+## Epic 22: TensorRT Engine Introspection - **COMPLETE**
 
-*Deep analysis of NVIDIA TensorRT compiled engines. Inspired by [TRT Engine Explorer](https://github.com/NVIDIA/TensorRT/tree/main/tools/experimental/trt-engine-explorer).*
+*Archived to [PRDBacklogArchive.md](PRDBacklogArchive.md) - 50/50 tasks (v0.7.2)*
 
-**Requirements:**
-- NVIDIA GPU (tested on RTX 4050, Ada Lovelace)
-- CUDA 12.x
-- TensorRT 10.x Python bindings (`pip install haoline[tensorrt]`)
-- Engine files must be built for compatible GPU architecture
-
-**Phasing:**
-- Phase 1: Foundation (Stories 22.1, 22.5, 22.7) - Load, summarize, integrate
-- Phase 2: Optimization Understanding (Story 22.2) - See what TRT did
-- Phase 3: ONNX ↔ TRT Comparison (Stories 22.3, 22.6) - Side-by-side analysis
-- Phase 4: Performance Deep Dive (Story 22.4) - Profiling data extraction
-
----
-
-### Story 22.1: Engine File Loader [Phase 1] - **COMPLETE**
-*Load .engine/.plan TRT blobs using TensorRT runtime APIs.*
-
-- [x] **Task 22.1.1**: Add `tensorrt` extra to pyproject.toml (tensorrt>=10.0)
-- [x] **Task 22.1.2**: Create `TRTEngineReader` class in `src/haoline/formats/tensorrt.py`
-- [x] **Task 22.1.3**: Implement `TRTEngineReader.read()` to deserialize engine files
-- [x] **Task 22.1.4**: Extract engine metadata (TRT version, build flags, calibration info)
-- [x] **Task 22.1.5**: Handle engine compatibility checks (GPU arch, TRT version mismatch)
-- [x] **Task 22.1.6**: Support both `.engine` and `.plan` file extensions
-- [x] **Task 22.1.7**: Add `is_tensorrt_file()` and `is_available()` helper functions
-
-### Story 22.2: Fused Graph Reconstruction [Phase 2] - **COMPLETE**
-*Parse the optimized TRT graph and reconstruct the execution plan.*
-
-- [x] **Task 22.2.1**: Extract layer list from engine (names, types, shapes)
-- [x] **Task 22.2.2**: Identify fused operations (Conv+BN+ReLU → single kernel)
-- [x] **Task 22.2.3**: Detect removed/optimized-away layers (via comparison)
-- [x] **Task 22.2.4**: Extract kernel substitutions (cuDNN vs custom kernels) - tactic field
-- [x] **Task 22.2.5**: Parse timing cache if present (Phase 4) - `parse_timing_cache()` in v0.7.1
-- [x] **Task 22.2.6**: Identify precision per layer (FP32/FP16/INT8/TF32)
-
-### Story 22.3: ONNX ↔ TRT Diff View [Phase 3] - **COMPLETE**
-*Visual comparison between source ONNX and compiled TRT engine.*
-
-- [x] **Task 22.3.1**: Map TRT layers back to original ONNX nodes (by name matching)
-- [x] **Task 22.3.2**: Highlight fused operations (N ONNX ops → 1 TRT layer)
-- [x] **Task 22.3.3**: Show precision auto-selection decisions per layer
-- [x] **Task 22.3.4**: Visualize layer rewrites (e.g., attention → Flash Attention)
-- [x] **Task 22.3.5**: Display shape changes (dynamic → static binding)
-- [x] **Task 22.3.6**: Generate side-by-side graph comparison in HTML report
-
-### Story 22.4: TRT Performance Metadata Panel [Phase 4] - **COMPLETE**
-*Extract and display engine profiling information (if profiling was enabled during build).*
-
-- [x] **Task 22.4.1**: Extract per-layer latency from profiling data
-- [x] **Task 22.4.2**: Show workspace size allocation per layer
-- [x] **Task 22.4.3**: Display kernel/tactic selection choices
-- [x] **Task 22.4.4**: Identify memory-bound vs compute-bound layers
-- [x] **Task 22.4.5**: Show layer timing breakdown chart (HTML/Streamlit)
-- [x] **Task 22.4.6**: Extract device memory footprint
-
-### Story 22.5: TRT Engine Summary Block [Phase 1] - **COMPLETE**
-*Comprehensive summary matching HaoLine report format.*
-
-- [x] **Task 22.5.1**: Generate engine overview (layer count, total memory, precision mix)
-- [x] **Task 22.5.2**: Show optimization summary (fusions applied, original ops count)
-- [x] **Task 22.5.3**: Display hardware binding info (GPU arch, compute capability)
-- [x] **Task 22.5.4**: List builder configuration (max batch, workspace, DLA cores)
-
-### Story 22.6: ONNX vs TRT Comparison Mode [Phase 3] - **COMPLETE**
-*Side-by-side analysis showing what changed and performance impact.*
-
-- [x] **Task 22.6.1**: Add `haoline model.onnx --compare-trt model.engine` CLI support
-- [x] **Task 22.6.2**: Compute layer count delta (before/after fusion)
-- [x] **Task 22.6.3**: Show precision changes with accuracy impact notes
-- [x] **Task 22.6.4**: Generate comparison report (JSON/MD/HTML formats)
-- [x] **Task 22.6.5**: Visualize memory reduction from optimizations
-
-### Story 22.7: CLI & Streamlit Integration [Phase 1] - **COMPLETE**
-*Full integration with HaoLine CLI and web UI.*
-
-- [x] **Task 22.7.1**: Register TensorRT in `formats/__init__.py` detect_format()
-- [x] **Task 22.7.2**: Add `.engine` and `.plan` to CLI accepted formats
-- [x] **Task 22.7.3**: Add TensorRT to Streamlit file_uploader accepted types
-- [x] **Task 22.7.4**: Create TRT-specific report sections (fusions, precision breakdown)
-- [x] **Task 22.7.5**: Add "TensorRT Analysis" tab in Streamlit with engine details
-- [x] **Task 22.7.6**: Handle graceful degradation when TRT not installed (skip with message)
-- [x] **Task 22.7.7**: Update HuggingFace Spaces requirements (note: TRT requires GPU, may not work on free tier)
-- [x] **Task 22.7.8**: Write unit tests for TRTEngineReader (9 tests + integration test)
-
-### Story 22.8: Quantization Bottleneck Analysis [Phase 4] - **COMPLETE (8/8)**
-*Engine-level insight into failed fusions and speed bottlenecks (per user feedback).*
-
-**User Pain Point:** "When I create a QAT module, TRT engine explorer shows nodes I need to fix for higher speed."
-
-- [x] **Task 22.8.1**: Detect "failed fusion zones" - ops that should fuse but appear separate
-  - Conv followed by BN followed by ReLU appearing as 3 layers = missed optimization
-  - Flag common patterns: Conv+BN+ReLU, MatMul+Add, LayerNorm+Add
-- [x] **Task 22.8.2**: Group consecutive FP32 layers into "bottleneck zones"
-  - Find largest non-quantized regions
-  - Calculate zone size (layer count, estimated time impact)
-- [x] **Task 22.8.3**: Add per-layer quant status indicators (INT8/FP16/FP32 with color coding)
-  - Shown in CLI output with precision breakdown
-- [x] **Task 22.8.4**: Estimate "quant gap" - speed delta vs ideal fully-quantized engine
-  - Use precision breakdown + typical speed ratios (INT8 ~2-4x faster than FP32)
-- [x] **Task 22.8.5**: Generate "Quantization Fusion Summary" panel:
-  ```
-  Fused INT8 regions: 84.6%
-  Remaining FP32 ops: 12
-  Largest bottleneck: LayerNorm → Add → MLP (3 layers)
-  Estimated speed gap vs ideal QAT: 1.7×
-  ```
-- [x] **Task 22.8.6**: Add `--quant-bottlenecks` CLI flag to show bottleneck analysis
-- [x] **Task 22.8.7**: Add bottleneck heatmap to Streamlit TRT view (red zones for FP32)
-- [x] **Task 22.8.8**: Parse timing cache/profiling data if available for actual timings
+**Summary:** Deep analysis of NVIDIA TensorRT compiled engines including layer rewrite detection (FlashAttention, GELU, LayerNorm), ONNX↔TRT side-by-side HTML comparison, performance metadata panel, quantization bottleneck analysis, and timing charts.
 
 ---
 
