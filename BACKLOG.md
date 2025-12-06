@@ -58,6 +58,7 @@
 | Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
+| Epic 51: AWS GPU Deployment | Not Started | 4 | 0/18 | P3 |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
 | Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
 | Epic 44: Expanded Op Type Support | Not Started | 3 | 0/14 | P3 |
@@ -479,6 +480,51 @@
 - [ ] **Task 50.3.2**: Add `--quiet` and `--verbose` flags consistently
 - [ ] **Task 50.3.3**: Add colored output for warnings/errors (with `--no-color` flag)
 - [ ] **Task 50.3.4**: Add `haoline doctor` command to check system setup (GPU, deps, versions)
+
+---
+
+## Epic 51: AWS GPU Deployment (P3)
+
+*Deploy HaoLine on AWS with GPU support to unlock all features not available on HF Spaces free tier.*
+
+**Motivation:**
+- HuggingFace Spaces free tier = CPU only (no TensorRT, no runtime benchmarking)
+- AWS g4dn/g5 instances provide NVIDIA GPUs for full feature support
+- Professional deployment with custom domain, scaling
+
+### Story 51.1: Infrastructure Setup
+*Set up AWS infrastructure for HaoLine deployment.*
+
+- [ ] **Task 51.1.1**: Create Dockerfile with CUDA, TensorRT, and all dependencies
+- [ ] **Task 51.1.2**: Set up ECR repository for container images
+- [ ] **Task 51.1.3**: Configure g4dn.xlarge instance (T4 GPU, cost-effective)
+- [ ] **Task 51.1.4**: Set up ALB with SSL certificate (ACM)
+- [ ] **Task 51.1.5**: Configure auto-start/stop to minimize costs (scheduled scaling)
+
+### Story 51.2: Streamlit Deployment
+*Deploy Streamlit app on AWS with GPU support.*
+
+- [ ] **Task 51.2.1**: Create ECS task definition with GPU resource allocation
+- [ ] **Task 51.2.2**: Deploy Streamlit container to ECS Fargate (GPU)
+- [ ] **Task 51.2.3**: Configure CloudWatch logging and monitoring
+- [ ] **Task 51.2.4**: Add health checks and auto-recovery
+
+### Story 51.3: Feature Unlocking
+*Enable GPU-dependent features in AWS deployment.*
+
+- [ ] **Task 51.3.1**: Enable TensorRT engine analysis (full support)
+- [ ] **Task 51.3.2**: Enable runtime inference benchmarking (actual GPU timings)
+- [ ] **Task 51.3.3**: Add UI indicator showing "GPU-Accelerated" status
+
+### Story 51.4: Runtime Profiling Streamlit UI
+*Epic 9 (Runtime Profiling) is CLI-only. Add Streamlit UI for GPU deployments.*
+
+- [ ] **Task 51.4.1**: Add "Benchmark" tab in Streamlit analysis view
+- [ ] **Task 51.4.2**: Implement batch size sweep UI with live progress
+- [ ] **Task 51.4.3**: Show per-layer timing breakdown chart
+- [ ] **Task 51.4.4**: Display GPU memory utilization during inference
+- [ ] **Task 51.4.5**: Add bottleneck detection summary card
+- [ ] **Task 51.4.6**: Show "GPU Required" message on HF Spaces free tier
 
 ---
 

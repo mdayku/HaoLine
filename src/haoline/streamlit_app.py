@@ -976,6 +976,30 @@ def analyze_model_file(uploaded_file) -> AnalysisResult | None:
 
 def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str) -> None:
     """Handle TensorRT engine file analysis in Streamlit."""
+    import os
+
+    # Check if running on HuggingFace Spaces (free tier = no GPU)
+    is_hf_spaces = os.environ.get("SPACE_ID") is not None
+    is_hf_free_tier = is_hf_spaces and os.environ.get("SPACE_HARDWARE", "cpu") == "cpu"
+
+    if is_hf_free_tier:
+        st.error(
+            """
+            **TensorRT requires NVIDIA GPU**
+
+            This HuggingFace Space is running on CPU (free tier).
+            TensorRT engine analysis requires an NVIDIA GPU.
+
+            **Options:**
+            1. **Run locally**: `pip install haoline[tensorrt]` (requires NVIDIA GPU + CUDA 12.x)
+            2. **Use CLI**: `haoline model.engine` on a GPU machine
+            3. **Upgrade Space**: Use a GPU-enabled HuggingFace Space tier
+
+            *ONNX models work fine on CPU - try uploading an ONNX file instead!*
+            """
+        )
+        return
+
     try:
         from haoline.formats.tensorrt import TRTEngineReader, format_bytes, is_available
     except ImportError:
@@ -1404,6 +1428,21 @@ def main():
             "</div>",
             unsafe_allow_html=True,
         )
+
+        # GPU features disclaimer for HuggingFace Spaces
+        is_hf_spaces = os.environ.get("SPACE_ID") is not None
+        is_hf_free_tier = is_hf_spaces and os.environ.get("SPACE_HARDWARE", "cpu") == "cpu"
+
+        if is_hf_free_tier:
+            st.markdown("---")
+            st.info(
+                "**GPU Features Unavailable**\n\n"
+                "This Space runs on CPU (free tier). Features requiring GPU:\n"
+                "- TensorRT engine analysis\n"
+                "- Runtime inference benchmarking\n"
+                "- Actual batch/resolution sweeps\n\n"
+                "*Run locally with GPU for full features.*"
+            )
 
         st.markdown(f"---\n*HaoLine v{__version__}*")
 
