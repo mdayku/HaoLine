@@ -54,8 +54,8 @@
 | Epic 38: Docker Distribution | Not Started | 1 | 0/5 | P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | Not Started | 4 | 0/20 | P2 |
-| Epic 41: Standardized Reporting | **Complete** | 5 | 43/44 | **P1** |
-| Epic 42: Format Conversion Testing | Not Started | 4 | 0/24 | **P1** |
+| Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
+| Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
 
 ---
 
@@ -1566,7 +1566,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [x] **Task 41.5.5**: Add extended Hardware Estimates (utilization, saturation, throughput)
 - [x] **Task 41.5.6**: Add System Requirements to LLM prompt (min/rec/optimal GPUs)
 - [x] **Task 41.5.7**: Add Bottleneck Analysis recommendations to LLM prompt — Done: bottleneck_analysis with type, ratios, recommendations
-- [ ] **Task 41.5.8**: Test LLM summary quality with transformer model
+- [x] **Task 41.5.8**: Test LLM summary quality with transformer model
 
 ---
 
