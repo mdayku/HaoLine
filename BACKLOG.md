@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 12/42 | **P2** |
+| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 17/42 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -280,7 +280,7 @@
 *Comprehensive summary matching HaoLine report format.*
 
 - [x] **Task 22.5.1**: Generate engine overview (layer count, total memory, precision mix)
-- [ ] **Task 22.5.2**: Show optimization summary (fusions applied, layers removed) - *fusion counts done, formatting pending*
+- [x] **Task 22.5.2**: Show optimization summary (fusions applied, original ops count)
 - [x] **Task 22.5.3**: Display hardware binding info (GPU arch, compute capability)
 - [ ] **Task 22.5.4**: List builder configuration (max batch, workspace, DLA cores)
 
@@ -293,14 +293,14 @@
 - [ ] **Task 22.6.4**: Generate comparison report (JSON/MD/HTML formats)
 - [ ] **Task 22.6.5**: Visualize memory reduction from optimizations
 
-### Story 22.7: CLI & Streamlit Integration [Phase 1] - **PARTIAL**
+### Story 22.7: CLI & Streamlit Integration [Phase 1] - **COMPLETE**
 *Full integration with HaoLine CLI and web UI.*
 
 - [x] **Task 22.7.1**: Register TensorRT in `formats/__init__.py` detect_format()
-- [ ] **Task 22.7.2**: Add `.engine` and `.plan` to CLI accepted formats
-- [ ] **Task 22.7.3**: Add TensorRT to Streamlit file_uploader accepted types
-- [ ] **Task 22.7.4**: Create TRT-specific report sections (fusions, precision breakdown)
-- [ ] **Task 22.7.5**: Add "TensorRT Analysis" tab in Streamlit with engine details
+- [x] **Task 22.7.2**: Add `.engine` and `.plan` to CLI accepted formats
+- [x] **Task 22.7.3**: Add TensorRT to Streamlit file_uploader accepted types
+- [x] **Task 22.7.4**: Create TRT-specific report sections (fusions, precision breakdown)
+- [x] **Task 22.7.5**: Add "TensorRT Analysis" tab in Streamlit with engine details
 - [x] **Task 22.7.6**: Handle graceful degradation when TRT not installed (skip with message)
 - [ ] **Task 22.7.7**: Update HuggingFace Spaces requirements (note: TRT requires GPU, may not work on free tier)
 - [x] **Task 22.7.8**: Write unit tests for TRTEngineReader (9 tests + integration test)
