@@ -1354,5 +1354,5 @@ class MyFormatAdapter:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | Dec 2024 | Marcus | Initial architecture document |
+| 1.0 | Dec 2025 | Marcus | Initial architecture document |
 | 1.1 | Dec 6, 2025 | Marcus | Added Universal IR (Epic 18), Quantization Linter (Epic 33), Report Sections (Epic 41), updated file structure |

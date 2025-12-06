@@ -56,13 +56,13 @@
 | Epic 40: Full Pydantic Dataclass Migration | Not Started | 4 | 0/20 | P2 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
 | Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
-| **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2024* |
+| **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
 | Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
 | Epic 44: Expanded Op Type Support | Not Started | 3 | 0/14 | P3 |
-| Epic 45: UI Demo Polish | Not Started | 3 | 0/13 | P3 |
-| Epic 46: Enhanced Model Diff | Not Started | 3 | 0/15 | P3 |
-| Epic 47: Report Polish & Standards | Not Started | 3 | 0/15 | P4 |
-| Epic 48: Quantization Efficiency | Not Started | 2 | 0/10 | P3 |
+| ~~Epic 45: UI Demo Polish~~ | *Merged* | - | - | *→ Epic 11* |
+| ~~Epic 46: Enhanced Model Diff~~ | *Merged* | - | - | *→ Epic 18* |
+| Epic 47: Model Card & Standards | Not Started | 2 | 0/10 | P4 |
+| ~~Epic 48: Quantization Efficiency~~ | *Merged* | - | - | *→ Epic 33* |
 
 ---
 
@@ -900,124 +900,60 @@
 
 ---
 
-## Epic 45: UI Demo Polish (P3)
+## ~~Epic 45: UI Demo Polish~~ → MERGED INTO EPIC 11
 
-*Enhance the Streamlit demo for better first impressions. Suggestions from Deep Research analysis.*
+*Sample model preloading merged into Epic 11 (Streamlit Web UI). Visual risk indicators and comparison polish already covered by Epic 41.*
 
-### Story 45.1: Sample Model Preloading
-*Let users explore without uploading their own model first.*
-
-- [ ] **Task 45.1.1**: Bundle 2-3 small sample models (ResNet18, TinyBERT, YOLO-nano)
-- [ ] **Task 45.1.2**: Add "Try a sample model" dropdown in Streamlit
-- [ ] **Task 45.1.3**: Cache sample model analysis results for instant display
-- [ ] **Task 45.1.4**: Add sample model descriptions (architecture, use case)
-
-### Story 45.2: Visual Risk Indicators
-*Make risk signals more prominent with visual cues.*
-
-- [ ] **Task 45.2.1**: Add severity icons to risk signals (warning triangle, info circle)
-- [ ] **Task 45.2.2**: Color-code risk cards by severity (red=high, yellow=medium, blue=info)
-- [ ] **Task 45.2.3**: Add hardware bottleneck indicator in metrics cards
-- [ ] **Task 45.2.4**: Highlight "fits in VRAM" vs "exceeds VRAM" prominently
-- [ ] **Task 45.2.5**: Add "quantization recommended" badge when model is large FP32
-
-### Story 45.3: Quick Comparison Mode
-*Lightweight drag-and-drop comparison in web UI.*
-
-- [ ] **Task 45.3.1**: Add dual file upload zone (Model A vs Model B)
-- [ ] **Task 45.3.2**: Side-by-side metrics cards for quick comparison
-- [ ] **Task 45.3.3**: Delta indicators (↑10% params, ↓20% FLOPs)
-- [ ] **Task 45.3.4**: "Same architecture?" indicator based on op sequence
+**New Story 11.4 (in Epic 11):** Sample Model Preloading
+- [ ] Bundle 2-3 small sample models (ResNet18, TinyBERT, YOLO-nano)
+- [ ] Add "Try a sample model" dropdown in Streamlit
+- [ ] Cache sample model analysis results for instant display
 
 ---
 
-## Epic 46: Enhanced Model Diff (P3)
+## ~~Epic 46: Enhanced Model Diff~~ → MERGED INTO EPIC 18
 
-*Richer model comparison beyond basic count deltas. Identified gap from Deep Research analysis.*
+*Layer-level diff and visual diff merged into Epic 18 (Universal IR). Structural comparison tools (`diff()`, `is_structurally_equal()`) already exist in `universal_ir.py`.*
 
-**Context:** Current compare mode shows count differences but doesn't detail which specific layers were added/removed/changed.
-
-### Story 46.1: Layer-Level Diff
-*Show what changed between model versions at the layer level.*
-
-- [ ] **Task 46.1.1**: Align layers between models by name similarity
-- [ ] **Task 46.1.2**: Identify added layers (in B but not A)
-- [ ] **Task 46.1.3**: Identify removed layers (in A but not B)
-- [ ] **Task 46.1.4**: Identify modified layers (same name, different params/shape)
-- [ ] **Task 46.1.5**: Generate structured diff report (JSON/Markdown)
-
-### Story 46.2: Architecture Change Detection
-*Detect structural changes between model versions.*
-
-- [ ] **Task 46.2.1**: Detect depth changes (layers added/removed in sequence)
-- [ ] **Task 46.2.2**: Detect width changes (channel count differences)
-- [ ] **Task 46.2.3**: Detect head changes (output shape differences)
-- [ ] **Task 46.2.4**: Detect backbone swap (different base architecture)
-- [ ] **Task 46.2.5**: Generate "what changed" summary paragraph
-
-### Story 46.3: Visual Diff
-*Visualize differences in graph view.*
-
-- [ ] **Task 46.3.1**: Highlight added nodes (green)
-- [ ] **Task 46.3.2**: Highlight removed nodes (red)
-- [ ] **Task 46.3.3**: Highlight modified nodes (yellow)
-- [ ] **Task 46.3.4**: Side-by-side graph comparison view
-- [ ] **Task 46.3.5**: Unified diff view with change annotations
+**New Story 18.7 (in Epic 18):** Enhanced Diff Visualization
+- [ ] Extend `diff()` to include layer-level alignment by name
+- [ ] Add added/removed/modified layer categorization
+- [ ] Visualize diff in graph view (green=added, red=removed, yellow=modified)
+- [ ] Generate "what changed" summary paragraph
 
 ---
 
-## Epic 47: Report Polish & Standards Compliance (P4)
+## Epic 47: Model Card & Standards Compliance (P4)
 
-*Improve report navigability and align with industry standards. Identified gaps from Deep Research analysis.*
+*Align output with industry standards. Report navigation already covered by Epic 41.*
 
-### Story 47.1: Large Report Navigation
-*Make long reports easier to navigate.*
-
-- [ ] **Task 47.1.1**: Add table of contents to HTML reports
-- [ ] **Task 47.1.2**: Add collapsible sections (accordion UI) for large reports
-- [ ] **Task 47.1.3**: Add "jump to section" navigation bar
-- [ ] **Task 47.1.4**: Add executive summary card at top (key metrics + risk count)
-- [ ] **Task 47.1.5**: Limit per-layer table to top-N by default with "show all" option
-
-### Story 47.2: Model Card Toolkit Compliance
+### Story 47.1: Model Card Toolkit Compliance
 *Align output with Google's Model Card Toolkit schema for interoperability.*
 
-- [ ] **Task 47.2.1**: Research Model Card Toolkit JSON schema
-- [ ] **Task 47.2.2**: Map HaoLine fields to Model Card fields
-- [ ] **Task 47.2.3**: Add `--model-card-format` CLI flag for MCT-compliant output
-- [ ] **Task 47.2.4**: Include MCT required fields (intended use, limitations, ethical considerations)
-- [ ] **Task 47.2.5**: Generate Model Card Toolkit-compatible JSON export
+- [ ] **Task 47.1.1**: Research Model Card Toolkit JSON schema
+- [ ] **Task 47.1.2**: Map HaoLine fields to Model Card fields
+- [ ] **Task 47.1.3**: Add `--model-card-format` CLI flag for MCT-compliant output
+- [ ] **Task 47.1.4**: Include MCT required fields (intended use, limitations, ethical considerations)
+- [ ] **Task 47.1.5**: Generate Model Card Toolkit-compatible JSON export
 
-### Story 47.3: Industry Standard Metrics
+### Story 47.2: Industry Standard Metrics
 *Add metrics used by model benchmarking leaderboards.*
 
-- [ ] **Task 47.3.1**: Add Params/FLOP efficiency ratio
-- [ ] **Task 47.3.2**: Add memory efficiency score (params per MB)
-- [ ] **Task 47.3.3**: Add compute density metric (FLOPs per parameter)
-- [ ] **Task 47.3.4**: Compare against reference architectures (vs ResNet50, vs BERT-base)
+- [ ] **Task 47.2.1**: Add Params/FLOP efficiency ratio
+- [ ] **Task 47.2.2**: Add memory efficiency score (params per MB)
+- [ ] **Task 47.2.3**: Add compute density metric (FLOPs per parameter)
+- [ ] **Task 47.2.4**: Compare against reference architectures (vs ResNet50, vs BERT-base)
+- [ ] **Task 47.2.5**: Add efficiency percentile ranking
 
 ---
 
-## Epic 48: Quantization Efficiency Scoring (P3)
+## ~~Epic 48: Quantization Efficiency~~ → MERGED INTO EPIC 33
 
-*Beyond detecting quantization - provide actionable efficiency insights. Identified gap from Deep Research analysis.*
+*Quantization efficiency scoring merged into Epic 33 (QAT Linters). Readiness scoring and recommendations already exist. Efficiency metrics extend that work.*
 
-**Context:** Current analysis flags `is_quantized` but doesn't evaluate how effective the quantization is or compare efficiency gains.
-
-### Story 48.1: Efficiency Metrics
-*Quantify the benefits of quantization.*
-
-- [ ] **Task 48.1.1**: Calculate compression ratio (original size / quantized size)
-- [ ] **Task 48.1.2**: Estimate theoretical speedup from precision reduction
-- [ ] **Task 48.1.3**: Calculate memory bandwidth savings
-- [ ] **Task 48.1.4**: Add "efficiency score" (0-100) based on size + speed gains
-- [ ] **Task 48.1.5**: Compare against typical compression ratios for architecture type
-
-### Story 48.2: Quantization Quality Indicators
-*Assess whether quantization was done well.*
-
-- [ ] **Task 48.2.1**: Check for mixed-precision consistency (no random FP32 layers)
-- [ ] **Task 48.2.2**: Identify layers that should stay FP16/FP32 (classifiers, embeddings)
-- [ ] **Task 48.2.3**: Flag "over-quantized" models (INT4 on accuracy-sensitive layers)
-- [ ] **Task 48.2.4**: Detect calibration artifacts (unusual scale/zero-point values)
-- [ ] **Task 48.2.5**: Generate "quantization quality report" with recommendations
+**New Story 33.6 (in Epic 33):** Quantization Efficiency Scoring
+- [ ] Calculate compression ratio (original size / quantized size)
+- [ ] Estimate theoretical speedup from precision reduction
+- [ ] Add "efficiency score" (0-100) based on size + speed gains
+- [ ] Detect over-quantization (INT4 on accuracy-sensitive layers)
+- [ ] Generate quantization efficiency report

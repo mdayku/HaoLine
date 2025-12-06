@@ -5,7 +5,44 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.3] - 2024-12-04
+## [0.4.0] - 2025-12-06
+
+### Added
+- Epic 33 complete: QAT & Quantization Linters (41/41 tasks)
+- Quantization readiness scoring (0-100)
+- QAT graph validation (fake-quant detection, scale consistency)
+- LLM-powered quantization recommendations
+- `--lint-quantization`, `--quant-report`, `--quant-llm-advice` CLI flags
+- Quantization analysis in Streamlit UI
+
+### Changed
+- Documentation archival system: PRDBacklogArchive.md for completed epics
+- Cursor rules updated with mypy frequency (every 3 commits)
+- BACKLOG.md slimmed from 1848 to ~800 lines (57% reduction)
+- Merged overlapping Deep Research epics (45→11, 46→18, 48→33)
+
+### Fixed
+- 62 mypy type errors across codebase
+- Ruff lint error (unused import)
+
+## [0.3.0] - 2025-12-06
+
+### Added
+- Epic 41 complete: Full CLI-Streamlit parity (44/44 tasks)
+- System Requirements section (Steam-style min/rec/optimal)
+- Deployment Cost Calculator ($/month estimates)
+- Batch/Resolution Sweep views
+- Per-Layer Timing breakdown
+- Memory Overview chart
+- Run Benchmark button
+- Privacy Controls (redact names, summary only)
+- Universal IR export (JSON + DOT graph)
+- Cloud Instance selector (AWS/Azure/GCP)
+
+### Changed
+- LLM prompts now include all analysis data (KV cache, precision, memory breakdown)
+
+## [0.2.3] - 2025-12-04
 
 ### Added
 - CLI Reference section in README with all flags documented
@@ -23,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Moved Docker distribution to Epic 38 (deferred)
 
-## [0.2.2] - 2024-12-04
+## [0.2.2] - 2025-12-04
 
 ### Added
 - Format readers for GGUF, SafeTensors, TFLite, CoreML, OpenVINO
@@ -41,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Various mypy type errors
 - Black/ruff formatting compliance
 
-## [0.2.1] - 2024-12-04
+## [0.2.1] - 2025-12-04
 
 ### Added
 - `haoline-web` CLI command to launch Streamlit app
@@ -53,7 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.env` file auto-loading for API keys
 - LLM summary prompts when API key missing
 
-## [0.2.0] - 2024-12-04
+## [0.2.0] - 2025-12-04
 
 ### Added
 - Streamlit Web UI (`streamlit_app.py`)
@@ -65,7 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved `matplotlib` from optional to core dependency
 - Bumped version for PyPI release
 
-## [0.1.0] - 2024-12-03
+## [0.1.0] - 2025-12-03
 
 ### Added
 - Initial PyPI release
@@ -82,6 +119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Compare mode for quantization analysis
 - CLI: `haoline` command with comprehensive flags
 
+[0.4.0]: https://github.com/mdayku/HaoLine/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/mdayku/HaoLine/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/mdayku/HaoLine/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/mdayku/HaoLine/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/mdayku/HaoLine/compare/v0.2.0...v0.2.1

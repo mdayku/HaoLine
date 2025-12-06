@@ -1885,4 +1885,4 @@ This creates a complete **optimize → analyze → deploy** workflow.
 | Dec 4, 2025 | **Epic 11 COMPLETE** - Streamlit Web UI deployed to HuggingFace Spaces |
 | Dec 4, 2025 | **PyPI Published** - `pip install haoline` available worldwide |
 
-*See [PRDBacklogArchive.md](PRDBacklogArchive.md) for complete December 2024 changelog.*
+*See [PRDBacklogArchive.md](PRDBacklogArchive.md) for complete December 2025 changelog.*

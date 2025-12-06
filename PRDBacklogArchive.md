@@ -22,7 +22,7 @@
 
 ## Epic 1: Environment Setup (COMPLETE - 11/11)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 - [x] Fork and build ONNX Runtime
 - [x] Build Python wheel (`onnxruntime_gpu-1.24.0`)
@@ -35,7 +35,7 @@
 
 ## Epic 2: Core Analysis Engine (COMPLETE - 17/17)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 - [x] ONNX Graph Loader
 - [x] Parameter Counting (with shared weights, quantized params)
@@ -46,7 +46,7 @@
 
 ## Epic 3: Pattern Analysis (COMPLETE - 9/9)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 - [x] Block Detection (Conv-BN-ReLU, Residual, Transformer)
 - [x] Risk Heuristics (deep networks, dynamic shapes, oversized layers)
@@ -55,7 +55,7 @@
 
 ## Epic 4: CLI and Output (COMPLETE - 18/18)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 - [x] CLI Implementation (argparse, progress, error handling)
 - [x] JSON Output (schema validation)
@@ -66,7 +66,7 @@
 
 ## Epic 4B: PyTorch Integration (COMPLETE - 14/14)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 - [x] PyTorch to ONNX Conversion
 - [x] Dataset/Class Metadata Extraction (Ultralytics, output shape inference)
@@ -75,7 +75,7 @@
 
 ## Epic 4C: TensorFlow and Keras Conversion (COMPLETE - 15/15)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 4C.1: TensorFlow to ONNX Conversion
 - [x] Add `--from-tensorflow` CLI flag with SavedModel path argument
@@ -102,7 +102,7 @@
 
 ## Epic 5: Visualization Module (COMPLETE - 52/52)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 5.1: Chart Infrastructure
 - [x] Set up matplotlib with Agg backend
@@ -172,7 +172,7 @@
 
 ## Epic 6: Hardware Profiles and Compare Mode (COMPLETE - 56/56)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 6.1: Hardware Profile System
 - [x] Define hardware profile dataclass (HardwareProfile)
@@ -217,7 +217,7 @@
 
 ## Epic 7: LLM Integration (COMPLETE - 5/5)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 7.1: LLM Summarizer
 - [x] Implement API client abstraction
@@ -232,7 +232,7 @@
 
 ## Epic 8: Testing & CI/CD (COMPLETE - 18/18)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 - [x] Unit Tests (all modules)
 - [x] Integration Tests (CLI end-to-end)
@@ -243,7 +243,7 @@
 
 ## Epic 9: Runtime Profiling (COMPLETE - 22/22)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 9.1: Batch Size Benchmarking
 - [x] Implement `run_batch_sweep_benchmark()` with ONNX Runtime
@@ -286,7 +286,7 @@
 
 ## Epic 10B: Standalone Package (COMPLETE - 23/23)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 10B.0: Greenfield Extraction
 - [x] Create new GitHub repo (standalone, not ORT fork)
@@ -324,7 +324,7 @@
 
 ## Epic 11: Streamlit Web UI (COMPLETE - 17/17)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 11.1: Basic Streamlit App
 - [x] Create `streamlit_app.py` with file upload widget
@@ -353,7 +353,7 @@
 
 ## Epic 12: Eval Import & Comparison (COMPLETE - 30/30)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 12.1: Base Eval Schema
 - [x] Define `EvalResult` base schema
@@ -403,7 +403,7 @@
 
 ## Epic 18: Universal IR (COMPLETE - 25/25)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 18.1: Universal Graph IR
 - [x] Design `UniversalGraph` dataclass
@@ -446,7 +446,7 @@
 
 ## Epic 25: Privacy and Trust Architecture (COMPLETE - 9/9)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 25.1: Local-First Architecture
 - [x] Document "model never leaves your machine" guarantee
@@ -467,7 +467,7 @@
 
 ## Epic 33: QAT & Quantization Linters (COMPLETE - 41/41)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 33.1: Quantization-Unfriendly Op Detection
 - [x] Build list of quantization-unfriendly ops
@@ -523,7 +523,7 @@
 
 ## Epic 39: Pydantic Schema Migration (COMPLETE - 12/12)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 39.1: Core Model Migration
 - [x] Add `pydantic>=2.0` to core dependencies
@@ -547,7 +547,7 @@
 
 ## Epic 41: Standardized Reporting (COMPLETE - 44/44)
 
-*Completed: December 2024*
+*Completed: December 2025*
 
 ### Story 41.1: Audit Current Report Differences
 - [x] Create comparison matrix: CLI HTML vs Streamlit
@@ -609,7 +609,7 @@
 
 *Historical changelog entries moved from PRD.md. These document the evolution of the project.*
 
-## December 2024 Changelog
+## December 2025 Changelog
 
 | Date | Section | Change | Reason |
 |------|---------|--------|--------|
