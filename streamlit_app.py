@@ -1235,22 +1235,97 @@ def main():
         )
 
         if uploaded_file is None:
+            # Show format capability matrix
             st.markdown(
                 """
-            <div style="text-align: center; padding: 1rem 2rem; margin-top: -0.5rem;">
-                <p style="font-size: 0.9rem; margin-bottom: 0.75rem; color: #a3a3a3;">
-                    <span style="color: #10b981; font-weight: 600;">ONNX</span> ✓ &nbsp;&nbsp;
-                    <span style="color: #a3a3a3;">PyTorch</span> ↻ &nbsp;&nbsp;
-                    <span style="color: #a3a3a3;">SafeTensors</span> ↻
-                </p>
-                <p style="font-size: 0.8rem; color: #737373;">
+            <div style="text-align: center; padding: 0.5rem 2rem; margin-top: -0.5rem;">
+                <p style="font-size: 0.8rem; color: #737373; margin-bottom: 1rem;">
                     Need a model? Browse the 
-                    <a href="https://huggingface.co/models?library=onnx" target="_blank" style="color: #10b981; text-decoration: none;">HuggingFace ONNX Hub →</a>
+                    <a href="https://huggingface.co/models?library=onnx" target="_blank" style="color: #10b981; text-decoration: none;">HuggingFace ONNX Hub</a>
                 </p>
             </div>
             """,
                 unsafe_allow_html=True,
             )
+
+            # Capability matrix as an expander
+            with st.expander("Format Capabilities", expanded=False):
+                st.markdown(
+                    """
+                <style>
+                    .cap-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+                    .cap-table th { text-align: left; padding: 0.5rem; border-bottom: 1px solid #333; color: #10b981; }
+                    .cap-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #222; }
+                    .cap-table tr:hover { background: rgba(16, 185, 129, 0.05); }
+                    .cap-yes { color: #10b981; }
+                    .cap-no { color: #666; }
+                    .cap-warn { color: #f59e0b; }
+                </style>
+                <table class="cap-table">
+                    <tr>
+                        <th>Format</th>
+                        <th>Graph</th>
+                        <th>Params</th>
+                        <th>FLOPs</th>
+                        <th>Interactive Map</th>
+                        <th>Notes</th>
+                    </tr>
+                    <tr>
+                        <td><strong>ONNX</strong></td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Full support (recommended)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PyTorch</strong></td>
+                        <td class="cap-warn">CLI only</td>
+                        <td class="cap-warn">CLI only</td>
+                        <td class="cap-warn">CLI only</td>
+                        <td class="cap-warn">CLI only</td>
+                        <td class="cap-warn">Requires local PyTorch install</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SafeTensors</strong></td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-warn">Weights only - convert to ONNX for full analysis</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TensorRT</strong></td>
+                        <td class="cap-no">CLI only</td>
+                        <td class="cap-no">N/A</td>
+                        <td class="cap-no">N/A</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-warn">CLI: layer analysis, ONNX comparison (requires GPU)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TFLite</strong></td>
+                        <td class="cap-no">CLI only</td>
+                        <td class="cap-yes">CLI</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-warn">Basic analysis via CLI</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CoreML</strong></td>
+                        <td class="cap-no">CLI only</td>
+                        <td class="cap-yes">CLI</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-warn">Basic analysis via CLI (macOS)</td>
+                    </tr>
+                </table>
+                <p style="font-size: 0.75rem; color: #666; margin-top: 0.75rem;">
+                    <strong>CLI only</strong> = Use <code>pip install haoline</code> and run <code>haoline model.ext</code> locally.<br>
+                    For full features, convert models to ONNX format.
+                </p>
+                """,
+                    unsafe_allow_html=True,
+                )
 
     # Analysis
     if uploaded_file is not None:
