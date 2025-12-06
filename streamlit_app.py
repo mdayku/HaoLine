@@ -40,6 +40,7 @@ class AnalysisResult(BaseModel):
     timestamp: datetime
     report: Any  # InspectionReport
     file_size: int
+    model_path: str | None = None  # Path to temp file for interactive graph
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -62,13 +63,14 @@ def init_session_state():
         st.session_state.current_result = None  # Currently displayed analysis
 
 
-def add_to_history(name: str, report: Any, file_size: int):
+def add_to_history(name: str, report: Any, file_size: int, model_path: str | None = None):
     """Add an analysis result to session history."""
     result = AnalysisResult(
         name=name,
         timestamp=datetime.now(),
         report=report,
         file_size=file_size,
+        model_path=model_path,
     )
     # Keep max 10 results, newest first
     st.session_state.analysis_history.insert(0, result)
@@ -1414,10 +1416,10 @@ def main():
                         hardware=profile,
                     )
 
-                # Add to history and set as current
+                # Add to history and set as current (keep temp file for interactive graph)
                 import os
                 file_size = os.path.getsize(demo_path)
-                result = add_to_history(f"{demo_name}.onnx", report, file_size)
+                result = add_to_history(f"{demo_name}.onnx", report, file_size, model_path=demo_path)
                 st.session_state.current_result = result
 
                 st.success(f"Loaded {demo_name} - {demo_info['desc']}")
@@ -1463,7 +1465,7 @@ def main():
             st.metric("Operators", str(report.graph_summary.num_nodes))
 
         # Tabs for different views
-        tab1, tab2, tab3 = st.tabs(["Overview", "Details", "Export"])
+        tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Interactive Graph", "Details", "Export"])
 
         with tab1:
             st.markdown("### Model Information")
@@ -1514,21 +1516,86 @@ def main():
                 st.bar_chart(df.set_index("Operator"))
 
         with tab2:
-            st.markdown("### Layer Details")
-            if report.layers:
-                layer_data = []
-                for layer in report.layers[:50]:  # Show first 50
-                    layer_data.append({
-                        "Name": layer.name[:30] + "..." if len(layer.name) > 30 else layer.name,
-                        "Type": layer.op_type,
-                        "Params": format_number(layer.params) if layer.params else "-",
-                        "FLOPs": format_number(layer.flops) if layer.flops else "-",
-                    })
-                st.dataframe(layer_data, use_container_width=True)
+            # Interactive Graph (needs model file)
+            if result.model_path and Path(result.model_path).exists():
+                st.markdown(
+                    """
+                    <p style="font-size: 0.85rem; color: #737373; margin-bottom: 1rem;">
+                    Scroll to zoom | Drag to pan | Click nodes to expand/collapse
+                    </p>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                try:
+                    from haoline.analyzer import ONNXGraphLoader
+
+                    graph_loader = ONNXGraphLoader()
+                    _, graph_info = graph_loader.load(result.model_path)
+
+                    # Analyze patterns
+                    pattern_analyzer = PatternAnalyzer()
+                    blocks = pattern_analyzer.detect_blocks(graph_info)
+
+                    # Edge analysis
+                    edge_analyzer = EdgeAnalyzer()
+                    edge_result = edge_analyzer.analyze(graph_info)
+
+                    # Build hierarchical graph
+                    builder = HierarchicalGraphBuilder()
+                    hier_graph = builder.build(graph_info, blocks, model_name.replace(".onnx", ""))
+
+                    # Generate the full D3.js HTML
+                    graph_html = generate_graph_html(
+                        hier_graph,
+                        edge_result,
+                        title=model_name,
+                        model_size_bytes=result.file_size,
+                    )
+
+                    # Embed with generous height
+                    components.html(graph_html, height=800, scrolling=False)
+
+                except Exception as e:
+                    st.warning(f"Could not generate interactive graph: {e}")
+                    # Fallback to block list
+                    if report.detected_blocks:
+                        st.markdown("#### Detected Architecture Blocks")
+                        for i, block in enumerate(report.detected_blocks[:15]):
+                            with st.expander(f"{block.block_type}: {block.name}", expanded=(i < 3)):
+                                st.write(f"**Type:** {block.block_type}")
+                                st.write(f"**Nodes:** {len(block.nodes)}")
             else:
-                st.info("No layer details available.")
+                st.info("Interactive graph not available - model file not cached.")
+                # Show blocks as fallback
+                if report.detected_blocks:
+                    st.markdown("#### Detected Architecture Blocks")
+                    for i, block in enumerate(report.detected_blocks[:15]):
+                        with st.expander(f"{block.block_type}: {block.name}", expanded=(i < 3)):
+                            st.write(f"**Type:** {block.block_type}")
+                            st.write(f"**Nodes:** {len(block.nodes)}")
 
         with tab3:
+            st.markdown("### Architecture Blocks")
+            if report.detected_blocks:
+                for i, block in enumerate(report.detected_blocks[:15]):
+                    with st.expander(f"{block.block_type}: {block.name}", expanded=(i < 3)):
+                        st.write(f"**Type:** {block.block_type}")
+                        st.write(f"**Nodes:** {len(block.nodes)}")
+                        if hasattr(block, "params") and block.params:
+                            st.write(f"**Parameters:** {format_number(block.params)}")
+            else:
+                st.info("No architecture blocks detected.")
+
+            # Op type breakdown
+            if report.graph_summary and report.graph_summary.op_type_counts:
+                st.markdown("### Operator Types")
+                op_counts = report.graph_summary.op_type_counts
+                sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)
+                op_data = [{"Operator": op, "Count": count} for op, count in sorted_ops[:20]]
+                st.dataframe(op_data, use_container_width=True)
+
+        with tab4:
             st.markdown("### Export Report")
             # JSON export
             report_dict = report.to_dict() if hasattr(report, "to_dict") else {"error": "Export not available"}
