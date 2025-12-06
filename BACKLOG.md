@@ -371,18 +371,20 @@
 
 ### Format Capability Matrix
 
-| Format | Graph | Params | FLOPs | Memory | Interactive Map | Quant Info | Convert to ONNX |
-|--------|-------|--------|-------|--------|-----------------|------------|-----------------|
-| **ONNX** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A (native) |
-| **PyTorch** | ✅ via export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ torch.onnx |
-| **TFLite** | ✅ | ✅ | ❓ | ✅ | ✅ | ✅ | ⚠️ lossy |
-| **CoreML** | ✅ layers | ✅ | ❓ | ❓ | ✅ | ❓ | ⚠️ lossy |
-| **OpenVINO** | ✅ | ✅ | ❓ | ❓ | ✅ | ✅ | ⚠️ lossy |
-| **GGUF** | ❌ metadata | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ |
-| **SafeTensors** | ❌ weights | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ (needs arch) |
+| Format | Graph | Params | FLOPs | Memory | Interactive Map | Quant Info | Convert to ONNX | ONNX Compare |
+|--------|-------|--------|-------|--------|-----------------|------------|-----------------|--------------|
+| **ONNX** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A (native) | N/A |
+| **PyTorch** | ✅ via export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ torch.onnx | N/A |
+| **TensorRT** | ✅ fused | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ `--compare-trt` |
+| **TFLite** | ✅ | ✅ | ❓ | ✅ | ✅ | ✅ | ⚠️ lossy | ❌ |
+| **CoreML** | ✅ layers | ✅ | ❓ | ❓ | ✅ | ❓ | ⚠️ lossy | ❌ |
+| **OpenVINO** | ✅ | ✅ | ❓ | ❓ | ✅ | ✅ | ⚠️ lossy | ❌ |
+| **GGUF** | ❌ metadata | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
+| **SafeTensors** | ❌ weights | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ (needs arch) | ❌ |
 
 **Tier System:**
 - **Tier 1 (Full)**: ONNX, PyTorch - all metrics, interactive graph
+- **Tier 1.5 (Optimized)**: TensorRT - fused graph, ONNX comparison, precision breakdown (requires NVIDIA GPU)
 - **Tier 2 (Graph)**: TFLite, CoreML, OpenVINO - graph structure, most metrics
 - **Tier 3 (Metadata)**: GGUF - architecture metadata, no graph
 - **Tier 4 (Weights)**: SafeTensors - weights only, needs external architecture
