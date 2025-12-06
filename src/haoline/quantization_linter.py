@@ -51,8 +51,11 @@ class QuantIssueType(Enum):
     ACCURACY_SENSITIVE_OP = "accuracy_sensitive_op"
     DYNAMIC_SHAPE = "dynamic_shape"
     MISSING_FAKE_QUANT = "missing_fake_quant"
+    INCONSISTENT_FAKE_QUANT = "inconsistent_fake_quant"
     INCONSISTENT_QUANT = "inconsistent_quant"
     WIDE_ACTIVATION_RANGE = "wide_activation_range"
+    SCALE_MISMATCH = "scale_mismatch"
+    PER_TENSOR_VS_CHANNEL = "per_tensor_vs_channel"
     CUSTOM_OP = "custom_op"
     NO_QUANT_KERNEL = "no_quant_kernel"
 
@@ -305,6 +308,13 @@ class QuantizationLintResult:
     # Problem layers (for targeted recommendations)
     problem_layers: list[dict] = field(default_factory=list)
 
+    # QAT validation results
+    is_qat_model: bool = False  # True if model has fake-quant nodes
+    missing_fake_quant_nodes: list[str] = field(default_factory=list)
+    inconsistent_fake_quant: list[dict] = field(default_factory=list)
+    scale_mismatches: list[dict] = field(default_factory=list)
+    wide_activation_ranges: list[dict] = field(default_factory=list)
+
     # Summary stats
     total_ops: int = 0
     quant_friendly_pct: float = 0.0
@@ -323,6 +333,11 @@ class QuantizationLintResult:
             "quantization_ops": self.quantization_ops,
             "dynamic_shape_nodes": self.dynamic_shape_nodes,
             "problem_layers": self.problem_layers,
+            "is_qat_model": self.is_qat_model,
+            "missing_fake_quant_nodes": self.missing_fake_quant_nodes,
+            "inconsistent_fake_quant": self.inconsistent_fake_quant,
+            "scale_mismatches": self.scale_mismatches,
+            "wide_activation_ranges": self.wide_activation_ranges,
             "total_ops": self.total_ops,
             "quant_friendly_pct": self.quant_friendly_pct,
         }
@@ -408,13 +423,16 @@ class QuantizationLinter:
         # Phase 3: Check for custom/unknown ops
         self._detect_custom_ops(graph_info, result)
 
-        # Phase 4: Generate warnings for each issue
+        # Phase 4: QAT-specific validation (if model has fake-quant ops)
+        self._validate_qat_graph(graph_info, result)
+
+        # Phase 5: Generate warnings for each issue
         self._generate_warnings(graph_info, result)
 
-        # Phase 5: Calculate readiness score
+        # Phase 6: Calculate readiness score
         self._calculate_score(result)
 
-        # Phase 6: Identify problem layers
+        # Phase 7: Identify problem layers
         self._identify_problem_layers(graph_info, result)
 
         return result
@@ -476,6 +494,236 @@ class QuantizationLinter:
                 # Check domain - custom domain indicates custom op
                 if node.domain and node.domain not in ("", "ai.onnx", "ai.onnx.ml"):
                     result.custom_ops.append(node.op_type)
+
+    def _validate_qat_graph(self, graph_info: GraphInfo, result: QuantizationLintResult) -> None:
+        """Validate QAT-annotated graphs for correctness.
+
+        Checks for:
+        - Missing fake-quantization nodes before quantizable ops
+        - Inconsistent fake-quant placement across branches
+        - Per-tensor vs per-channel quantization consistency
+        - Suspiciously wide activation ranges (suggests calibration issues)
+        - Inconsistent scales/zero points across residual connections
+        """
+        # Build maps for efficient lookup
+        node_by_output: dict[str, object] = {}
+        for node in graph_info.nodes:
+            for output in node.outputs:
+                node_by_output[output] = node
+
+        # Check if this is a QAT model (has fake-quant ops)
+        fake_quant_ops = {"QuantizeLinear", "DequantizeLinear", "DynamicQuantizeLinear"}
+        fake_quant_nodes = [n for n in graph_info.nodes if n.op_type in fake_quant_ops]
+
+        if not fake_quant_nodes:
+            # Not a QAT model - skip QAT-specific validation
+            return
+
+        result.is_qat_model = True
+
+        # Task 33.2.1: Detect missing fake-quant nodes before quantizable ops
+        self._check_missing_fake_quant(graph_info, node_by_output, result)
+
+        # Task 33.2.2: Check for inconsistent fake-quant placement across branches
+        self._check_inconsistent_fake_quant(graph_info, node_by_output, result)
+
+        # Task 33.2.3: Validate per-tensor vs per-channel consistency
+        self._check_quant_granularity_consistency(graph_info, fake_quant_nodes, result)
+
+        # Task 33.2.4: Flag suspiciously wide activation ranges
+        self._check_activation_ranges(graph_info, fake_quant_nodes, result)
+
+        # Task 33.2.5: Detect inconsistent scales across residual connections
+        self._check_residual_scale_consistency(graph_info, node_by_output, result)
+
+    def _check_missing_fake_quant(
+        self,
+        graph_info: GraphInfo,
+        node_by_output: dict[str, object],
+        result: QuantizationLintResult,
+    ) -> None:
+        """Check for quantizable ops missing fake-quant on their inputs."""
+        quantizable_ops = {"Conv", "ConvTranspose", "MatMul", "Gemm"}
+
+        for node in graph_info.nodes:
+            if node.op_type not in quantizable_ops:
+                continue
+
+            # Check each input - should have DequantizeLinear before it
+            for input_name in node.inputs:
+                if input_name in graph_info.initializers:
+                    # Weight input - check if it has QuantizeLinear -> DequantizeLinear
+                    continue
+
+                producer = node_by_output.get(input_name)
+                if producer and producer.op_type != "DequantizeLinear":
+                    # Activation input without fake-quant
+                    result.missing_fake_quant_nodes.append(node.name)
+                    break
+
+    def _check_inconsistent_fake_quant(
+        self,
+        graph_info: GraphInfo,
+        node_by_output: dict[str, object],
+        result: QuantizationLintResult,
+    ) -> None:
+        """Check for inconsistent fake-quant placement across parallel branches."""
+        # Find merge points (nodes with multiple inputs from different paths)
+        merge_ops = {"Add", "Concat", "Mul"}
+
+        for node in graph_info.nodes:
+            if node.op_type not in merge_ops:
+                continue
+
+            # Check if inputs come from consistent quantization state
+            has_quantized_input = False
+            has_unquantized_input = False
+
+            for input_name in node.inputs:
+                if input_name in graph_info.initializers:
+                    continue  # Skip weight inputs
+
+                producer = node_by_output.get(input_name)
+                if producer:
+                    if producer.op_type == "DequantizeLinear":
+                        has_quantized_input = True
+                    else:
+                        has_unquantized_input = True
+
+            if has_quantized_input and has_unquantized_input:
+                result.inconsistent_fake_quant.append(
+                    {
+                        "node": node.name,
+                        "op_type": node.op_type,
+                        "issue": "Mixed quantized/unquantized inputs",
+                    }
+                )
+
+    def _check_quant_granularity_consistency(
+        self,
+        graph_info: GraphInfo,
+        fake_quant_nodes: list,
+        result: QuantizationLintResult,
+    ) -> None:
+        """Check for mixed per-tensor and per-channel quantization."""
+        per_tensor_count = 0
+        per_channel_count = 0
+
+        for node in fake_quant_nodes:
+            if node.op_type != "QuantizeLinear":
+                continue
+
+            # Check axis attribute - if present, it's per-channel
+            axis = node.attributes.get("axis")
+            if axis is not None:
+                per_channel_count += 1
+            else:
+                per_tensor_count += 1
+
+        # If we have both, it might be intentional (weights vs activations)
+        # but flag if the ratio is unusual
+        if per_tensor_count > 0 and per_channel_count > 0:
+            ratio = per_channel_count / (per_tensor_count + per_channel_count)
+            if 0.2 < ratio < 0.8:
+                # Mixed usage - could be intentional but worth noting
+                result.warnings.append(
+                    QuantWarning(
+                        severity=Severity.LOW,
+                        issue_type=QuantIssueType.PER_TENSOR_VS_CHANNEL,
+                        message=f"Mixed quantization granularity: {per_tensor_count} per-tensor, "
+                        f"{per_channel_count} per-channel",
+                        recommendation="Typically, weights use per-channel and activations use "
+                        "per-tensor. Verify this is intentional.",
+                        details={
+                            "per_tensor_count": per_tensor_count,
+                            "per_channel_count": per_channel_count,
+                        },
+                    )
+                )
+
+    def _check_activation_ranges(
+        self,
+        graph_info: GraphInfo,
+        fake_quant_nodes: list,
+        result: QuantizationLintResult,
+    ) -> None:
+        """Check for suspiciously wide activation ranges (calibration issues)."""
+        # This requires analyzing the scale values in QuantizeLinear nodes
+        # Wide scales suggest the calibration data didn't capture the full range
+        for node in fake_quant_nodes:
+            if node.op_type != "QuantizeLinear":
+                continue
+
+            # Scale is the second input (y_scale)
+            if len(node.inputs) >= 2:
+                scale_name = node.inputs[1]
+                if scale_name in graph_info.initializers:
+                    scale_tensor = graph_info.initializers[scale_name]
+                    if hasattr(scale_tensor, "flatten"):
+                        scales = scale_tensor.flatten()
+                        if len(scales) > 0:
+                            max_scale = float(max(abs(s) for s in scales))
+                            # Very large scales suggest wide dynamic range
+                            # INT8 range is -128 to 127, so scale > 1 means values > 127
+                            if max_scale > 10.0:
+                                result.wide_activation_ranges.append(
+                                    {
+                                        "node": node.name,
+                                        "max_scale": max_scale,
+                                        "issue": "Very wide activation range",
+                                    }
+                                )
+
+    def _check_residual_scale_consistency(
+        self,
+        graph_info: GraphInfo,
+        node_by_output: dict[str, object],
+        result: QuantizationLintResult,
+    ) -> None:
+        """Check for scale mismatches in residual connections."""
+        # Find Add nodes that might be residual connections
+        for node in graph_info.nodes:
+            if node.op_type != "Add":
+                continue
+
+            # Get scales of both inputs if they come from DequantizeLinear
+            input_scales: list[tuple[str, float | None]] = []
+
+            for input_name in node.inputs:
+                if input_name in graph_info.initializers:
+                    continue
+
+                producer = node_by_output.get(input_name)
+                if producer and producer.op_type == "DequantizeLinear":
+                    # Get the scale from DequantizeLinear
+                    if len(producer.inputs) >= 2:
+                        scale_name = producer.inputs[1]
+                        if scale_name in graph_info.initializers:
+                            scale_tensor = graph_info.initializers[scale_name]
+                            if hasattr(scale_tensor, "flatten"):
+                                scales = scale_tensor.flatten()
+                                if len(scales) == 1:
+                                    input_scales.append((input_name, float(scales[0])))
+                                else:
+                                    # Per-channel - use mean for comparison
+                                    mean_scale = sum(scales) / len(scales)
+                                    input_scales.append((input_name, float(mean_scale)))
+
+            # If we have scales for both inputs, check for mismatch
+            if len(input_scales) == 2:
+                scale1 = input_scales[0][1]
+                scale2 = input_scales[1][1]
+                if scale1 is not None and scale2 is not None:
+                    ratio = max(scale1, scale2) / max(min(scale1, scale2), 1e-10)
+                    if ratio > 2.0:
+                        # Significant scale mismatch
+                        result.scale_mismatches.append(
+                            {
+                                "node": node.name,
+                                "scale_ratio": ratio,
+                                "issue": f"Residual Add with scale mismatch (ratio: {ratio:.2f}x)",
+                            }
+                        )
 
     def _generate_warnings(self, graph_info: GraphInfo, result: QuantizationLintResult) -> None:
         """Generate warnings for all detected issues."""
@@ -557,6 +805,65 @@ class QuantizationLinter:
                     )
                 )
 
+        # QAT-specific warnings
+        if result.is_qat_model:
+            # Missing fake-quant nodes
+            if result.missing_fake_quant_nodes:
+                result.warnings.append(
+                    QuantWarning(
+                        severity=Severity.HIGH,
+                        issue_type=QuantIssueType.MISSING_FAKE_QUANT,
+                        message=f"{len(result.missing_fake_quant_nodes)} quantizable ops missing "
+                        "fake-quant on inputs",
+                        recommendation="Add QuantizeLinear -> DequantizeLinear before these ops "
+                        "to enable proper QAT training.",
+                        details={"nodes": result.missing_fake_quant_nodes[:10]},
+                    )
+                )
+
+            # Inconsistent fake-quant placement
+            if result.inconsistent_fake_quant:
+                result.warnings.append(
+                    QuantWarning(
+                        severity=Severity.HIGH,
+                        issue_type=QuantIssueType.INCONSISTENT_FAKE_QUANT,
+                        message=f"{len(result.inconsistent_fake_quant)} merge nodes have "
+                        "inconsistent quantization on inputs",
+                        recommendation="Ensure all inputs to Add/Concat/Mul nodes are either "
+                        "all quantized or all unquantized.",
+                        details={"nodes": result.inconsistent_fake_quant[:5]},
+                    )
+                )
+
+            # Scale mismatches in residuals
+            if result.scale_mismatches:
+                result.warnings.append(
+                    QuantWarning(
+                        severity=Severity.MEDIUM,
+                        issue_type=QuantIssueType.SCALE_MISMATCH,
+                        message=f"{len(result.scale_mismatches)} residual connections have "
+                        "mismatched quantization scales",
+                        recommendation="Large scale differences in residual Add operations can "
+                        "cause accuracy loss. Consider using scale alignment techniques.",
+                        details={"nodes": result.scale_mismatches[:5]},
+                    )
+                )
+
+            # Wide activation ranges
+            if result.wide_activation_ranges:
+                result.warnings.append(
+                    QuantWarning(
+                        severity=Severity.MEDIUM,
+                        issue_type=QuantIssueType.WIDE_ACTIVATION_RANGE,
+                        message=f"{len(result.wide_activation_ranges)} nodes have very wide "
+                        "activation ranges",
+                        recommendation="Large quantization scales suggest calibration data may "
+                        "not represent typical inference. Consider recalibrating with more "
+                        "representative data.",
+                        details={"nodes": result.wide_activation_ranges[:5]},
+                    )
+                )
+
     def _calculate_score(self, result: QuantizationLintResult) -> int:
         """Calculate overall readiness score (0-100)."""
         score = 100
@@ -580,6 +887,27 @@ class QuantizationLinter:
         # Deduct for many dynamic shapes
         if len(result.dynamic_shape_nodes) > 10:
             score -= 10
+
+        # QAT-specific deductions
+        if result.is_qat_model:
+            # Missing fake-quant is a significant issue
+            if result.missing_fake_quant_nodes:
+                missing_pct = (
+                    len(result.missing_fake_quant_nodes) / max(result.total_ops, 1)
+                ) * 100
+                score -= min(missing_pct * 0.5, 15)
+
+            # Inconsistent fake-quant placement
+            if result.inconsistent_fake_quant:
+                score -= min(len(result.inconsistent_fake_quant) * 3, 10)
+
+            # Scale mismatches in residuals
+            if result.scale_mismatches:
+                score -= min(len(result.scale_mismatches) * 2, 10)
+
+            # Wide activation ranges suggest calibration issues
+            if result.wide_activation_ranges:
+                score -= min(len(result.wide_activation_ranges) * 2, 10)
 
         # Bonus if already quantized (someone already did the work!)
         if result.is_already_quantized:

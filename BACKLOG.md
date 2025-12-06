@@ -46,7 +46,7 @@
 | **OPTIMIZATION** ||||
 | Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
-| Epic 33: QAT Linters | In Progress | 4 | 6/22 | **P1** |
+| Epic 33: QAT Linters | In Progress | 4 | 11/22 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
@@ -1116,11 +1116,11 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 ### Story 33.2: QAT Graph Validation
 *Validate QAT-annotated graphs for correctness.*
-- [ ] **Task 33.2.1**: Detect missing fake-quantization nodes
-- [ ] **Task 33.2.2**: Check for inconsistent fake-quant placement across branches
-- [ ] **Task 33.2.3**: Validate per-tensor vs per-channel quantization consistency
-- [ ] **Task 33.2.4**: Flag suspiciously wide activation ranges (suggests calibration issue)
-- [ ] **Task 33.2.5**: Detect inconsistent scales/zero points across residual connections
+- [x] **Task 33.2.1**: Detect missing fake-quantization nodes — `_check_missing_fake_quant()` method
+- [x] **Task 33.2.2**: Check for inconsistent fake-quant placement across branches — `_check_inconsistent_fake_quant()` method
+- [x] **Task 33.2.3**: Validate per-tensor vs per-channel quantization consistency — `_check_quant_granularity_consistency()` method
+- [x] **Task 33.2.4**: Flag suspiciously wide activation ranges (suggests calibration issue) — `_check_activation_ranges()` method
+- [x] **Task 33.2.5**: Detect inconsistent scales/zero points across residual connections — `_check_residual_scale_consistency()` method
 
 ### Story 33.3: Quantization Readiness Score
 *Emit an overall "QAT readiness score" with breakdown.*
