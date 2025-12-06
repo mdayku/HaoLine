@@ -46,7 +46,7 @@
 | **OPTIMIZATION** ||||
 | Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
-| Epic 33: QAT Linters | In Progress | 5 | 39/41 | **P1** |
+| Epic 33: QAT Linters | In Progress | 5 | 40/41 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
