@@ -156,7 +156,7 @@ Examples:
         "model_path",
         type=pathlib.Path,
         nargs="?",  # Optional now since --list-hardware doesn't need it
-        help="Path to the ONNX model file to analyze.",
+        help="Path to model file. Supports ONNX (.onnx), TensorRT engines (.engine, .plan).",
     )
 
     parser.add_argument(
@@ -1636,6 +1636,157 @@ def _generate_quant_report_markdown(result: QuantizationLintResult, model_name: 
     return "\n".join(lines)
 
 
+def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
+    """Handle TensorRT engine file analysis.
+
+    TensorRT engines require special handling since they're compiled,
+    optimized models without the same structure as ONNX.
+    """
+    try:
+        from .formats.tensorrt import TRTEngineReader, format_bytes, is_available
+    except ImportError:
+        logger.error(
+            "TensorRT support not installed.\n"
+            "Install with: pip install haoline[tensorrt]\n"
+            "Note: Requires NVIDIA GPU and CUDA 12.x"
+        )
+        return
+
+    if not is_available():
+        logger.error(
+            "TensorRT not available. Install with: pip install tensorrt\n"
+            "Note: Requires NVIDIA GPU and CUDA 12.x"
+        )
+        return
+
+    print(f"\n{'=' * 60}")
+    print("TensorRT Engine Analysis")
+    print(f"{'=' * 60}\n")
+
+    try:
+        reader = TRTEngineReader(model_path)
+        info = reader.read()
+    except RuntimeError as e:
+        logger.error(f"Failed to load TensorRT engine: {e}")
+        return
+
+    # Engine overview
+    print(f"File: {model_path.name}")
+    print(f"TensorRT Version: {info.trt_version}")
+    print(f"Device: {info.device_name}")
+    print(f"Compute Capability: SM {info.compute_capability[0]}.{info.compute_capability[1]}")
+    print(f"Device Memory: {format_bytes(info.device_memory_bytes)}")
+    print()
+
+    # Bindings
+    print("Input/Output Bindings:")
+    for b in info.input_bindings:
+        print(f"  [Input]  {b.name}: {b.shape} ({b.dtype})")
+    for b in info.output_bindings:
+        print(f"  [Output] {b.name}: {b.shape} ({b.dtype})")
+    print()
+
+    # Layer summary
+    print(f"Layer Count: {info.layer_count}")
+    fused_count = len([layer for layer in info.layers if "+" in layer.name])
+    if fused_count > 0:
+        print(
+            f"Fused Layers: {fused_count}/{info.layer_count} ({100 * fused_count // info.layer_count}%)"
+        )
+    print()
+
+    # Layer type distribution
+    print("Layer Type Distribution:")
+    for ltype, count in sorted(info.layer_type_counts.items(), key=lambda x: -x[1]):
+        print(f"  {ltype}: {count}")
+    print()
+
+    # Precision breakdown
+    if info.precision_breakdown:
+        print("Precision Breakdown:")
+        for prec, count in info.precision_breakdown.items():
+            print(f"  {prec}: {count}")
+        print()
+
+    # JSON output if requested
+    if args.out_json:
+        import json
+
+        output_data = {
+            "format": "tensorrt",
+            "path": str(model_path),
+            "trt_version": info.trt_version,
+            "device": {
+                "name": info.device_name,
+                "compute_capability": list(info.compute_capability),
+            },
+            "device_memory_bytes": info.device_memory_bytes,
+            "layer_count": info.layer_count,
+            "fused_layer_count": fused_count,
+            "layer_type_counts": info.layer_type_counts,
+            "precision_breakdown": info.precision_breakdown,
+            "bindings": [
+                {
+                    "name": b.name,
+                    "shape": list(b.shape),
+                    "dtype": b.dtype,
+                    "is_input": b.is_input,
+                }
+                for b in info.bindings
+            ],
+            "layers": [
+                {"name": layer.name, "type": layer.type, "precision": layer.precision}
+                for layer in info.layers
+            ],
+        }
+        with open(args.out_json, "w") as f:
+            json.dump(output_data, f, indent=2)
+        print(f"JSON report written to: {args.out_json}")
+
+    # Markdown output if requested
+    if args.out_md:
+        md_lines = [
+            f"# TensorRT Engine Analysis: {model_path.name}",
+            "",
+            "## Engine Overview",
+            "",
+            "| Property | Value |",
+            "|----------|-------|",
+            f"| TensorRT Version | {info.trt_version} |",
+            f"| Device | {info.device_name} |",
+            f"| Compute Capability | SM {info.compute_capability[0]}.{info.compute_capability[1]} |",
+            f"| Device Memory | {format_bytes(info.device_memory_bytes)} |",
+            f"| Layer Count | {info.layer_count} |",
+            f"| Fused Layers | {fused_count} ({100 * fused_count // info.layer_count}%) |",
+            "",
+            "## Bindings",
+            "",
+            "| Name | Type | Shape | Dtype |",
+            "|------|------|-------|-------|",
+        ]
+        for b in info.bindings:
+            io_type = "Input" if b.is_input else "Output"
+            md_lines.append(f"| {b.name} | {io_type} | {b.shape} | {b.dtype} |")
+
+        md_lines.extend(
+            [
+                "",
+                "## Layer Type Distribution",
+                "",
+                "| Type | Count |",
+                "|------|-------|",
+            ]
+        )
+        for ltype, count in sorted(info.layer_type_counts.items(), key=lambda x: -x[1]):
+            md_lines.append(f"| {ltype} | {count} |")
+
+        with open(args.out_md, "w") as f:
+            f.write("\n".join(md_lines))
+        print(f"Markdown report written to: {args.out_md}")
+
+    print("\n[TensorRT analysis complete]")
+
+
 def run_inspect():
     """Main entry point for the model_inspect CLI."""
     # Load environment variables from .env file if present
@@ -1960,6 +2111,11 @@ def run_inspect():
         if not model_path.exists():
             logger.error(f"Model file not found: {model_path}")
             sys.exit(1)
+
+        # Check for TensorRT engine files - handle separately
+        if model_path.suffix.lower() in (".engine", ".plan"):
+            _handle_tensorrt_analysis(args, model_path, logger)
+            sys.exit(0)
 
         if model_path.suffix.lower() not in (".onnx", ".pb", ".ort"):
             logger.warning(f"Unexpected file extension: {model_path.suffix}. Proceeding anyway.")

@@ -974,6 +974,149 @@ def analyze_model_file(uploaded_file) -> AnalysisResult | None:
         return None
 
 
+def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str) -> None:
+    """Handle TensorRT engine file analysis in Streamlit."""
+    try:
+        from haoline.formats.tensorrt import TRTEngineReader, format_bytes, is_available
+    except ImportError:
+        st.error(
+            """
+            **TensorRT support not installed.**
+
+            Install with: `pip install haoline[tensorrt]`
+
+            Note: Requires NVIDIA GPU and CUDA 12.x
+            """
+        )
+        return
+
+    if not is_available():
+        st.error(
+            """
+            **TensorRT not available.**
+
+            Install with: `pip install tensorrt`
+
+            Note: Requires NVIDIA GPU and CUDA 12.x
+            """
+        )
+        return
+
+    # Save to temp file for TensorRT to read
+    with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
+        tmp.write(file_bytes)
+        tmp_path = tmp.name
+
+    try:
+        with st.spinner("Loading TensorRT engine..."):
+            reader = TRTEngineReader(tmp_path)
+            info = reader.read()
+    except RuntimeError as e:
+        st.error(f"Failed to load TensorRT engine: {e}")
+        Path(tmp_path).unlink(missing_ok=True)
+        return
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+    # Display TensorRT Analysis
+    st.markdown("## TensorRT Engine Analysis")
+    st.caption(f"**{file_name}**")
+
+    # Overview metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Layers", info.layer_count)
+    with col2:
+        fused = len([layer for layer in info.layers if "+" in layer.name])
+        st.metric("Fused", f"{fused}/{info.layer_count}", f"{100 * fused // info.layer_count}%")
+    with col3:
+        st.metric("Memory", format_bytes(info.device_memory_bytes))
+    with col4:
+        st.metric("TRT Version", info.trt_version.split(".")[0] + ".x")
+
+    # Device info
+    st.markdown("### Device")
+    st.info(
+        f"**{info.device_name}** — Compute Capability SM {info.compute_capability[0]}.{info.compute_capability[1]}"
+    )
+
+    # Bindings
+    st.markdown("### Input/Output Bindings")
+    binding_data = []
+    for b in info.bindings:
+        binding_data.append(
+            {
+                "Name": b.name,
+                "Type": "Input" if b.is_input else "Output",
+                "Shape": str(b.shape),
+                "Dtype": b.dtype,
+            }
+        )
+    st.dataframe(binding_data, use_container_width=True, hide_index=True)
+
+    # Layer type distribution
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("### Layer Types")
+        layer_data = [
+            {"Type": ltype, "Count": count}
+            for ltype, count in sorted(info.layer_type_counts.items(), key=lambda x: -x[1])
+        ]
+        st.dataframe(layer_data, use_container_width=True, hide_index=True)
+
+    with col2:
+        st.markdown("### Optimization Summary")
+        fused_layers = [layer for layer in info.layers if "+" in layer.name]
+        if fused_layers:
+            # Count original ops that got fused
+            original_ops = sum(layer.name.count("+") + 1 for layer in fused_layers)
+            st.success(
+                f"""
+                **{len(fused_layers)} fused layers** combining **~{original_ops} original ops**
+
+                TensorRT optimized this model by fusing operations like Conv+BatchNorm+ReLU
+                into single kernels for faster inference.
+                """
+            )
+        else:
+            st.info("No layer fusions detected in this engine.")
+
+    # All layers expandable
+    with st.expander("📋 All Layers", expanded=False):
+        all_layers = [
+            {"#": i + 1, "Name": layer.name[:80], "Type": layer.type, "Precision": layer.precision}
+            for i, layer in enumerate(info.layers)
+        ]
+        st.dataframe(all_layers, use_container_width=True, hide_index=True)
+
+    # JSON export
+    st.markdown("### Export")
+    export_data = {
+        "format": "tensorrt",
+        "file": file_name,
+        "trt_version": info.trt_version,
+        "device": info.device_name,
+        "compute_capability": list(info.compute_capability),
+        "device_memory_bytes": info.device_memory_bytes,
+        "layer_count": info.layer_count,
+        "fused_layer_count": len(fused_layers) if fused_layers else 0,
+        "layer_type_counts": info.layer_type_counts,
+        "bindings": [
+            {"name": b.name, "shape": list(b.shape), "dtype": b.dtype, "is_input": b.is_input}
+            for b in info.bindings
+        ],
+    }
+    import json
+
+    st.download_button(
+        "📥 Download JSON Report",
+        data=json.dumps(export_data, indent=2),
+        file_name=f"{Path(file_name).stem}_tensorrt.json",
+        mime="application/json",
+    )
+
+
 def get_hardware_options() -> dict[str, dict]:
     """Get hardware profile options organized by category."""
     categories = {
@@ -1276,8 +1419,8 @@ def main():
         # File upload - support multiple formats
         uploaded_file = st.file_uploader(
             "Upload your model",
-            type=["onnx", "pt", "pth", "safetensors"],
-            help="ONNX (recommended), PyTorch (.pt/.pth), or SafeTensors",
+            type=["onnx", "pt", "pth", "safetensors", "engine", "plan"],
+            help="ONNX, PyTorch (.pt/.pth), SafeTensors, or TensorRT engines (.engine/.plan)",
         )
 
         if uploaded_file is None:
@@ -1286,6 +1429,7 @@ def main():
             <div style="text-align: center; padding: 1rem 2rem; margin-top: -0.5rem;">
                 <p style="font-size: 0.9rem; margin-bottom: 0.75rem; color: #a3a3a3;">
                     <span style="color: #10b981; font-weight: 600;">ONNX</span> ✓ &nbsp;&nbsp;
+                    <span style="color: #10b981; font-weight: 600;">TensorRT</span> ✓ &nbsp;&nbsp;
                     <span style="color: #a3a3a3;">PyTorch</span> ↻ &nbsp;&nbsp;
                     <span style="color: #a3a3a3;">SafeTensors</span> ↻
                 </p>
@@ -1354,6 +1498,11 @@ def main():
             file_bytes = uploaded_file.getvalue()
 
         tmp_path = None
+
+        # Check for TensorRT engines - handle specially
+        if file_ext in [".engine", ".plan"]:
+            _handle_tensorrt_streamlit(file_bytes, file_name, file_ext)
+            st.stop()
 
         # Check if format needs conversion
         if file_ext in [".pt", ".pth"]:
