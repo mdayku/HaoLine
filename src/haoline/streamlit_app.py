@@ -1,5 +1,6 @@
 # Copyright (c) 2025 HaoLine Contributors
 # SPDX-License-Identifier: MIT
+# Build: 2025-12-06-v2 (force cache invalidation)
 
 """
 HaoLine Streamlit Web UI.
