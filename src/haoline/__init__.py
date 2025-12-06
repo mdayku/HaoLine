@@ -89,6 +89,13 @@ from .operational_profiling import (
 from .patterns import PatternAnalyzer
 from .pdf_generator import PDFGenerator, generate_pdf
 from .pdf_generator import is_available as is_pdf_available
+from .quantization_advisor import (
+    ArchitectureType,
+    DeploymentRuntime,
+    QuantizationAdvice,
+    QuantizationAdvisor,
+    advise_quantization,
+)
 from .quantization_linter import (
     LayerRiskScore,
     QuantIssueType,
@@ -207,6 +214,11 @@ __all__ = [
     "Severity",
     "QuantIssueType",
     "lint_model",
+    "QuantizationAdvisor",
+    "QuantizationAdvice",
+    "ArchitectureType",
+    "DeploymentRuntime",
+    "advise_quantization",
     "SystemRequirements",
     "TradeoffPoint",
     "ValidationError",
