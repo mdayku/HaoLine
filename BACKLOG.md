@@ -30,8 +30,8 @@
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | **COMPLETE** | 6 | 25/25 | Done |
-| Epic 19: SafeTensors | In Progress | 2 | 5/10 | P2 |
-| Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
+| Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
+| Epic 20: CoreML | In Progress | 2 | 7/12 | P2 |
 | Epic 21: TFLite | In Progress | 2 | 2/12 | P2 (needs pure Python parser) |
 | Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | **P2** |
 | Epic 23: OpenVINO | In Progress | 2 | 4/10 | P3 |
@@ -56,6 +56,7 @@
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
 | Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
+| Epic 49: Format Tiers & HuggingFace | Not Started | 4 | 0/18 | **P2** |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
 | Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
 | Epic 44: Expanded Op Type Support | Not Started | 3 | 0/14 | P3 |
@@ -137,7 +138,7 @@
 - [x] **Task 19.1.3**: Extract metadata (tensor names, shapes, dtypes)
 - [x] **Task 19.1.4**: Integrate with analysis pipeline (param counts, memory)
 - [x] **Task 19.1.5**: Test with real SafeTensors model (sentence-transformers/all-MiniLM-L6-v2, 22.7M params)
-- [ ] **Task 19.1.6**: Write unit tests for SafeTensorsReader
+- [x] **Task 19.1.6**: Write unit tests for SafeTensorsReader (8 tests in test_formats.py)
 
 ### Story 19.2: SafeTensors Writer
 - [ ] **Task 19.2.1**: Implement SafeTensorsAdapter.write() - export weights
@@ -157,8 +158,8 @@
 - [x] **Task 20.1.3**: Map CoreML ops to layer info (op_type_counts, precision_breakdown)
 - [x] **Task 20.1.4**: Extract CoreML-specific metadata (compute units, iOS version)
 - [x] **Task 20.1.5**: Integrate with analysis pipeline
-- [ ] **Task 20.1.6**: Test with real CoreML model (.mlmodel or .mlpackage)
-- [ ] **Task 20.1.7**: Write unit tests for CoreMLReader
+- [x] **Task 20.1.6**: Test with real CoreML model (in test_format_readers.py, CI on Linux)
+- [x] **Task 20.1.7**: Write unit tests for CoreMLReader (6 tests in test_formats.py)
 
 ### Story 20.2: CoreML Writer
 - [ ] **Task 20.2.1**: Implement CoreMLAdapter.write() via coremltools conversion
@@ -283,6 +284,69 @@
 ### Story 24.2: GGUF Analysis Features
 - [ ] **Task 24.2.1**: Show quantization breakdown (data available, needs UI)
 - [ ] **Task 24.2.2**: Estimate VRAM for different context lengths (method exists)
+
+---
+
+## Epic 49: Format Capability Tiers & HuggingFace Integration (P2)
+
+*Rationalize what metrics are available per format, and add auto-conversion for weight-only formats.*
+
+**Relationship to Epic 42:** Epic 42 tests existing conversion paths work correctly. Epic 49 adds NEW features (HuggingFace CLI, format-aware UI). Testing for Epic 49 features should be added to Epic 42 after implementation.
+
+### Format Capability Matrix
+
+| Format | Graph | Params | FLOPs | Memory | Interactive Map | Quant Info | Convert to ONNX |
+|--------|-------|--------|-------|--------|-----------------|------------|-----------------|
+| **ONNX** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A (native) |
+| **PyTorch** | ✅ via export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ torch.onnx |
+| **TFLite** | ✅ | ✅ | ❓ | ✅ | ✅ | ✅ | ⚠️ lossy |
+| **CoreML** | ✅ layers | ✅ | ❓ | ❓ | ✅ | ❓ | ⚠️ lossy |
+| **OpenVINO** | ✅ | ✅ | ❓ | ❓ | ✅ | ✅ | ⚠️ lossy |
+| **GGUF** | ❌ metadata | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| **SafeTensors** | ❌ weights | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ (needs arch) |
+
+**Tier System:**
+- **Tier 1 (Full)**: ONNX, PyTorch - all metrics, interactive graph
+- **Tier 2 (Graph)**: TFLite, CoreML, OpenVINO - graph structure, most metrics
+- **Tier 3 (Metadata)**: GGUF - architecture metadata, no graph
+- **Tier 4 (Weights)**: SafeTensors - weights only, needs external architecture
+
+### Story 49.1: HuggingFace Model Integration
+*Load HF models (config + weights) and auto-convert to ONNX for full analysis.*
+
+- [ ] **Task 49.1.1**: Add `--from-huggingface REPO_ID` CLI flag
+- [ ] **Task 49.1.2**: Download config.json + model files from HF Hub
+- [ ] **Task 49.1.3**: Detect model type from config (BERT, GPT, LLaMA, etc.)
+- [ ] **Task 49.1.4**: Load model using `transformers` library
+- [ ] **Task 49.1.5**: Export to ONNX using `optimum` library
+- [ ] **Task 49.1.6**: Run full analysis on exported ONNX
+- [ ] **Task 49.1.7**: Add `huggingface` extra to pyproject.toml (transformers, optimum)
+
+### Story 49.2: Format-Aware UI/CLI
+*Show appropriate metrics and disable unavailable features per format.*
+
+- [ ] **Task 49.2.1**: Define `FormatCapabilities` dataclass with feature flags
+- [ ] **Task 49.2.2**: Return capabilities from each format reader
+- [ ] **Task 49.2.3**: CLI: Skip FLOPs/graph for weight-only formats with clear message
+- [ ] **Task 49.2.4**: Streamlit: Disable graph tab for formats without graph
+- [ ] **Task 49.2.5**: Show "Convert to ONNX for full analysis" prompt for Tier 3/4 formats
+- [ ] **Task 49.2.6**: Add format tier badge in reports (Full/Graph/Metadata/Weights)
+
+### Story 49.3: SafeTensors → ONNX Path
+*If SafeTensors is alongside config.json, auto-load and convert.*
+
+- [ ] **Task 49.3.1**: Detect config.json in same directory as .safetensors
+- [ ] **Task 49.3.2**: Parse config.json to get architecture type
+- [ ] **Task 49.3.3**: Auto-suggest HF model load if config found
+- [ ] **Task 49.3.4**: Support local directory with config + safetensors
+
+### Story 49.4: Implement Missing FLOPs for Non-ONNX Formats
+*Add FLOPs estimation for TFLite, CoreML, OpenVINO ops.*
+
+- [ ] **Task 49.4.1**: Map TFLite builtin ops to FLOP formulas
+- [ ] **Task 49.4.2**: Map CoreML layer types to FLOP formulas
+- [ ] **Task 49.4.3**: Map OpenVINO op types to FLOP formulas
+- [ ] **Task 49.4.4**: Add FLOPs to format reader return types
 
 ---
 
@@ -794,6 +858,8 @@
 *Comprehensive test suite for all format conversions in the conversion matrix (Epics 19-24).*
 
 **Goal:** Ensure every `to` and `from` conversion path works correctly, preserves metadata, and handles edge cases gracefully.
+
+**Relationship to Epic 49:** This epic tests EXISTING conversions. When Epic 49 adds new paths (HuggingFace → ONNX), add corresponding tests here.
 
 ### Story 42.1: ONNX Hub Conversions
 *Test ONNX as the interchange format (most common path).*

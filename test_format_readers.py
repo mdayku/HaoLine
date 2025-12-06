@@ -202,7 +202,7 @@ def test_tflite():
 
 
 def test_coreml():
-    """Test CoreML reader."""
+    """Test CoreML reader (coremltools works on Linux for parsing)."""
     print("\n" + "=" * 60)
     print("Testing CoreML Reader")
     print("=" * 60)
@@ -214,9 +214,43 @@ def test_coreml():
         print("Install with: pip install coremltools")
         return None
 
-    print("[INFO] CoreML test requires a .mlmodel file")
-    print("CoreML models are typically macOS-specific.")
-    return None
+    # Download a small CoreML model from HuggingFace
+    from huggingface_hub import hf_hub_download
+
+    print("\nDownloading CoreML model...")
+    try:
+        # MobileNetV2 CoreML model
+        model_path = hf_hub_download(
+            repo_id="apple/mobilenet-v2-coreml",
+            filename="MobileNetV2.mlmodel",
+            cache_dir="./test_models/cache",
+        )
+        print(f"Downloaded: {model_path}")
+    except Exception as e:
+        print(f"Failed to download: {e}")
+        print("[SKIP] Could not download CoreML model")
+        return None
+
+    from haoline.formats.coreml import CoreMLReader, is_coreml_file
+
+    print(f"\nIs CoreML file: {is_coreml_file(model_path)}")
+
+    try:
+        reader = CoreMLReader(model_path)
+        info = reader.read()
+
+        print(f"\n--- CoreML Model Info ---")
+        print(f"Spec version: {info.spec_version}")
+        print(f"Description: {info.description}")
+        print(f"Model type: {info.model_type}")
+        print(f"Layer count: {info.layer_count}")
+        print(f"Layer types: {info.layer_type_counts}")
+
+        print("\n[SUCCESS] CoreML reader works correctly!")
+        return True
+    except Exception as e:
+        print(f"Error reading model: {e}")
+        return False
 
 
 def test_openvino():

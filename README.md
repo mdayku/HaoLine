@@ -391,11 +391,41 @@ The Universal IR includes:
 | TensorFlow SavedModel | ✅ Full | Requires tf2onnx |
 | Keras (.h5, .keras) | ✅ Full | Requires tf2onnx |
 | GGUF (.gguf) | ✅ Read | llama.cpp LLMs (`pip install haoline`) |
-| SafeTensors (.safetensors) | ✅ Read | HuggingFace weights (`pip install haoline[formats]`) |
-| TFLite (.tflite) | ✅ Read | Mobile/edge (`pip install haoline[formats]`) |
+| SafeTensors (.safetensors) | ⚠️ Weights Only | HuggingFace weights (`pip install haoline[safetensors]`) |
+| TFLite (.tflite) | ✅ Read | Mobile/edge, Linux/Mac (`pip install haoline[tflite]`) |
 | CoreML (.mlmodel, .mlpackage) | ✅ Read | Apple devices (`pip install haoline[coreml]`) |
 | OpenVINO (.xml) | ✅ Read | Intel inference (`pip install haoline[openvino]`) |
 | TensorRT Engine | 🔜 Coming | NVIDIA optimized engines |
+
+### Format Capabilities Matrix
+
+Not all formats support all features. Here's what you get with each:
+
+| Feature | ONNX | PyTorch | TFLite | CoreML | OpenVINO | GGUF | SafeTensors |
+|---------|------|---------|--------|--------|----------|------|-------------|
+| **Parameter Count** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Memory Estimate** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **FLOPs Estimate** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Interactive Graph** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Layer-by-Layer Table** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Op Type Breakdown** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Quantization Analysis** | ✅ | ✅ | ✅ | ❓ | ✅ | ✅ | ❌ |
+| **Runtime Benchmarking** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+**Legend:** ✅ = Supported | ❌ = Not available | ❓ = Partial
+
+**Why the differences?**
+
+- **ONNX/PyTorch**: Full graph structure available → all features work
+- **TFLite/CoreML/OpenVINO**: Graph structure available, but FLOPs formulas not yet implemented for their op types
+- **GGUF**: Architecture metadata (layers, heads, context length) but no computational graph
+- **SafeTensors**: Weights only - no graph, no architecture. Use `--from-huggingface` to load the full model
+
+**Tip:** For full analysis of HuggingFace models stored as SafeTensors, load the complete model:
+```bash
+# Coming soon: --from-huggingface flag
+haoline --from-huggingface meta-llama/Llama-2-7b --out-html report.html
+```
 
 ---
 

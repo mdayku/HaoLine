@@ -38,6 +38,7 @@
 16. [Future Vision: MLOps Platform](#16-future-vision-mlops-platform-p5)
 17. [LLM-Scale Analysis (Epics 26-30)](#17-llm-scale-analysis-epics-26-30)
 18. [Model Optimization Service (Epics 31-32)](#18-model-optimization-service-epics-31-32)
+19. [Format Capabilities and Limitations](#19-format-capabilities-and-limitations)
 
 ---
 
@@ -1867,6 +1868,71 @@ This creates a complete **optimize → analyze → deploy** workflow.
 
 ---
 
+## 19. Format Capabilities and Limitations
+
+### 19.1 Format Tier System
+
+Not all model formats are created equal. HaoLine supports multiple formats with varying levels of analysis capability:
+
+| Tier | Formats | What's Available | What's Missing |
+|------|---------|------------------|----------------|
+| **Tier 1: Full** | ONNX, PyTorch | All metrics, FLOPs, graph, benchmarking | Nothing |
+| **Tier 2: Graph** | TFLite, CoreML, OpenVINO | Graph structure, params, ops | FLOPs formulas |
+| **Tier 3: Metadata** | GGUF | Architecture info, quant types, VRAM | Computational graph |
+| **Tier 4: Weights** | SafeTensors | Parameter counts, memory size | Everything else |
+
+### 19.2 Capability Matrix
+
+| Feature | ONNX | PyTorch | TFLite | CoreML | OpenVINO | GGUF | SafeTensors |
+|---------|------|---------|--------|--------|----------|------|-------------|
+| **Parameter Count** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Memory Estimate** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **FLOPs Estimate** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Interactive Graph** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Layer Table** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Op Type Breakdown** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Quantization Info** | ✅ | ✅ | ✅ | ❓ | ✅ | ✅ | ❌ |
+| **Runtime Benchmark** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Hardware Estimates** | ✅ | ✅ | ⚠️ | ⚠️ | ⚠️ | ✅ | ⚠️ |
+
+**Legend:** ✅ Full | ⚠️ Partial (no FLOPs) | ❌ Not available | ❓ Partial support
+
+### 19.3 Why These Limitations?
+
+**ONNX (Tier 1):** Our native format. Full computational graph with shapes, making all metrics calculable.
+
+**PyTorch (Tier 1):** Converted to ONNX via `torch.onnx.export`, inherits full ONNX capabilities.
+
+**TFLite/CoreML/OpenVINO (Tier 2):** Have graph structure, but use different op types. FLOPs formulas not yet implemented for their specific operators. Graph visualization works.
+
+**GGUF (Tier 3):** LLM weight format with architecture metadata (layer count, attention heads, context length). No computational graph - it's designed for inference engines like llama.cpp that know the architecture.
+
+**SafeTensors (Tier 4):** Pure weight storage format. Contains tensor names and shapes but NO architecture information. The model structure lives elsewhere (typically `config.json` for HuggingFace models).
+
+### 19.4 Upgrading Tier 3/4 Formats
+
+For full analysis of weight-only formats, convert to ONNX:
+
+```bash
+# HuggingFace models (SafeTensors + config.json)
+# Coming soon: --from-huggingface flag
+haoline --from-huggingface meta-llama/Llama-2-7b --out-html report.html
+
+# GGUF → Convert via llama.cpp export (manual process)
+# No direct HaoLine support planned - use ONNX export from original model
+```
+
+### 19.5 Format-Aware UI Behavior
+
+The CLI and Streamlit UI adapt to format capabilities:
+
+- **Unavailable features are disabled** - No graph tab for SafeTensors
+- **Clear messaging** - "FLOPs not available for TFLite format"
+- **Upgrade prompts** - "Convert to ONNX for full analysis"
+- **Format badge** - Reports show tier (Full/Graph/Metadata/Weights)
+
+---
+
 ## Appendix: Delta Log
 
 *Full historical changelog archived in [PRDBacklogArchive.md](PRDBacklogArchive.md) to reduce context window usage.*
@@ -1875,6 +1941,7 @@ This creates a complete **optimize → analyze → deploy** workflow.
 
 | Date | Change | 
 |------|--------|
+| Dec 6, 2025 | **Format Reader Tests Complete** - Added test_formats.py with 33 unit tests. SafeTensors (19.1.6) and CoreML (20.1.6, 20.1.7) reader stories complete. 350 tests total. |
 | Dec 6, 2025 | **Dependency Extras Audit** - Added `jax`, `ultralytics` extras. Documented all extras in README. Added cursor rule for dependency management. Created `Dockerfile.test` and CI job for format reader testing. |
 | Dec 6, 2025 | **Format Reader Testing** - Validated SafeTensors (22.7M params) and GGUF (TinyLlama 1.1B). Fixed TFLite backlog (was falsely marked complete - pure Python fallback is stub only). |
 | Dec 6, 2025 | **v0.5.0 Released to PyPI** - Complete Pydantic migration deployed. Zero `@dataclass` or `from dataclasses import` remaining. HuggingFace Spaces auto-rebuild triggered. |
