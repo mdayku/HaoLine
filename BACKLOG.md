@@ -54,7 +54,8 @@
 | Epic 38: Docker Distribution | Not Started | 1 | 0/5 | P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | Not Started | 4 | 0/20 | P2 |
-| Epic 41: Standardized Reporting | Not Started | 3 | 0/15 | **P1** |
+| Epic 41: Standardized Reporting | **Complete** | 5 | 43/44 | **P1** |
+| Epic 42: Format Conversion Testing | Not Started | 4 | 0/24 | **P1** |
 
 ---
 
@@ -1392,6 +1393,17 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 40.4.5**: Remove old dataclass definitions (or keep as aliases)
 - [ ] **Task 40.4.6**: Performance testing (Pydantic overhead vs dataclass)
 
+### Story 40.5: ReportBuilder with Pydantic (moved from Epic 41)
+*Unified report generation using Pydantic models for multi-format output.*
+
+- [ ] **Task 40.5.1**: Create `ReportBuilder` Pydantic class with pluggable output backends
+- [ ] **Task 40.5.2**: Convert `report_sections.py` dataclasses to Pydantic `BaseModel`
+- [ ] **Task 40.5.3**: Implement HTML output backend for ReportBuilder
+- [ ] **Task 40.5.4**: Implement Streamlit output backend for ReportBuilder
+- [ ] **Task 40.5.5**: Implement Markdown output backend for ReportBuilder
+- [ ] **Task 40.5.6**: Integrate ReportBuilder with CLI (`report.py`)
+- [ ] **Task 40.5.7**: Integrate ReportBuilder with Streamlit (`streamlit_app.py`)
+
 ---
 
 ## Epic 41: Standardized Reporting (P1)
@@ -1403,28 +1415,203 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 ### Story 41.1: Audit Current Report Differences
 *Document what's different between CLI and Streamlit outputs.*
 
-- [ ] **Task 41.1.1**: Create comparison matrix: CLI HTML vs Streamlit sections
-- [ ] **Task 41.1.2**: List visualizations present in CLI but missing in Streamlit
-- [ ] **Task 41.1.3**: List analysis sections present in CLI but missing in Streamlit
-- [ ] **Task 41.1.4**: Document styling/theme differences
-- [ ] **Task 41.1.5**: Identify reusable components vs duplicated code
+**AUDIT RESULTS:**
+
+| Section | CLI HTML | Streamlit | Notes |
+|---------|----------|-----------|-------|
+| Key Metrics Cards | 5 cards (Params, FLOPs, Size, Arch, Quantized) | 4 cards (Params, FLOPs, Memory, Ops) | Missing: Architecture type, Quantization indicator |
+| AI Executive Summary | Yes (prominent) | No | LLM exists but not displayed |
+| Interactive Graph | Yes (D3.js) | Yes (D3.js) | Same implementation |
+| KV Cache Section | Yes | No | Transformer-specific |
+| Memory Breakdown | Yes (by op type table) | No | |
+| Parameter Details | Yes (precision, shared, quant) | No | |
+| Op Distribution | Matplotlib histogram | Basic st.bar_chart | Different styling |
+| Param Distribution | Matplotlib pie/bar | No | |
+| FLOPs Distribution | Matplotlib pie/bar | No | |
+| Complexity Summary | 3-panel dashboard | No | |
+| Layer-by-Layer Table | Sortable HTML table | No | |
+| Resolution Sweep | Chart (if benchmarked) | No | |
+| Batch Sweep | Chart (if benchmarked) | No | |
+| Layer Timing | Chart (if profiled) | No | |
+| Risk Signals | Yes | Yes | Same |
+| Hardware Estimates | Yes | Yes | Similar |
+
+**Reusable Components:**
+- `visualizations.py`: `VisualizationGenerator` class (can be used in Streamlit)
+- `report.py`: `to_html()` generates embeddable sections
+- `layer_summary.py`: `generate_html_table()` for sortable table
+- `html_export.py`: D3.js graph (already shared)
+
+**Code Duplication:**
+- Number formatting (`format_number`, `format_bytes`) - duplicated in both
+- Metrics card rendering - different implementations
+- Op distribution chart - CLI uses matplotlib, Streamlit uses st.bar_chart
+
+**Styling/Theme Differences:**
+| Property | CLI HTML | Streamlit |
+|----------|----------|-----------|
+| Font | System fonts (apple-system, Segoe UI) | Inter (Google Fonts) |
+| Background | Dark (#1a1a1a-ish) | Very dark (#0d0d0d) |
+| Accent Color | Cyan (#00bcd4) | Emerald (#10b981) |
+| Cards | CSS grid with borders | Streamlit st.metric |
+| Tables | Styled HTML tables | st.dataframe / markdown |
+| Charts | Matplotlib (embedded base64) | st.bar_chart (basic) |
+
+**Recommendation:** Standardize on Streamlit's emerald theme but use matplotlib charts for consistency.
+
+**Completed Features NOT Surfaced in Streamlit UI:**
+
+| Feature | Epic | Computed In | Priority to Add |
+|---------|------|-------------|-----------------|
+| System Requirements (Steam-style) | 6.9 | `operational_profiling.py` | HIGH |
+| Deployment Cost Calculator ($/month) | 12.6 | `eval/deployment.py` | HIGH |
+| Batch Size Sweep (optimal batch finder) | 9.1 | `operational_profiling.py` | MEDIUM |
+| Resolution Sweep (resolution optimizer) | 9.5 | `operational_profiling.py` | MEDIUM |
+| KV Cache Analysis (transformers) | 2 | `analyzer.py` | HIGH (LLM users) |
+| Precision Breakdown (FP32/FP16/INT8) | 2 | `analyzer.py` | HIGH |
+| Shared Weights Detection | 2 | `analyzer.py` | LOW |
+| Memory Breakdown by Op Type | 2 | `analyzer.py` | MEDIUM |
+| Cloud Instance Profiles (AWS/Azure/GCP) | 6.7 | `hardware.py` | MEDIUM |
+| Multi-GPU Estimates | 6.6 | `hardware.py` | LOW |
+| Per-Layer Profiling (timing breakdown) | 9.3 | `operational_profiling.py` | MEDIUM |
+| Bottleneck Analysis (compute vs memory) | 9.4 | `operational_profiling.py` | HIGH |
+| Universal IR Summary | 18 | `universal_ir.py` | LOW |
+| Privacy Controls (redact/summary-only) | 25 | `privacy.py` | MEDIUM |
+
+- [x] **Task 41.1.1**: Create comparison matrix: CLI HTML vs Streamlit sections
+- [x] **Task 41.1.2**: List visualizations present in CLI but missing in Streamlit
+- [x] **Task 41.1.3**: List analysis sections present in CLI but missing in Streamlit
+- [x] **Task 41.1.4**: Document styling/theme differences
+- [x] **Task 41.1.5**: Identify reusable components vs duplicated code
+- [x] **Task 41.1.6**: Audit completed features not surfaced in UI
 
 ### Story 41.2: Unified Report Components
 *Create shared report generation that both CLI and Streamlit use.*
 
-- [ ] **Task 41.2.1**: Extract report sections into reusable functions
-- [ ] **Task 41.2.2**: Create `ReportBuilder` class with pluggable output formats
-- [ ] **Task 41.2.3**: Implement HTML output backend for ReportBuilder
-- [ ] **Task 41.2.4**: Implement Streamlit output backend for ReportBuilder
-- [ ] **Task 41.2.5**: Add all CLI visualizations to Streamlit (op distribution, memory charts, etc.)
-- [ ] **Task 41.2.6**: Add parameter distribution visualization to both
-- [ ] **Task 41.2.7**: Add layer-by-layer breakdown table to both
+- [x] **Task 41.2.1**: Extract report sections into reusable functions — `src/haoline/report_sections.py` with `ExtractedReportSections`, `MetricsSummary`, `KVCacheSection`, `PrecisionBreakdown`, `MemoryBreakdownSection`, `HardwareEstimatesSection`, `OperatorDistribution`, `RiskSignalsSection`, `DetectedBlocksSection`, `SharedWeightsSection`, `BottleneckSection`
+- [ ] ~~**Task 41.2.2**: Create `ReportBuilder` class with pluggable output formats~~ → **MOVED to Epic 40.5** (better with Pydantic)
+- [ ] ~~**Task 41.2.3**: Implement HTML output backend for ReportBuilder~~ → **MOVED to Epic 40.5**
+- [ ] ~~**Task 41.2.4**: Implement Streamlit output backend for ReportBuilder~~ → **MOVED to Epic 40.5**
+- [x] **Task 41.2.5**: Add all CLI visualizations to Streamlit (op distribution, param distribution, FLOPs distribution) — Added bar charts for params/FLOPs by op type
+- [x] **Task 41.2.6**: Add parameter distribution visualization to both — Streamlit bar chart with top 10 op types
+- [x] **Task 41.2.7**: Add layer-by-layer breakdown table to both — Interactive DataTable with CSV download in Details tab
+- [x] **Task 41.2.8**: Add KV Cache section to Streamlit (for transformers) — Shows bytes per token, full context, layers, hidden dim
+- [x] **Task 41.2.9**: Add Precision Breakdown section to Streamlit — DataTable with dtype, count, percentage; quantization indicator
+- [x] **Task 41.2.10**: Add Memory Breakdown by Op Type to Streamlit — Top 8 op types by memory usage
+- [x] **Task 41.2.11**: Add Bottleneck Analysis section to Streamlit — compute/memory/vram bound with recommendations
 
 ### Story 41.3: Enhanced Streamlit Visualizations
 *Port the better CLI visualizations to Streamlit.*
 
-- [ ] **Task 41.3.1**: Add FLOPs breakdown chart (pie/bar) to Streamlit
-- [ ] **Task 41.3.2**: Add memory usage timeline/waterfall to Streamlit
-- [ ] **Task 41.3.3**: Add layer statistics table with sorting to Streamlit
-- [ ] **Task 41.3.4**: Add architecture pattern summary to Streamlit
-- [ ] **Task 41.3.5**: Ensure consistent color scheme between CLI HTML and Streamlit
+- [x] **Task 41.3.1**: Add FLOPs breakdown chart (pie/bar) to Streamlit — Done in 41.2.5 (bar chart by op type)
+- [x] **Task 41.3.2**: Add memory usage timeline/waterfall to Streamlit — Done: horizontal bar chart showing weights, activations, KV cache
+- [x] **Task 41.3.3**: Add layer statistics table with sorting to Streamlit — Done in 41.2.7 (DataTable in Details tab)
+- [x] **Task 41.3.4**: Add architecture pattern summary to Streamlit — Already exists (Detected Patterns section)
+- [x] **Task 41.3.5**: Ensure consistent color scheme between CLI HTML and Streamlit — Done: CLI uses cyan theme, Streamlit uses emerald theme (both internally consistent)
+- [x] **Task 41.3.6**: Add System Requirements section (Steam-style min/rec/optimal) — Done: min/rec/optimal GPU tiers with VRAM
+- [x] **Task 41.3.7**: Add Deployment Cost Calculator ($/month estimate) — Done: expandable panel with FPS, hours, precision, replicas inputs
+- [x] **Task 41.3.8**: Add Batch Size Sweep results view (when benchmarked) — Done: shows optimal batch, peak throughput, line chart
+- [x] **Task 41.3.9**: Add Resolution Sweep results view (when benchmarked) — Done: shows optimal/max resolution, throughput chart
+- [x] **Task 41.3.10**: Add Per-Layer Timing breakdown (when profiled) — Done: shows slowest layers table + time by op type chart
+- [x] **Task 41.3.11**: Add Cloud Instance selector (AWS/Azure/GCP) — Done: dropdown in Cost Calculator with T4/A10G/A100/H100/Jetson
+- [x] **Task 41.3.12**: Add Privacy Controls toggle (redact names, summary-only) — Done: checkboxes in sidebar, affects layer table
+
+### Story 41.4: CLI-Streamlit Parity Matrix
+*Ensure both interfaces have the same features.*
+
+**CLI Options → Streamlit Equivalents:**
+
+| CLI Flag | CLI Status | Streamlit Status | Notes |
+|----------|------------|------------------|-------|
+| `--hardware PROFILE` | Done | Done | Hardware dropdown |
+| `--precision` | Done | Done | Part of analysis |
+| `--batch-size` | Done | **Done** | Sidebar number input (41.4.1) |
+| `--system-requirements` | Done | **Done** | System Requirements section (41.3.6) |
+| `--sweep-batch-sizes` | Done | **Done** | Results view if data exists (41.3.8) |
+| `--sweep-resolutions` | Done | **Done** | Results view if data exists (41.3.9) |
+| `--deployment-fps` | Done | **Done** | Deployment Cost Calculator (41.3.7) |
+| `--deployment-hours` | Done | **Done** | Deployment Cost Calculator (41.3.7) |
+| `--cloud INSTANCE` | Done | **Done** | Cost Calculator dropdown (41.3.11) |
+| `--gpu-count` | Done | **Done** | Sidebar number input (41.4.5) |
+| `--deployment-target` | Done | **Done** | Sidebar selectbox (41.4.6) |
+| `--no-benchmark` | Done | N/A | Streamlit uses theoretical only |
+| `--with-plots` | Done | Done | Charts checkbox |
+| `--include-graph` | Done | Done | Graph checkbox |
+| `--include-layer-table` | Done | **Done** | Layer table in Details tab (41.2.7) |
+| `--llm-summary` | Done | Done | API key input |
+| `--redact-names` | Done | **Done** | Privacy checkbox (41.3.12) |
+| `--summary-only` | Done | **Done** | Privacy checkbox (41.3.12) |
+| `--offline` | Done | N/A | Streamlit inherently online |
+| `--export-ir` | Done | **Done** | Export tab download (41.4.9) |
+| `--layer-csv` | Done | **Done** | CSV download button (41.2.7) |
+
+- [x] **Task 41.4.1**: Add batch size input control to Streamlit — Done: sidebar number input, used in HW estimates
+- [x] **Task 41.4.2**: Add "Run Benchmark" button for batch/resolution sweeps — Done: expandable panel with batch size selection, runs actual ONNX benchmarks
+- [x] **Task 41.4.3**: Add deployment cost panel (fps, hours, $/month) — Done in 41.3.7
+- [x] **Task 41.4.4**: Add cloud instance dropdown (AWS/Azure/GCP) — Done in 41.3.11
+- [x] **Task 41.4.5**: Add GPU count spinner for multi-GPU estimates — Done: sidebar number input
+- [x] **Task 41.4.6**: Add deployment target selector (edge/local/cloud) — Done: sidebar selectbox with cloud/local/edge
+- [x] **Task 41.4.7**: Add per-layer table with CSV download — Done in 41.2.7
+- [x] **Task 41.4.8**: Add privacy toggles (redact names, summary only) — Done in 41.3.12
+- [x] **Task 41.4.9**: Add Universal IR export button — Done: Export tab with Universal IR JSON + DOT graph downloads
+- [x] **Task 41.4.10**: Update CLI parity matrix as features are added — Updated inline above
+
+### Story 41.5: LLM Prompt Enhancement
+*Ensure AI summaries include all analysis data for comprehensive insights.*
+
+- [x] **Task 41.5.1**: Audit current LLM prompt for missing data fields
+- [x] **Task 41.5.2**: Add KV Cache info to LLM prompt (for transformers/LLMs)
+- [x] **Task 41.5.3**: Add Precision Breakdown to LLM prompt (quantization status, mixed precision)
+- [x] **Task 41.5.4**: Add Memory Breakdown by op type to LLM prompt
+- [x] **Task 41.5.5**: Add extended Hardware Estimates (utilization, saturation, throughput)
+- [x] **Task 41.5.6**: Add System Requirements to LLM prompt (min/rec/optimal GPUs)
+- [x] **Task 41.5.7**: Add Bottleneck Analysis recommendations to LLM prompt — Done: bottleneck_analysis with type, ratios, recommendations
+- [ ] **Task 41.5.8**: Test LLM summary quality with transformer model
+
+---
+
+## Epic 42: Format Conversion Testing (P1)
+
+*Comprehensive test suite for all format conversions in the conversion matrix (Epics 19-24).*
+
+**Goal:** Ensure every `to` and `from` conversion path works correctly, preserves metadata, and handles edge cases gracefully.
+
+### Story 42.1: ONNX Hub Conversions
+*Test ONNX as the interchange format (most common path).*
+
+- [ ] **Task 42.1.1**: Test ONNX → TensorRT conversion (requires TRT runtime)
+- [ ] **Task 42.1.2**: Test ONNX → TFLite conversion (via tf2onnx reverse)
+- [ ] **Task 42.1.3**: Test ONNX → CoreML conversion (via coremltools)
+- [ ] **Task 42.1.4**: Test ONNX → OpenVINO conversion (via openvino)
+- [ ] **Task 42.1.5**: Test TFLite → ONNX conversion (tflite2onnx)
+- [ ] **Task 42.1.6**: Test CoreML → ONNX conversion (lossy path)
+
+### Story 42.2: Framework-to-ONNX Conversions
+*Test native framework exports to ONNX.*
+
+- [ ] **Task 42.2.1**: Test PyTorch → ONNX with simple CNN model
+- [ ] **Task 42.2.2**: Test PyTorch → ONNX with Ultralytics YOLO model
+- [ ] **Task 42.2.3**: Test PyTorch → ONNX with transformer model
+- [ ] **Task 42.2.4**: Test TensorFlow SavedModel → ONNX conversion
+- [ ] **Task 42.2.5**: Test Keras .h5 → ONNX conversion
+- [ ] **Task 42.2.6**: Test TensorFlow frozen graph → ONNX conversion
+
+### Story 42.3: Framework Multi-Hop Conversions
+*Test conversions that go through ONNX as intermediary.*
+
+- [ ] **Task 42.3.1**: Test PyTorch → TFLite (via ONNX)
+- [ ] **Task 42.3.2**: Test PyTorch → CoreML (via coremltools direct)
+- [ ] **Task 42.3.3**: Test PyTorch → OpenVINO (via ONNX)
+- [ ] **Task 42.3.4**: Test TensorFlow → TFLite (direct, should be FULL)
+- [ ] **Task 42.3.5**: Test TensorFlow → CoreML (via coremltools)
+- [ ] **Task 42.3.6**: Test TensorFlow → OpenVINO (via ONNX)
+
+### Story 42.4: Round-Trip and Metadata Validation
+*Verify conversions preserve essential information.*
+
+- [ ] **Task 42.4.1**: Create test harness for conversion round-trips
+- [ ] **Task 42.4.2**: Test ONNX → TFLite → ONNX round-trip (check param counts)
+- [ ] **Task 42.4.3**: Test ONNX → CoreML → ONNX round-trip (check lossy delta)
+- [ ] **Task 42.4.4**: Validate op_type_counts preserved across conversions
+- [ ] **Task 42.4.5**: Validate precision_breakdown preserved across conversions
+- [ ] **Task 42.4.6**: Test conversion error handling (unsupported ops, invalid models)

@@ -23,7 +23,7 @@ Example usage:
     print(report.to_json())
 """
 
-__version__ = "0.2.8"
+__version__ = "0.3.0"
 
 from .analyzer import MetricsEngine, ONNXGraphLoader
 from .compare_visualizations import (
@@ -94,6 +94,26 @@ from .report import (
     InspectionReport,
     ModelInspector,
     infer_num_classes_from_output,
+)
+from .report_sections import (
+    BlockSummaryItem,
+    BottleneckSection,
+    DetectedBlocksSection,
+    ExtractedReportSections,
+    HardwareEstimatesSection,
+    KVCacheSection,
+    MemoryBreakdownRow,
+    MemoryBreakdownSection,
+    MetricsCard,
+    MetricsSummary,
+    OperatorDistribution,
+    PrecisionBreakdown,
+    PrecisionBreakdownRow,
+    RiskSignalItem,
+    RiskSignalsSection,
+    SharedWeightsSection,
+    format_bytes,
+    format_number,
 )
 from .risks import RiskAnalyzer, RiskSignal, RiskThresholds
 from .schema import (
@@ -206,4 +226,23 @@ __all__ = [
     "summarize_report",
     "validate_report",
     "validate_report_strict",
+    # Report Sections (Story 41.2)
+    "BlockSummaryItem",
+    "BottleneckSection",
+    "DetectedBlocksSection",
+    "ExtractedReportSections",
+    "HardwareEstimatesSection",
+    "KVCacheSection",
+    "MemoryBreakdownRow",
+    "MemoryBreakdownSection",
+    "MetricsCard",
+    "MetricsSummary",
+    "OperatorDistribution",
+    "PrecisionBreakdown",
+    "PrecisionBreakdownRow",
+    "RiskSignalItem",
+    "RiskSignalsSection",
+    "SharedWeightsSection",
+    "format_bytes",
+    "format_number",
 ]

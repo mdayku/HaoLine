@@ -97,13 +97,22 @@ haoline-web
 
 This opens an interactive dashboard at `http://localhost:8501` with:
 
-> **Want to deploy your own?** See [DEPLOYMENT.md](DEPLOYMENT.md) for HuggingFace Spaces, Docker, and self-hosted options.
 - Drag-and-drop model upload (ONNX, PyTorch)
 - Hardware selection with 50+ GPU profiles (searchable)
+- **NEW:** Batch size and GPU count controls
+- **NEW:** System Requirements (Steam-style min/rec/optimal)
+- **NEW:** Deployment Cost Calculator (monthly cloud cost estimates)
+- **NEW:** Cloud instance selector (T4, A10G, A100, H100, Jetson)
 - Full interactive D3.js neural network graph
 - Model comparison mode (side-by-side analysis)
+- **NEW:** Per-layer timing breakdown (when benchmarked)
+- **NEW:** Memory usage overview chart
+- **NEW:** Run Benchmark button (actual ONNX Runtime measurements)
+- **NEW:** Privacy controls (redact layer names, summary-only mode)
 - AI-powered summaries (bring your own API key)
-- Export to PDF, HTML, JSON, Markdown
+- Export to PDF, HTML, JSON, Markdown, **Universal IR**, **DOT graph**
+
+> **Want to deploy your own?** See [DEPLOYMENT.md](DEPLOYMENT.md) for HuggingFace Spaces, Docker, and self-hosted options.
 
 ---
 
@@ -221,6 +230,22 @@ Or use the web UI's comparison mode for an interactive experience.
 | `--from-jax PATH` | Convert JAX/Flax model |
 | `--input-shape SHAPE` | Input shape for conversion (e.g., `1,3,224,224`) |
 | `--keep-onnx PATH` | Save converted ONNX to path |
+
+### Privacy Options
+
+| Flag | Description |
+|------|-------------|
+| `--redact-names` | Anonymize layer names for IP protection |
+| `--summary-only` | Show only aggregate statistics |
+| `--offline` | Disable all network requests |
+
+### Universal IR Export
+
+| Flag | Description |
+|------|-------------|
+| `--export-ir PATH` | Export format-agnostic graph as JSON |
+| `--export-graph PATH` | Export graph as DOT or PNG (Graphviz) |
+| `--list-conversions` | Show all supported format conversions |
 
 ### Other Options
 

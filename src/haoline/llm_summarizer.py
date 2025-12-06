@@ -65,28 +65,36 @@ class LLMSummary:
 SYSTEM_PROMPT = """You are an expert ML engineer analyzing ONNX model architectures.
 Your task is to provide clear, accurate summaries of model structure and characteristics.
 Be concise but informative. Focus on:
-- Architecture type and key patterns
-- Model size and computational complexity
+- Architecture type and key patterns (CNN, Transformer, RNN, hybrid)
+- Model size, computational complexity, and memory requirements
+- Hardware deployment considerations (VRAM, latency, bottlenecks)
+- Quantization status and precision characteristics
+- KV cache requirements for transformer/LLM models
 - Potential use cases based on structure
-- Any notable characteristics or concerns
+- Any notable characteristics, risks, or optimization opportunities
 
 Respond in plain text without markdown formatting."""
 
 SHORT_SUMMARY_PROMPT = """Based on this ONNX model analysis, write a 1-2 sentence summary.
-Focus on: what type of model this is, its size, and primary use case.
+Focus on: what type of model this is, its size, quantization status, and primary use case.
 
 Model Analysis:
 {report_json}
 
 Write only the summary, no preamble or explanation."""
 
-DETAILED_SUMMARY_PROMPT = """Based on this ONNX model analysis, write a detailed paragraph (3-5 sentences).
+DETAILED_SUMMARY_PROMPT = """Based on this ONNX model analysis, write a detailed paragraph (4-6 sentences).
 Include:
-1. Architecture type and structure (e.g., CNN, Transformer, hybrid)
-2. Model complexity (parameters, FLOPs, memory)
-3. Key architectural patterns detected
-4. Deployment considerations based on hardware estimates
-5. Any risk signals or recommendations
+1. Architecture type and structure (e.g., CNN, Transformer, hybrid, LLM)
+2. Model complexity (parameters, FLOPs, model size, peak memory)
+3. Precision and quantization status (FP32, FP16, INT8, mixed precision)
+4. Key architectural patterns detected (attention heads, residual blocks, etc.)
+5. Hardware deployment analysis:
+   - VRAM requirements and whether it fits on target GPU
+   - Bottleneck classification (compute-bound vs memory-bound)
+   - Theoretical latency and throughput
+6. For transformers: KV cache requirements per token and full context
+7. Any risk signals, deployment concerns, or optimization recommendations
 
 Model Analysis:
 {report_json}
@@ -295,6 +303,7 @@ class LLMSummarizer:
         Prepare a condensed version of the report for LLM consumption.
 
         Keeps the most relevant information while staying within token limits.
+        Includes all analysis sections: metrics, precision, memory, hardware, KV cache, etc.
         """
         # Build a focused summary dict
         summary: dict[str, Any] = {
@@ -317,12 +326,23 @@ class LLMSummarizer:
             }
 
         if report.param_counts:
-            summary["parameters"] = {
+            param_summary: dict[str, Any] = {
                 "total": report.param_counts.total,
                 "by_op_type": dict(
                     sorted(report.param_counts.by_op_type.items(), key=lambda x: -x[1])[:5]
                 ),
             }
+            # Precision breakdown (Story 41.5: LLM prompt enhancement)
+            if report.param_counts.precision_breakdown:
+                param_summary["precision_breakdown"] = report.param_counts.precision_breakdown
+            if report.param_counts.is_quantized:
+                param_summary["is_quantized"] = True
+                if report.param_counts.quantized_ops:
+                    param_summary["quantized_ops"] = report.param_counts.quantized_ops[:5]
+            # Shared weights
+            if report.param_counts.num_shared_weights > 0:
+                param_summary["num_shared_weights"] = report.param_counts.num_shared_weights
+            summary["parameters"] = param_summary
 
         if report.flop_counts:
             summary["flops"] = {
@@ -333,10 +353,31 @@ class LLMSummarizer:
             }
 
         if report.memory_estimates:
-            summary["memory"] = {
-                "model_size_bytes": report.memory_estimates.model_size_bytes,
-                "peak_activation_bytes": report.memory_estimates.peak_activation_bytes,
+            mem = report.memory_estimates
+            memory_summary: dict[str, Any] = {
+                "model_size_bytes": mem.model_size_bytes,
+                "peak_activation_bytes": mem.peak_activation_bytes,
             }
+            # KV Cache for transformers (Story 41.5)
+            if mem.kv_cache_bytes_per_token > 0:
+                memory_summary["kv_cache"] = {
+                    "bytes_per_token": mem.kv_cache_bytes_per_token,
+                    "bytes_full_context": mem.kv_cache_bytes_full_context,
+                }
+                if mem.kv_cache_config:
+                    memory_summary["kv_cache"]["config"] = mem.kv_cache_config
+            # Memory breakdown by op type (Story 41.5)
+            if mem.breakdown:
+                bd = mem.breakdown
+                if bd.weights_by_op_type:
+                    memory_summary["weights_by_op_type"] = dict(
+                        sorted(bd.weights_by_op_type.items(), key=lambda x: -x[1])[:5]
+                    )
+                if bd.activations_by_op_type:
+                    memory_summary["activations_by_op_type"] = dict(
+                        sorted(bd.activations_by_op_type.items(), key=lambda x: -x[1])[:5]
+                    )
+            summary["memory"] = memory_summary
 
         summary["architecture_type"] = report.architecture_type
 
@@ -354,14 +395,49 @@ class LLMSummarizer:
 
         if report.hardware_estimates:
             hw = report.hardware_estimates
-            summary["hardware_estimates"] = {
+            hw_summary: dict[str, Any] = {
                 "device": hw.device,
                 "precision": hw.precision,
                 "batch_size": hw.batch_size,
                 "vram_required_bytes": hw.vram_required_bytes,
                 "fits_in_vram": hw.fits_in_vram,
-                "theoretical_latency_ms": hw.theoretical_latency_ms,
+                "theoretical_latency_ms": round(hw.theoretical_latency_ms, 2),
                 "bottleneck": hw.bottleneck,
+            }
+            # Extended hardware metrics (Story 41.5)
+            if hasattr(hw, "compute_utilization_estimate"):
+                hw_summary["compute_utilization"] = round(hw.compute_utilization_estimate * 100, 1)
+            if hasattr(hw, "gpu_saturation"):
+                hw_summary["gpu_saturation_percent"] = round(hw.gpu_saturation * 100, 2)
+            if hasattr(hw, "throughput_fps"):
+                hw_summary["throughput_fps"] = round(hw.throughput_fps, 1)
+            summary["hardware_estimates"] = hw_summary
+
+        # System requirements if available
+        if hasattr(report, "system_requirements") and report.system_requirements:
+            sr = report.system_requirements
+            summary["system_requirements"] = {
+                "minimum": {
+                    "gpu": sr.minimum.gpu,
+                    "vram_gb": sr.minimum.vram_gb,
+                    "description": sr.minimum.description,
+                },
+                "recommended": {
+                    "gpu": sr.recommended.gpu,
+                    "vram_gb": sr.recommended.vram_gb,
+                    "description": sr.recommended.description,
+                },
+            }
+
+        # Bottleneck analysis with recommendations (Story 41.5.7)
+        if hasattr(report, "bottleneck_analysis") and report.bottleneck_analysis:
+            ba = report.bottleneck_analysis
+            summary["bottleneck_analysis"] = {
+                "type": ba.bottleneck_type,
+                "compute_ratio": ba.compute_ratio,
+                "memory_ratio": ba.memory_ratio,
+                "efficiency_percent": ba.efficiency_percent,
+                "recommendations": ba.recommendations[:3],  # Top 3 recommendations
             }
 
         return json.dumps(summary, indent=2)
