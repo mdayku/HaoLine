@@ -890,6 +890,78 @@ def render_compare_mode():
         )
 
 
+def _check_feature_availability() -> dict[str, dict[str, Any]]:
+    """Check which features are available in the current environment."""
+    features: dict[str, dict[str, Any]] = {}
+
+    # Core ONNX analysis (always available)
+    features["ONNX Analysis"] = {"available": True}
+    features["Interactive Graph"] = {"available": True}
+    features["Quantization Linting"] = {"available": True}
+
+    # TensorRT (requires GPU + tensorrt package)
+    try:
+        from haoline.formats.tensorrt import is_available
+
+        trt_available = is_available()
+    except ImportError:
+        trt_available = False
+    features["TensorRT Analysis"] = {
+        "available": trt_available,
+        "requires_gpu": True,
+    }
+
+    # Runtime Profiling (requires GPU + onnxruntime-gpu)
+    try:
+        import onnxruntime
+
+        has_gpu_ep = "CUDAExecutionProvider" in onnxruntime.get_available_providers()
+    except ImportError:
+        has_gpu_ep = False
+    features["GPU Inference"] = {
+        "available": has_gpu_ep,
+        "requires_gpu": True,
+    }
+
+    # LLM Summary (requires openai)
+    try:
+        import openai  # noqa: F401
+
+        llm_available = True
+    except ImportError:
+        llm_available = False
+    features["AI Summary"] = {
+        "available": llm_available,
+        "requires_dep": "openai",
+    }
+
+    # PDF Export (requires playwright)
+    try:
+        import playwright  # noqa: F401
+
+        pdf_available = True
+    except ImportError:
+        pdf_available = False
+    features["PDF Export"] = {
+        "available": pdf_available,
+        "requires_dep": "playwright",
+    }
+
+    # PyTorch conversion (requires torch)
+    try:
+        import torch  # noqa: F401
+
+        torch_available = True
+    except ImportError:
+        torch_available = False
+    features["PyTorch Conversion"] = {
+        "available": torch_available,
+        "requires_dep": "torch",
+    }
+
+    return features
+
+
 def _handle_tensorrt_streamlit(uploaded_file) -> None:
     """Handle TensorRT engine file analysis in Streamlit."""
     import tempfile
@@ -1382,6 +1454,47 @@ def main():
             help="Show only aggregate statistics, hide per-layer details",
         )
 
+        # Feature Availability Matrix (Task 50.2.7)
+        with st.expander("Feature Availability", expanded=False):
+            # Check what's available in this environment
+            features = _check_feature_availability()
+
+            st.markdown(
+                """
+                <style>
+                    .feat-avail { font-size: 0.85rem; }
+                    .feat-yes { color: #10b981; }
+                    .feat-no { color: #ef4444; }
+                    .feat-badge { 
+                        font-size: 0.7rem; 
+                        padding: 2px 6px; 
+                        border-radius: 4px; 
+                        margin-left: 4px;
+                    }
+                    .badge-gpu { background: #7c3aed; color: white; }
+                    .badge-dep { background: #f59e0b; color: black; }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            for feat_name, feat_info in features.items():
+                status = "✓" if feat_info["available"] else "✗"
+                status_class = "feat-yes" if feat_info["available"] else "feat-no"
+                badge = ""
+                if feat_info.get("requires_gpu"):
+                    badge = '<span class="feat-badge badge-gpu">GPU</span>'
+                elif feat_info.get("requires_dep"):
+                    badge = f'<span class="feat-badge badge-dep">{feat_info["requires_dep"]}</span>'
+
+                st.markdown(
+                    f'<div class="feat-avail"><span class="{status_class}">{status}</span> {feat_name}{badge}</div>',
+                    unsafe_allow_html=True,
+                )
+
+            if not features.get("TensorRT Analysis", {}).get("available"):
+                st.caption("GPU features require `pip install haoline[tensorrt]` and NVIDIA GPU")
+
         # LLM Summary
         st.markdown("### AI Summary")
         import os
@@ -1499,12 +1612,12 @@ def main():
                         <td class="cap-warn">Weights only - convert to ONNX for full analysis</td>
                     </tr>
                     <tr>
-                        <td><strong>TensorRT</strong></td>
+                        <td><strong>TensorRT</strong> <span style="background:#7c3aed;color:white;font-size:0.65rem;padding:1px 4px;border-radius:3px;">GPU</span></td>
                         <td class="cap-warn">GPU only</td>
                         <td class="cap-no">N/A</td>
                         <td class="cap-no">N/A</td>
                         <td class="cap-no">No</td>
-                        <td class="cap-warn">Quant bottleneck analysis (requires NVIDIA GPU)</td>
+                        <td class="cap-warn">Quant bottleneck analysis</td>
                     </tr>
                     <tr>
                         <td><strong>TFLite</strong></td>
