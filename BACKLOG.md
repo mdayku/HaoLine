@@ -55,7 +55,7 @@
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
-| Epic 42: Format Conversion Testing | In Progress | 6 | 14/38 | **P1** (all unblocked!) |
+| Epic 42: Format Conversion Testing | In Progress | 6 | 16/38 | **P1** (all unblocked!) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
@@ -1008,8 +1008,8 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 *Verify conversions preserve essential information.*
 
 - [x] **Task 42.5.1**: Create test harness for conversion round-trips ✅
-- [ ] **Task 42.5.2**: Test ONNX → TFLite → ONNX round-trip ✅ **UNBLOCKED**
-- [ ] **Task 42.5.3**: Test ONNX → CoreML → ONNX round-trip (measure lossy delta)
+- [x] **Task 42.5.2**: Test ONNX → TFLite → ONNX round-trip ✅ (skips on TF/Keras 3.x compat issues)
+- [x] **Task 42.5.3**: Test ONNX → CoreML → ONNX round-trip (measures lossy delta) ✅
 - [x] **Task 42.5.4**: Validate op_type_counts preserved across conversions ✅
 - [x] **Task 42.5.5**: Validate precision_breakdown preserved across conversions ✅
 - [ ] **Task 42.5.6**: Test conversion error handling (unsupported ops, invalid models)
