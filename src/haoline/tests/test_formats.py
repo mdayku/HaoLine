@@ -703,3 +703,112 @@ class TestTRTComparison:
         )
         assert metrics.file_size_ratio == 0.5
         assert metrics.estimated_precision_savings_ratio == 0.25
+
+
+class TestTRTQuantBottleneckAnalysis:
+    """Tests for TensorRT quantization bottleneck analysis (Story 22.8)."""
+
+    def test_bottleneck_zone_model(self) -> None:
+        """Test BottleneckZone Pydantic model."""
+        from haoline.formats.tensorrt import BottleneckZone
+
+        zone = BottleneckZone(
+            start_idx=5,
+            end_idx=10,
+            layer_count=6,
+            layer_names=["layer_5", "layer_6", "layer_7"],
+            layer_types=["Conv", "BN", "ReLU"],
+            severity="High",
+        )
+        assert zone.layer_count == 6
+        assert zone.severity == "High"
+
+    def test_failed_fusion_pattern_model(self) -> None:
+        """Test FailedFusionPattern Pydantic model."""
+        from haoline.formats.tensorrt import FailedFusionPattern
+
+        pattern = FailedFusionPattern(
+            pattern_type="Conv+BN+ReLU",
+            layer_names=["conv1", "bn1", "relu1"],
+            layer_indices=[0, 1, 2],
+            expected_fused_name="Conv+BN+ReLU_0",
+            reason="Sequential pattern not fused",
+            speed_impact="High",
+        )
+        assert pattern.pattern_type == "Conv+BN+ReLU"
+        assert len(pattern.layer_names) == 3
+
+    def test_quant_bottleneck_analysis_model(self) -> None:
+        """Test QuantBottleneckAnalysis Pydantic model."""
+        from haoline.formats.tensorrt import QuantBottleneckAnalysis, BottleneckZone
+
+        zone = BottleneckZone(
+            start_idx=5,
+            end_idx=10,
+            layer_count=6,
+            layer_names=["layer_5", "layer_6"],
+            layer_types=["Conv", "BN"],
+            severity="High",
+        )
+
+        analysis = QuantBottleneckAnalysis(
+            int8_layer_count=80,
+            fp16_layer_count=10,
+            fp32_layer_count=10,
+            total_layer_count=100,
+            quantization_ratio=0.8,
+            fp32_fallback_ratio=0.1,
+            bottleneck_zones=[zone],
+            estimated_speedup_potential=1.2,
+            recommendations=["Quantization looks good!"],
+        )
+        assert analysis.int8_layer_count == 80
+        assert analysis.quantization_ratio == 0.8
+        assert analysis.largest_bottleneck is not None
+        assert analysis.largest_bottleneck.layer_count == 6
+
+    def test_analyze_quant_bottlenecks_mock_engine(self) -> None:
+        """Test analyze_quant_bottlenecks with mock engine data."""
+        from pathlib import Path
+
+        from haoline.formats.tensorrt import (
+            TRTEngineInfo,
+            TRTLayerInfo,
+            analyze_quant_bottlenecks,
+        )
+
+        # Create mock layers with mixed precision
+        layers = [
+            TRTLayerInfo(name="conv1", type="Convolution", precision="INT8"),
+            TRTLayerInfo(name="conv2", type="Convolution", precision="INT8"),
+            # FP32 bottleneck zone
+            TRTLayerInfo(name="layernorm1", type="Normalization", precision="FP32"),
+            TRTLayerInfo(name="add1", type="ElementWise", precision="FP32"),
+            TRTLayerInfo(name="matmul1", type="MatrixMultiply", precision="FP32"),
+            # Back to INT8
+            TRTLayerInfo(name="conv3", type="Convolution", precision="INT8"),
+            TRTLayerInfo(name="conv4", type="Convolution", precision="INT8"),
+        ]
+
+        engine_info = TRTEngineInfo(
+            path=Path("test.engine"),
+            trt_version="10.0.0",
+            layers=layers,
+        )
+
+        analysis = analyze_quant_bottlenecks(engine_info)
+
+        assert analysis.int8_layer_count == 4
+        assert analysis.fp32_layer_count == 3
+        assert analysis.total_layer_count == 7
+        assert len(analysis.bottleneck_zones) >= 1
+        assert analysis.estimated_speedup_potential > 1.0
+
+    def test_bottleneck_zone_severity(self) -> None:
+        """Test zone severity based on layer count."""
+        from haoline.formats.tensorrt import _zone_severity
+
+        assert _zone_severity(2) == "Low"
+        assert _zone_severity(3) == "Medium"
+        assert _zone_severity(5) == "High"
+        assert _zone_severity(10) == "Critical"
