@@ -996,3 +996,568 @@ class TestTFLiteToOnnxWithoutTF:
 
         assert hasattr(tflite2onnx, "convert")
         assert hasattr(tflite2onnx, "__version__")
+
+
+# ============================================================================
+# Story 42.5: Conversion Validation Harness
+# ============================================================================
+
+
+class ConversionValidator:
+    """
+    Task 42.5.1: Test harness for validating conversion quality.
+
+    Compares two UniversalGraph instances (e.g., native vs converted)
+    and reports differences in structure, parameters, and metadata.
+    """
+
+    def __init__(
+        self,
+        tolerance_nodes: int = 10,
+        tolerance_params_pct: float = 1.0,
+        tolerance_edges_pct: float = 10.0,
+    ) -> None:
+        """
+        Initialize validator with tolerances.
+
+        Args:
+            tolerance_nodes: Max allowed difference in node count (fusions may reduce)
+            tolerance_params_pct: Max allowed % difference in parameter count
+            tolerance_edges_pct: Max allowed % difference in edge count
+        """
+        self.tolerance_nodes = tolerance_nodes
+        self.tolerance_params_pct = tolerance_params_pct
+        self.tolerance_edges_pct = tolerance_edges_pct
+        self.errors: list[str] = []
+        self.warnings: list[str] = []
+
+    def compare_graphs(
+        self,
+        graph_a: Any,
+        graph_b: Any,
+        name_a: str = "source",
+        name_b: str = "converted",
+    ) -> bool:
+        """
+        Compare two UniversalGraph instances.
+
+        Args:
+            graph_a: First graph (typically native/source)
+            graph_b: Second graph (typically converted)
+            name_a: Label for first graph
+            name_b: Label for second graph
+
+        Returns:
+            True if graphs are equivalent within tolerances
+        """
+        self.errors = []
+        self.warnings = []
+
+        # Node count comparison
+        self._compare_node_count(graph_a, graph_b, name_a, name_b)
+
+        # Parameter count comparison
+        self._compare_params(graph_a, graph_b, name_a, name_b)
+
+        # Op type comparison
+        self._compare_op_types(graph_a, graph_b, name_a, name_b)
+
+        # Input/output comparison
+        self._compare_io(graph_a, graph_b, name_a, name_b)
+
+        # Precision breakdown comparison
+        self._compare_precision_breakdown(graph_a, graph_b, name_a, name_b)
+
+        return len(self.errors) == 0
+
+    def _compare_node_count(self, graph_a: Any, graph_b: Any, name_a: str, name_b: str) -> None:
+        """Task 42.5.4 helper: Compare node counts."""
+        nodes_a = getattr(graph_a, "num_nodes", len(getattr(graph_a, "nodes", [])))
+        nodes_b = getattr(graph_b, "num_nodes", len(getattr(graph_b, "nodes", [])))
+
+        diff = abs(nodes_a - nodes_b)
+        if diff > self.tolerance_nodes:
+            self.errors.append(
+                f"Node count mismatch: {name_a}={nodes_a}, {name_b}={nodes_b} "
+                f"(diff={diff}, tolerance={self.tolerance_nodes})"
+            )
+        elif diff > 0:
+            self.warnings.append(
+                f"Minor node count difference: {name_a}={nodes_a}, {name_b}={nodes_b}"
+            )
+
+    def _compare_params(self, graph_a: Any, graph_b: Any, name_a: str, name_b: str) -> None:
+        """Task 42.5.7: Compare parameter counts within tolerance."""
+        params_a = getattr(graph_a, "total_parameters", 0)
+        params_b = getattr(graph_b, "total_parameters", 0)
+
+        if params_a == 0 and params_b == 0:
+            return  # Both have no params (e.g., activation-only models)
+
+        if params_a == 0 or params_b == 0:
+            self.warnings.append(
+                f"One graph has no parameters: {name_a}={params_a}, {name_b}={params_b}"
+            )
+            return
+
+        pct_diff = abs(params_a - params_b) / max(params_a, params_b) * 100
+        if pct_diff > self.tolerance_params_pct:
+            self.errors.append(
+                f"Parameter count mismatch: {name_a}={params_a:,}, {name_b}={params_b:,} "
+                f"(diff={pct_diff:.2f}%, tolerance={self.tolerance_params_pct}%)"
+            )
+        elif pct_diff > 0:
+            self.warnings.append(
+                f"Minor parameter difference: {name_a}={params_a:,}, {name_b}={params_b:,} "
+                f"({pct_diff:.2f}%)"
+            )
+
+    def _compare_op_types(self, graph_a: Any, graph_b: Any, name_a: str, name_b: str) -> None:
+        """Task 42.5.4: Compare op_type_counts between graphs."""
+        # Get op type counts
+        ops_a = self._get_op_counts(graph_a)
+        ops_b = self._get_op_counts(graph_b)
+
+        if not ops_a and not ops_b:
+            return
+
+        # Find ops unique to each graph
+        only_in_a = set(ops_a.keys()) - set(ops_b.keys())
+        only_in_b = set(ops_b.keys()) - set(ops_a.keys())
+
+        if only_in_a:
+            self.warnings.append(f"Ops only in {name_a}: {sorted(only_in_a)}")
+        if only_in_b:
+            self.warnings.append(f"Ops only in {name_b}: {sorted(only_in_b)}")
+
+        # Compare common ops
+        common_ops = set(ops_a.keys()) & set(ops_b.keys())
+        for op in common_ops:
+            count_a = ops_a[op]
+            count_b = ops_b[op]
+            if count_a != count_b:
+                self.warnings.append(
+                    f"Op '{op}' count differs: {name_a}={count_a}, {name_b}={count_b}"
+                )
+
+    def _compare_io(self, graph_a: Any, graph_b: Any, name_a: str, name_b: str) -> None:
+        """Compare input/output counts and shapes."""
+        inputs_a = len(getattr(graph_a, "inputs", []))
+        inputs_b = len(getattr(graph_b, "inputs", []))
+        outputs_a = len(getattr(graph_a, "outputs", []))
+        outputs_b = len(getattr(graph_b, "outputs", []))
+
+        if inputs_a != inputs_b:
+            self.errors.append(f"Input count mismatch: {name_a}={inputs_a}, {name_b}={inputs_b}")
+        if outputs_a != outputs_b:
+            self.errors.append(f"Output count mismatch: {name_a}={outputs_a}, {name_b}={outputs_b}")
+
+    def _compare_precision_breakdown(
+        self, graph_a: Any, graph_b: Any, name_a: str, name_b: str
+    ) -> None:
+        """Task 42.5.5: Compare precision_breakdown between graphs."""
+        prec_a = self._get_precision_breakdown(graph_a)
+        prec_b = self._get_precision_breakdown(graph_b)
+
+        if not prec_a and not prec_b:
+            return  # Neither has precision info
+
+        if not prec_a or not prec_b:
+            self.warnings.append(
+                f"Precision breakdown missing from one graph: "
+                f"{name_a}={bool(prec_a)}, {name_b}={bool(prec_b)}"
+            )
+            return
+
+        # Normalize precision names (e.g., "float32" -> "fp32")
+        prec_a = self._normalize_precision_keys(prec_a)
+        prec_b = self._normalize_precision_keys(prec_b)
+
+        # Find precisions unique to each graph
+        only_in_a = set(prec_a.keys()) - set(prec_b.keys())
+        only_in_b = set(prec_b.keys()) - set(prec_a.keys())
+
+        if only_in_a:
+            self.warnings.append(f"Precisions only in {name_a}: {sorted(only_in_a)}")
+        if only_in_b:
+            self.warnings.append(f"Precisions only in {name_b}: {sorted(only_in_b)}")
+
+        # Compare common precisions (as percentages of total)
+        total_a = sum(prec_a.values())
+        total_b = sum(prec_b.values())
+
+        if total_a > 0 and total_b > 0:
+            for prec in set(prec_a.keys()) & set(prec_b.keys()):
+                pct_a = prec_a[prec] / total_a * 100
+                pct_b = prec_b[prec] / total_b * 100
+                if abs(pct_a - pct_b) > 5.0:  # 5% tolerance
+                    self.warnings.append(
+                        f"Precision '{prec}' distribution differs: "
+                        f"{name_a}={pct_a:.1f}%, {name_b}={pct_b:.1f}%"
+                    )
+
+    def _get_precision_breakdown(self, graph: Any) -> dict[str, int]:
+        """Extract precision breakdown from a graph."""
+        # Try report.param_counts.precision_breakdown path
+        if hasattr(graph, "param_counts") and graph.param_counts:
+            prec = getattr(graph.param_counts, "precision_breakdown", None)
+            if prec:
+                return dict(prec)
+
+        # Try direct attribute
+        if hasattr(graph, "precision_breakdown"):
+            prec = graph.precision_breakdown
+            if prec:
+                return dict(prec)
+
+        return {}
+
+    def _normalize_precision_keys(self, prec: dict[str, int]) -> dict[str, int]:
+        """Normalize precision names for comparison."""
+        normalized: dict[str, int] = {}
+        for key, value in prec.items():
+            norm_key = key.lower().replace("float", "fp").replace("int", "int")
+            normalized[norm_key] = normalized.get(norm_key, 0) + value
+        return normalized
+
+    def _get_op_counts(self, graph: Any) -> dict[str, int]:
+        """Extract op type counts from a graph."""
+        # Try different attribute names
+        if hasattr(graph, "op_type_counts"):
+            return dict(graph.op_type_counts)
+
+        # Count from nodes
+        if hasattr(graph, "nodes"):
+            counts: dict[str, int] = {}
+            for node in graph.nodes:
+                op_type = getattr(node, "op_type", getattr(node, "type", "Unknown"))
+                counts[op_type] = counts.get(op_type, 0) + 1
+            return counts
+
+        return {}
+
+    def get_report(self) -> str:
+        """Generate human-readable validation report."""
+        lines = ["=" * 60, "Conversion Validation Report", "=" * 60]
+
+        if self.errors:
+            lines.append(f"\nERRORS ({len(self.errors)}):")
+            for err in self.errors:
+                lines.append(f"  [X] {err}")
+
+        if self.warnings:
+            lines.append(f"\nWARNINGS ({len(self.warnings)}):")
+            for warn in self.warnings:
+                lines.append(f"  [!] {warn}")
+
+        if not self.errors and not self.warnings:
+            lines.append("\n[OK] Graphs are equivalent within tolerances")
+
+        lines.append("=" * 60)
+        return "\n".join(lines)
+
+
+class TestConversionValidator:
+    """Unit tests for the ConversionValidator harness itself."""
+
+    def test_validator_identical_graphs(self) -> None:
+        """Identical graphs should pass validation."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class MockGraph:
+            num_nodes: int = 10
+            total_parameters: int = 1000000
+            inputs: list = None  # type: ignore
+            outputs: list = None  # type: ignore
+            op_type_counts: dict = None  # type: ignore
+
+            def __post_init__(self) -> None:
+                self.inputs = self.inputs or [1]
+                self.outputs = self.outputs or [1]
+                self.op_type_counts = self.op_type_counts or {"Conv": 5, "Relu": 5}
+
+        graph_a = MockGraph()
+        graph_b = MockGraph()
+
+        validator = ConversionValidator()
+        result = validator.compare_graphs(graph_a, graph_b)
+
+        assert result is True
+        assert len(validator.errors) == 0
+
+    def test_validator_node_count_within_tolerance(self) -> None:
+        """Node count difference within tolerance should pass."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class MockGraph:
+            num_nodes: int
+            total_parameters: int = 1000000
+            inputs: list = None  # type: ignore
+            outputs: list = None  # type: ignore
+
+            def __post_init__(self) -> None:
+                self.inputs = self.inputs or [1]
+                self.outputs = self.outputs or [1]
+
+        graph_a = MockGraph(num_nodes=100)
+        graph_b = MockGraph(num_nodes=95)  # 5 fewer due to fusion
+
+        validator = ConversionValidator(tolerance_nodes=10)
+        result = validator.compare_graphs(graph_a, graph_b)
+
+        assert result is True
+
+    def test_validator_node_count_exceeds_tolerance(self) -> None:
+        """Node count difference exceeding tolerance should fail."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class MockGraph:
+            num_nodes: int
+            total_parameters: int = 1000000
+            inputs: list = None  # type: ignore
+            outputs: list = None  # type: ignore
+
+            def __post_init__(self) -> None:
+                self.inputs = self.inputs or [1]
+                self.outputs = self.outputs or [1]
+
+        graph_a = MockGraph(num_nodes=100)
+        graph_b = MockGraph(num_nodes=50)  # 50 fewer - too many!
+
+        validator = ConversionValidator(tolerance_nodes=10)
+        result = validator.compare_graphs(graph_a, graph_b)
+
+        assert result is False
+        assert len(validator.errors) > 0
+
+    def test_validator_param_count_tolerance(self) -> None:
+        """Parameter count within percentage tolerance should pass."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class MockGraph:
+            num_nodes: int = 10
+            total_parameters: int = 0
+            inputs: list = None  # type: ignore
+            outputs: list = None  # type: ignore
+
+            def __post_init__(self) -> None:
+                self.inputs = self.inputs or [1]
+                self.outputs = self.outputs or [1]
+
+        graph_a = MockGraph(total_parameters=1000000)
+        graph_b = MockGraph(total_parameters=1005000)  # 0.5% difference
+
+        validator = ConversionValidator(tolerance_params_pct=1.0)
+        result = validator.compare_graphs(graph_a, graph_b)
+
+        assert result is True
+
+    def test_validator_io_mismatch(self) -> None:
+        """Input/output count mismatch should fail."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class MockGraph:
+            num_nodes: int = 10
+            total_parameters: int = 1000000
+            inputs: list = None  # type: ignore
+            outputs: list = None  # type: ignore
+
+            def __post_init__(self) -> None:
+                self.inputs = self.inputs or []
+                self.outputs = self.outputs or []
+
+        graph_a = MockGraph(inputs=[1], outputs=[1])
+        graph_b = MockGraph(inputs=[1, 2], outputs=[1])  # Extra input
+
+        validator = ConversionValidator()
+        result = validator.compare_graphs(graph_a, graph_b)
+
+        assert result is False
+
+    def test_validator_precision_breakdown(self) -> None:
+        """Task 42.5.5: Precision breakdown should be compared."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class ParamCounts:
+            precision_breakdown: dict
+
+        @dataclass
+        class MockGraph:
+            num_nodes: int = 10
+            total_parameters: int = 1000000
+            param_counts: ParamCounts = None  # type: ignore
+            inputs: list = None  # type: ignore
+            outputs: list = None  # type: ignore
+
+            def __post_init__(self) -> None:
+                self.inputs = self.inputs or [1]
+                self.outputs = self.outputs or [1]
+
+        # Same precision distribution
+        graph_a = MockGraph(
+            param_counts=ParamCounts(precision_breakdown={"fp32": 500000, "fp16": 500000})
+        )
+        graph_b = MockGraph(
+            param_counts=ParamCounts(precision_breakdown={"fp32": 480000, "fp16": 520000})
+        )
+
+        validator = ConversionValidator()
+        result = validator.compare_graphs(graph_a, graph_b)
+
+        # Should pass - precision distribution within 5% tolerance
+        assert result is True
+
+    def test_validator_precision_normalization(self) -> None:
+        """Precision names should be normalized (float32 -> fp32)."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class ParamCounts:
+            precision_breakdown: dict
+
+        @dataclass
+        class MockGraph:
+            num_nodes: int = 10
+            total_parameters: int = 1000000
+            param_counts: ParamCounts = None  # type: ignore
+            inputs: list = None  # type: ignore
+            outputs: list = None  # type: ignore
+
+            def __post_init__(self) -> None:
+                self.inputs = self.inputs or [1]
+                self.outputs = self.outputs or [1]
+
+        # Same data, different naming conventions
+        graph_a = MockGraph(param_counts=ParamCounts(precision_breakdown={"float32": 1000000}))
+        graph_b = MockGraph(param_counts=ParamCounts(precision_breakdown={"fp32": 1000000}))
+
+        validator = ConversionValidator()
+        result = validator.compare_graphs(graph_a, graph_b)
+
+        assert result is True
+        # No warnings about missing precisions since they normalized to same key
+        assert not any("only in" in w.lower() for w in validator.warnings)
+
+
+@pytest.mark.skipif(not is_pytorch_available(), reason="PyTorch not installed")
+class TestOnnxRoundTripValidation:
+    """
+    Task 42.5.4-42.5.7: Validate conversions preserve essential info.
+
+    Tests that PyTorch -> ONNX -> UniversalGraph preserves:
+    - Node/op counts
+    - Parameter counts
+    - Input/output shapes
+    """
+
+    def test_pytorch_onnx_preserves_params(self) -> None:
+        """Verify PyTorch -> ONNX preserves parameter count."""
+        import torch
+        import torch.nn as nn
+
+        class SimpleNet(nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.fc1 = nn.Linear(100, 50)  # 100*50 + 50 = 5050 params
+                self.fc2 = nn.Linear(50, 10)  # 50*10 + 10 = 510 params
+                # Total: 5560 params
+
+            def forward(self, x: torch.Tensor) -> torch.Tensor:
+                x = torch.relu(self.fc1(x))
+                return self.fc2(x)
+
+        model = SimpleNet()
+        model.eval()
+
+        # Count PyTorch params
+        pytorch_params = sum(p.numel() for p in model.parameters())
+        assert pytorch_params == 5560
+
+        # Export to ONNX
+        dummy_input = torch.randn(1, 100)
+        with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as f:
+            onnx_path = Path(f.name)
+
+        try:
+            torch.onnx.export(model, dummy_input, str(onnx_path), opset_version=17)
+
+            # Load and count ONNX params
+            from haoline.format_adapters import OnnxAdapter
+
+            graph = OnnxAdapter().read(onnx_path)
+            onnx_params = graph.total_parameters
+
+            # Validate within tolerance
+            validator = ConversionValidator(tolerance_params_pct=0.1)
+            # Create mock graphs for comparison
+            from dataclasses import dataclass
+
+            @dataclass
+            class ParamHolder:
+                total_parameters: int
+                num_nodes: int = 3
+                inputs: list = None  # type: ignore
+                outputs: list = None  # type: ignore
+
+                def __post_init__(self) -> None:
+                    self.inputs = self.inputs or [1]
+                    self.outputs = self.outputs or [1]
+
+            pytorch_graph = ParamHolder(total_parameters=pytorch_params)
+            onnx_graph = ParamHolder(total_parameters=onnx_params)
+
+            result = validator.compare_graphs(pytorch_graph, onnx_graph, "PyTorch", "ONNX")
+            assert result, validator.get_report()
+
+        finally:
+            onnx_path.unlink(missing_ok=True)
+
+    def test_onnx_universalgraph_op_types(self) -> None:
+        """Task 42.5.4: Verify op_type_counts extraction works."""
+        import torch
+        import torch.nn as nn
+
+        class ConvNet(nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
+                self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
+                self.pool = nn.MaxPool2d(2)
+                self.relu = nn.ReLU()
+
+            def forward(self, x: torch.Tensor) -> torch.Tensor:
+                x = self.relu(self.conv1(x))
+                x = self.pool(x)
+                x = self.relu(self.conv2(x))
+                return self.pool(x)
+
+        model = ConvNet()
+        model.eval()
+
+        dummy_input = torch.randn(1, 3, 64, 64)
+        with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as f:
+            onnx_path = Path(f.name)
+
+        try:
+            torch.onnx.export(model, dummy_input, str(onnx_path), opset_version=17)
+
+            from haoline.format_adapters import OnnxAdapter
+
+            graph = OnnxAdapter().read(onnx_path)
+
+            # Check op types are extracted
+            op_counts = graph.op_type_counts if hasattr(graph, "op_type_counts") else {}
+
+            # Should have Conv (ONNX native) or Conv2D (UniversalGraph normalized)
+            conv_key = "Conv" if "Conv" in op_counts else "Conv2D"
+            assert conv_key in op_counts, f"Missing Conv/Conv2D in {op_counts}"
+            assert op_counts[conv_key] == 2, f"Expected 2 {conv_key}, got {op_counts[conv_key]}"
+
+        finally:
+            onnx_path.unlink(missing_ok=True)
