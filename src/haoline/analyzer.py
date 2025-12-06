@@ -14,11 +14,11 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 import numpy as np
 import onnx
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # Standalone implementations that work without onnxruntime
@@ -45,9 +45,10 @@ _HAS_ORT_UTILS = False
 ModelProtoWithShapeInfo = None  # type: ignore
 
 
-@dataclass
-class NodeInfo:
+class NodeInfo(BaseModel):
     """Information about a single ONNX node."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
     op_type: str
@@ -60,54 +61,56 @@ class NodeInfo:
     flops: int = 0
 
 
-@dataclass
-class GraphInfo:
+class GraphInfo(BaseModel):
     """Parsed graph structure with extracted metadata."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
     nodes: list[NodeInfo]
     inputs: list[str]
     outputs: list[str]
-    initializers: dict[str, np.ndarray]  # name -> tensor
+    initializers: dict[str, Any]  # name -> np.ndarray (Any for Pydantic compat)
     value_shapes: dict[str, list[int | str]]  # name -> shape (may have symbolic dims)
 
     # Computed summaries
     num_nodes: int = 0
-    input_shapes: dict[str, list[int | str]] = field(default_factory=dict)
-    output_shapes: dict[str, list[int | str]] = field(default_factory=dict)
-    op_type_counts: dict[str, int] = field(default_factory=dict)
+    input_shapes: dict[str, list[int | str]] = Field(default_factory=dict)
+    output_shapes: dict[str, list[int | str]] = Field(default_factory=dict)
+    op_type_counts: dict[str, int] = Field(default_factory=dict)
 
     # Node lookup
-    node_by_name: dict[str, NodeInfo] = field(default_factory=dict)
-    node_by_output: dict[str, NodeInfo] = field(default_factory=dict)
+    node_by_name: dict[str, NodeInfo] = Field(default_factory=dict)
+    node_by_output: dict[str, NodeInfo] = Field(default_factory=dict)
 
 
-@dataclass
-class ParamCounts:
+class ParamCounts(BaseModel):
     """Parameter count breakdown."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     total: int = 0
     trainable: int = 0  # Assumed: all initializers are trainable unless marked
     non_trainable: int = 0
-    by_node: dict[str, float] = field(
+    by_node: dict[str, float] = Field(
         default_factory=dict
     )  # Float for fractional shared attribution
-    by_op_type: dict[str, float] = field(
+    by_op_type: dict[str, float] = Field(
         default_factory=dict
     )  # Float for fractional shared attribution
 
     # Shared weight tracking
-    shared_weights: dict[str, list[str]] = field(
+    shared_weights: dict[str, list[str]] = Field(
         default_factory=dict
     )  # initializer -> nodes using it
     num_shared_weights: int = 0  # Count of weights used by 2+ nodes
 
     # Quantization info
-    precision_breakdown: dict[str, int] = field(default_factory=dict)  # dtype -> param count
+    precision_breakdown: dict[str, int] = Field(default_factory=dict)  # dtype -> param count
     is_quantized: bool = False  # True if model has quantized weights or ops
-    quantized_ops: list[str] = field(default_factory=list)  # Quantized op types detected
+    quantized_ops: list[str] = Field(default_factory=list)  # Quantized op types detected
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "total": self.total,
             "trainable": self.trainable,
@@ -123,32 +126,34 @@ class ParamCounts:
         }
 
 
-@dataclass
-class FlopCounts:
+class FlopCounts(BaseModel):
     """FLOP estimate breakdown."""
 
-    total: int = 0
-    by_node: dict[str, int] = field(default_factory=dict)
-    by_op_type: dict[str, int] = field(default_factory=dict)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def to_dict(self) -> dict:
+    total: int = 0
+    by_node: dict[str, int] = Field(default_factory=dict)
+    by_op_type: dict[str, int] = Field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
         return {
             "total": self.total,
             "by_op_type": self.by_op_type,
         }
 
 
-@dataclass
-class MemoryBreakdown:
+class MemoryBreakdown(BaseModel):
     """Detailed memory breakdown by component type."""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     # Weights by operation type
-    weights_by_op_type: dict[str, int] = field(default_factory=dict)  # op -> bytes
+    weights_by_op_type: dict[str, int] = Field(default_factory=dict)  # op -> bytes
     # Top weight tensors
-    largest_weights: list[tuple[str, int]] = field(default_factory=list)  # (name, bytes)
+    largest_weights: list[tuple[str, int]] = Field(default_factory=list)  # (name, bytes)
     # Activation breakdown
-    activations_by_op_type: dict[str, int] = field(default_factory=dict)  # op -> bytes
-    largest_activations: list[tuple[str, int]] = field(default_factory=list)
+    activations_by_op_type: dict[str, int] = Field(default_factory=dict)  # op -> bytes
+    largest_activations: list[tuple[str, int]] = Field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -163,17 +168,18 @@ class MemoryBreakdown:
         }
 
 
-@dataclass
-class MemoryEstimates:
+class MemoryEstimates(BaseModel):
     """Memory usage estimates."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     model_size_bytes: int = 0  # Size of parameters/initializers
     peak_activation_bytes: int = 0  # Estimated peak activation memory (batch=1)
-    per_layer_activation_bytes: dict[str, int] = field(default_factory=dict)
+    per_layer_activation_bytes: dict[str, int] = Field(default_factory=dict)
     # KV cache estimates for transformer models
     kv_cache_bytes_per_token: int = 0  # KV cache per token (for streaming inference)
     kv_cache_bytes_full_context: int = 0  # Total KV cache at max seq length
-    kv_cache_config: dict[str, int] = field(default_factory=dict)  # num_layers, hidden_dim, etc.
+    kv_cache_config: dict[str, int] = Field(default_factory=dict)  # num_layers, hidden_dim, etc.
     # Detailed breakdown
     breakdown: MemoryBreakdown | None = None
 
