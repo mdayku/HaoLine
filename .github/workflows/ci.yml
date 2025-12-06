@@ -321,7 +321,20 @@ jobs:
           git config user.name "GitHub Actions"
           git add .
           git commit -m "Deploy from GitHub Actions"
-          git push --force https://mdayku:${HF_TOKEN}@huggingface.co/spaces/mdayku/haoline main
+          
+          # Retry logic for transient HF errors (504, ref locks, etc.)
+          HF_REMOTE="https://mdayku:${HF_TOKEN}@huggingface.co/spaces/mdayku/haoline"
+          for attempt in 1 2 3; do
+            echo "Push attempt $attempt..."
+            if git push --force "$HF_REMOTE" main 2>&1; then
+              echo "Push succeeded!"
+              exit 0
+            fi
+            echo "Push failed, waiting 15s before retry..."
+            sleep 15
+          done
+          echo "All push attempts failed"
+          exit 1
 
       - name: Deployment status
         if: steps.check_token.outputs.skip != 'true'
