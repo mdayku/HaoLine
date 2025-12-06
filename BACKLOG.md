@@ -55,7 +55,7 @@
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
-| Epic 42: Format Conversion Testing | **Partial** | 4 | 0/24 | **P1** (11 tasks unblocked) |
+| Epic 42: Format Conversion Testing | In Progress | 6 | 0/38 | **P1** (22 unblocked, 8 need GPU) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
@@ -133,6 +133,8 @@
 ## Epic 19: SafeTensors Format (P2)
 
 *HuggingFace ecosystem, widely used for LLM weights. Easy win.*
+
+**Note:** Story 19.2 (Writer) exports *to* SafeTensors. Epic 49 imports *from* SafeTensors/HuggingFace *to* ONNX. They are independent - Story 19.2 is NOT a prerequisite for Epic 49.
 
 ### Story 19.1: SafeTensors Reader - **COMPLETE**
 - [x] **Task 19.1.1**: Add safetensors dependency (optional) - in `[formats]` extra
@@ -906,54 +908,107 @@
 
 ## Epic 42: Format Conversion Testing (P1)
 
-*Comprehensive test suite for all format conversions in the conversion matrix (Epics 19-24).*
+*Comprehensive test suite for all format conversions in HaoLine.*
 
 **Goal:** Ensure every `to` and `from` conversion path works correctly, preserves metadata, and handles edge cases gracefully.
 
 **Relationship to Epic 49:** This epic tests EXISTING conversions. When Epic 49 adds new paths (HuggingFace → ONNX), add corresponding tests here.
 
-**Status:** Partially unblocked - Stories 42.1 (partial) and 42.2 can start now!
+**Conversion Matrix:**
+```
+              TO →
+FROM ↓     | ONNX | TRT | TFLite | CoreML | OpenVINO | SafeTensors
+-----------+------+-----+--------+--------+----------+------------
+ONNX       |  -   | ✅  | BLOCKED| ✅     | ✅       | ❌
+TensorRT   | ❌   |  -  | ❌     | ❌     | ❌       | ❌
+TFLite     | BLOCKED| ❌ |  -    | ❌     | ❌       | ❌
+CoreML     | ⚠️   | ❌  | ❌     |  -     | ❌       | ❌
+OpenVINO   | ⚠️   | ❌  | ❌     | ❌     |  -       | ❌
+PyTorch    | ✅   | via | via    | ✅     | via      | ✅
+TensorFlow | ✅   | via | ✅     | ✅     | via      | ❌
+JAX        | ✅   | via | via    | via    | via      | ❌
+```
+Legend: ✅=Supported, ⚠️=Lossy, BLOCKED=Needs Epic 21, via=Through ONNX, ❌=Not supported
 
-### Story 42.1: ONNX Hub Conversions - **PARTIAL UNBLOCK**
+### Story 42.1: ONNX Hub Conversions
 *Test ONNX as the interchange format (most common path).*
 
-- [ ] **Task 42.1.1**: Test ONNX → TensorRT conversion (requires TRT runtime) ✅ **UNBLOCKED**
-- [ ] **Task 42.1.2**: Test ONNX → TFLite conversion (via tf2onnx reverse) - needs Epic 21
-- [ ] **Task 42.1.3**: Test ONNX → CoreML conversion (via coremltools) ✅ **UNBLOCKED**
-- [ ] **Task 42.1.4**: Test ONNX → OpenVINO conversion (via openvino) ✅ **UNBLOCKED**
-- [ ] **Task 42.1.5**: Test TFLite → ONNX conversion (tflite2onnx) - needs Epic 21
-- [ ] **Task 42.1.6**: Test CoreML → ONNX conversion (lossy path) ✅ **UNBLOCKED**
+**ONNX → Other Formats:**
+- [ ] **Task 42.1.1**: Test ONNX → TensorRT conversion ✅ **UNBLOCKED** (requires NVIDIA GPU)
+- [ ] **Task 42.1.2**: Test ONNX → TFLite conversion 🔒 **BLOCKED** (needs Epic 21 TFLite writer)
+- [ ] **Task 42.1.3**: Test ONNX → CoreML conversion ✅ **UNBLOCKED**
+- [ ] **Task 42.1.4**: Test ONNX → OpenVINO conversion ✅ **UNBLOCKED**
+
+**Other Formats → ONNX:**
+- [ ] **Task 42.1.5**: Test TFLite → ONNX conversion 🔒 **BLOCKED** (needs Epic 21 tflite2onnx)
+- [ ] **Task 42.1.6**: Test CoreML → ONNX conversion ✅ **UNBLOCKED** (lossy path)
 - [ ] **Task 42.1.7**: Test OpenVINO → ONNX conversion ✅ **UNBLOCKED**
 
-### Story 42.2: Framework-to-ONNX Conversions - **FULLY UNBLOCKED**
+### Story 42.2: Framework-to-ONNX Conversions ✅ **FULLY UNBLOCKED**
 *Test native framework exports to ONNX.*
 
-- [ ] **Task 42.2.1**: Test PyTorch → ONNX with simple CNN model ✅ **UNBLOCKED**
-- [ ] **Task 42.2.2**: Test PyTorch → ONNX with Ultralytics YOLO model ✅ **UNBLOCKED**
-- [ ] **Task 42.2.3**: Test PyTorch → ONNX with transformer model ✅ **UNBLOCKED**
-- [ ] **Task 42.2.4**: Test TensorFlow SavedModel → ONNX conversion ✅ **UNBLOCKED**
-- [ ] **Task 42.2.5**: Test Keras .h5 → ONNX conversion ✅ **UNBLOCKED**
-- [ ] **Task 42.2.6**: Test TensorFlow frozen graph → ONNX conversion ✅ **UNBLOCKED**
+**PyTorch → ONNX:**
+- [ ] **Task 42.2.1**: Test PyTorch → ONNX with simple CNN model
+- [ ] **Task 42.2.2**: Test PyTorch → ONNX with Ultralytics YOLO model
+- [ ] **Task 42.2.3**: Test PyTorch → ONNX with transformer model (attention patterns)
 
-### Story 42.3: Framework Multi-Hop Conversions
-*Test conversions that go through ONNX as intermediary.*
+**TensorFlow/Keras → ONNX:**
+- [ ] **Task 42.2.4**: Test TensorFlow SavedModel → ONNX conversion
+- [ ] **Task 42.2.5**: Test Keras .h5 → ONNX conversion
+- [ ] **Task 42.2.6**: Test TensorFlow frozen graph → ONNX conversion
 
-- [ ] **Task 42.3.1**: Test PyTorch → TFLite (via ONNX)
-- [ ] **Task 42.3.2**: Test PyTorch → CoreML (via coremltools direct)
-- [ ] **Task 42.3.3**: Test PyTorch → OpenVINO (via ONNX)
-- [ ] **Task 42.3.4**: Test TensorFlow → TFLite (direct, should be FULL)
-- [ ] **Task 42.3.5**: Test TensorFlow → CoreML (via coremltools)
-- [ ] **Task 42.3.6**: Test TensorFlow → OpenVINO (via ONNX)
+**JAX → ONNX:**
+- [ ] **Task 42.2.7**: Test JAX/Flax → ONNX with simple MLP
+- [ ] **Task 42.2.8**: Test JAX → ONNX with custom apply function
 
-### Story 42.4: Round-Trip and Metadata Validation
+### Story 42.3: Multi-Hop & Direct Conversions
+*Test conversions that go through ONNX as intermediary or direct paths.*
+
+**PyTorch Multi-Hop:**
+- [ ] **Task 42.3.1**: Test PyTorch → TFLite (via ONNX) 🔒 **BLOCKED**
+- [ ] **Task 42.3.2**: Test PyTorch → CoreML (via coremltools direct) ✅ **UNBLOCKED**
+- [ ] **Task 42.3.3**: Test PyTorch → OpenVINO (via ONNX) ✅ **UNBLOCKED**
+- [ ] **Task 42.3.4**: Test PyTorch → TensorRT (via ONNX) ✅ **UNBLOCKED** (requires GPU)
+
+**TensorFlow Multi-Hop:**
+- [ ] **Task 42.3.5**: Test TensorFlow → TFLite (direct tf.lite.TFLiteConverter) ✅ **UNBLOCKED**
+- [ ] **Task 42.3.6**: Test TensorFlow → CoreML (via coremltools) ✅ **UNBLOCKED**
+- [ ] **Task 42.3.7**: Test TensorFlow → OpenVINO (via ONNX) ✅ **UNBLOCKED**
+
+**JAX Multi-Hop:**
+- [ ] **Task 42.3.8**: Test JAX → TFLite (via ONNX) 🔒 **BLOCKED**
+- [ ] **Task 42.3.9**: Test JAX → CoreML (via ONNX) ✅ **UNBLOCKED**
+
+### Story 42.4: ONNX↔TRT Comparison Tests ✅ **UNBLOCKED**
+*Test the TensorRT comparison features from Epic 22.*
+
+- [ ] **Task 42.4.1**: Test `--compare-trt` with ResNet ONNX + compiled engine
+- [ ] **Task 42.4.2**: Verify fusion detection accuracy (Conv+BN+ReLU → single kernel)
+- [ ] **Task 42.4.3**: Verify precision change detection (FP32 → FP16/INT8)
+- [ ] **Task 42.4.4**: Test layer rewrite detection (FlashAttention, GELU)
+- [ ] **Task 42.4.5**: Test HTML comparison report generation
+- [ ] **Task 42.4.6**: Test quantization bottleneck analysis accuracy
+
+### Story 42.5: Round-Trip and Metadata Validation
 *Verify conversions preserve essential information.*
 
-- [ ] **Task 42.4.1**: Create test harness for conversion round-trips
-- [ ] **Task 42.4.2**: Test ONNX → TFLite → ONNX round-trip (check param counts)
-- [ ] **Task 42.4.3**: Test ONNX → CoreML → ONNX round-trip (check lossy delta)
-- [ ] **Task 42.4.4**: Validate op_type_counts preserved across conversions
-- [ ] **Task 42.4.5**: Validate precision_breakdown preserved across conversions
-- [ ] **Task 42.4.6**: Test conversion error handling (unsupported ops, invalid models)
+- [ ] **Task 42.5.1**: Create test harness for conversion round-trips
+- [ ] **Task 42.5.2**: Test ONNX → TFLite → ONNX round-trip 🔒 **BLOCKED**
+- [ ] **Task 42.5.3**: Test ONNX → CoreML → ONNX round-trip (measure lossy delta)
+- [ ] **Task 42.5.4**: Validate op_type_counts preserved across conversions
+- [ ] **Task 42.5.5**: Validate precision_breakdown preserved across conversions
+- [ ] **Task 42.5.6**: Test conversion error handling (unsupported ops, invalid models)
+- [ ] **Task 42.5.7**: Verify param_counts match before/after conversion (within tolerance)
+
+### Story 42.6: Weight Export Tests
+*Test weight extraction and SafeTensors export paths.*
+
+- [ ] **Task 42.6.1**: Test PyTorch state_dict → SafeTensors export
+- [ ] **Task 42.6.2**: Test ONNX initializers → SafeTensors export
+- [ ] **Task 42.6.3**: Verify tensor name preservation
+- [ ] **Task 42.6.4**: Verify dtype preservation (fp16, bf16, int8)
+
+**Task Summary:** 38 total tasks (22 unblocked, 8 blocked on Epic 21, 8 require TRT GPU)
 
 ---
 
