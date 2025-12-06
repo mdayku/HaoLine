@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | In Progress | 8 | 34/50 | **P2** |
+| Epic 22: TensorRT Engine Introspection | In Progress | 8 | 40/50 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -306,29 +306,29 @@
 - [x] **Task 22.7.7**: Update HuggingFace Spaces requirements (note: TRT requires GPU, may not work on free tier)
 - [x] **Task 22.7.8**: Write unit tests for TRTEngineReader (9 tests + integration test)
 
-### Story 22.8: Quantization Bottleneck Analysis [Phase 4] - **NEW**
+### Story 22.8: Quantization Bottleneck Analysis [Phase 4] - **IN PROGRESS (6/8)**
 *Engine-level insight into failed fusions and speed bottlenecks (per user feedback).*
 
 **User Pain Point:** "When I create a QAT module, TRT engine explorer shows nodes I need to fix for higher speed."
 
-- [ ] **Task 22.8.1**: Detect "failed fusion zones" - ops that should fuse but appear separate
+- [x] **Task 22.8.1**: Detect "failed fusion zones" - ops that should fuse but appear separate
   - Conv followed by BN followed by ReLU appearing as 3 layers = missed optimization
   - Flag common patterns: Conv+BN+ReLU, MatMul+Add, LayerNorm+Add
-- [ ] **Task 22.8.2**: Group consecutive FP32 layers into "bottleneck zones"
+- [x] **Task 22.8.2**: Group consecutive FP32 layers into "bottleneck zones"
   - Find largest non-quantized regions
   - Calculate zone size (layer count, estimated time impact)
-- [ ] **Task 22.8.3**: Add per-layer quant status indicators (INT8/FP16/FP32 with color coding)
-  - Green = INT8, Yellow = FP16, Red = FP32 fallback
-- [ ] **Task 22.8.4**: Estimate "quant gap" - speed delta vs ideal fully-quantized engine
+- [x] **Task 22.8.3**: Add per-layer quant status indicators (INT8/FP16/FP32 with color coding)
+  - Shown in CLI output with precision breakdown
+- [x] **Task 22.8.4**: Estimate "quant gap" - speed delta vs ideal fully-quantized engine
   - Use precision breakdown + typical speed ratios (INT8 ~2-4x faster than FP32)
-- [ ] **Task 22.8.5**: Generate "Quantization Fusion Summary" panel:
+- [x] **Task 22.8.5**: Generate "Quantization Fusion Summary" panel:
   ```
   Fused INT8 regions: 84.6%
   Remaining FP32 ops: 12
   Largest bottleneck: LayerNorm → Add → MLP (3 layers)
   Estimated speed gap vs ideal QAT: 1.7×
   ```
-- [ ] **Task 22.8.6**: Add `--quant-bottlenecks` CLI flag to show bottleneck analysis
+- [x] **Task 22.8.6**: Add `--quant-bottlenecks` CLI flag to show bottleneck analysis
 - [ ] **Task 22.8.7**: Add bottleneck heatmap to Streamlit TRT view (red zones for FP32)
 - [ ] **Task 22.8.8**: Parse timing cache/profiling data if available for actual timings
 
