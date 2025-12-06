@@ -46,7 +46,7 @@
 | **OPTIMIZATION** ||||
 | Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
-| Epic 33: QAT Linters | In Progress | 4 | 11/22 | **P1** |
+| Epic 33: QAT Linters | In Progress | 5 | 20/34 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
@@ -1138,6 +1138,25 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 - [ ] **Task 33.4.4**: Suggest per-channel vs per-tensor for specific layers
 - [ ] **Task 33.4.5**: Generate "QAT Readiness Report" (Markdown/HTML)
 - [ ] **Task 33.4.6**: Integrate recommendations into compare mode (FP32 vs INT8)
+
+### Story 33.5: CLI & Streamlit Integration
+*Surface quantization linting features in both interfaces with parity.*
+
+**CLI (already implemented):**
+- [x] **Task 33.5.1**: Add `--lint-quantization` flag to run analysis — Done in cli.py
+- [x] **Task 33.5.2**: Add `--quant-report PATH` for Markdown output — Done in cli.py
+- [ ] **Task 33.5.3**: Include quant lint results in `--out-json` report
+- [ ] **Task 33.5.4**: Add quant section to `--out-html` report
+- [ ] **Task 33.5.5**: Add `--quant-report-html` for HTML quant report
+
+**Streamlit:**
+- [x] **Task 33.5.6**: Add "Quantization Analysis" checkbox in sidebar — `include_quant_analysis` checkbox
+- [x] **Task 33.5.7**: Display readiness score with letter grade (A-F) — Score card with A-F grade
+- [x] **Task 33.5.8**: Show severity-ranked warnings with icons — Color-coded warning list
+- [x] **Task 33.5.9**: Display op breakdown chart (quant-friendly vs unfriendly) — Metrics display
+- [x] **Task 33.5.10**: Show problem layers table with recommendations — Problem layers dataframe
+- [x] **Task 33.5.11**: Add QAT validation results section (if QAT model) — QAT metrics
+- [x] **Task 33.5.12**: Add "Download Quant Report" button (Markdown) — Download button
 
 ---
 

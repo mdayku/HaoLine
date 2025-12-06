@@ -1049,6 +1049,11 @@ def main():
             "Interactive Graph", value=True, help="Include zoomable D3.js network visualization"
         )
         include_charts = st.checkbox("Charts", value=True, help="Include matplotlib visualizations")
+        include_quant_analysis = st.checkbox(
+            "Quantization Analysis",
+            value=False,
+            help="Analyze model readiness for INT8 quantization",
+        )
 
         # Privacy Controls (Story 41.3.12, 41.4.8)
         st.markdown("### Privacy Controls")
@@ -1538,6 +1543,165 @@ def main():
                                 st.caption(
                                     f"Quantized ops: {', '.join(report.param_counts.quantized_ops[:5])}"
                                 )
+
+                    # Quantization Readiness Analysis (Epic 33)
+                    if include_quant_analysis:
+                        with st.expander("INT8 Quantization Readiness", expanded=True):
+                            try:
+                                from haoline.quantization_linter import (
+                                    QuantizationLinter,
+                                    Severity,
+                                )
+                                from haoline.analyzer import ONNXGraphLoader
+
+                                # Load graph and run linting
+                                graph_loader = ONNXGraphLoader()
+                                _, graph_info = graph_loader.load(tmp_path)
+                                linter = QuantizationLinter()
+                                quant_result = linter.lint(graph_info)
+
+                                # Readiness Score with letter grade
+                                score = quant_result.readiness_score
+                                if score >= 90:
+                                    grade, color = "A", "#22c55e"
+                                elif score >= 75:
+                                    grade, color = "B", "#84cc16"
+                                elif score >= 60:
+                                    grade, color = "C", "#eab308"
+                                elif score >= 40:
+                                    grade, color = "D", "#f97316"
+                                else:
+                                    grade, color = "F", "#ef4444"
+
+                                # Score display
+                                score_col1, score_col2, score_col3 = st.columns([1, 2, 1])
+                                with score_col2:
+                                    st.markdown(
+                                        f"""
+                                        <div style="text-align: center; padding: 1rem; 
+                                             background: linear-gradient(135deg, {color}22, {color}11);
+                                             border: 2px solid {color}; border-radius: 12px;">
+                                            <div style="font-size: 3rem; font-weight: bold; color: {color};">
+                                                {grade}
+                                            </div>
+                                            <div style="font-size: 1.5rem; color: #e5e5e5;">
+                                                {score}/100
+                                            </div>
+                                            <div style="font-size: 0.9rem; color: #a3a3a3;">
+                                                Quantization Readiness
+                                            </div>
+                                        </div>
+                                        """,
+                                        unsafe_allow_html=True,
+                                    )
+
+                                st.markdown("")
+
+                                # Op breakdown
+                                op_col1, op_col2 = st.columns(2)
+                                with op_col1:
+                                    st.metric(
+                                        "Quant-Friendly Ops",
+                                        f"{quant_result.quant_friendly_pct:.1f}%",
+                                        help="Percentage of ops that work well with INT8",
+                                    )
+                                with op_col2:
+                                    st.metric(
+                                        "Issues Found",
+                                        len(quant_result.warnings),
+                                        delta=f"{quant_result.critical_count} critical"
+                                        if quant_result.critical_count > 0
+                                        else None,
+                                        delta_color="inverse",
+                                    )
+
+                                # Warnings by severity
+                                if quant_result.warnings:
+                                    st.markdown("#### Issues")
+                                    severity_icons = {
+                                        Severity.CRITICAL: "!!",
+                                        Severity.HIGH: "!",
+                                        Severity.MEDIUM: "~",
+                                        Severity.LOW: ".",
+                                        Severity.INFO: "i",
+                                    }
+                                    severity_colors = {
+                                        Severity.CRITICAL: "#ef4444",
+                                        Severity.HIGH: "#f97316",
+                                        Severity.MEDIUM: "#eab308",
+                                        Severity.LOW: "#84cc16",
+                                        Severity.INFO: "#3b82f6",
+                                    }
+
+                                    for w in sorted(
+                                        quant_result.warnings,
+                                        key=lambda x: list(Severity).index(x.severity),
+                                    ):
+                                        icon = severity_icons.get(w.severity, "?")
+                                        color = severity_colors.get(w.severity, "#737373")
+                                        st.markdown(
+                                            f"""
+                                            <div style="padding: 0.5rem; margin: 0.25rem 0; 
+                                                 border-left: 3px solid {color}; background: {color}11;">
+                                                <span style="color: {color}; font-weight: bold;">[{icon}]</span>
+                                                <span style="color: #e5e5e5;">{w.message}</span>
+                                                {f'<br><span style="color: #a3a3a3; font-size: 0.85rem; margin-left: 2rem;">→ {w.recommendation}</span>' if w.recommendation else ""}
+                                            </div>
+                                            """,
+                                            unsafe_allow_html=True,
+                                        )
+
+                                # Problem layers table
+                                if quant_result.problem_layers:
+                                    st.markdown("#### Problem Layers")
+                                    prob_df = pd.DataFrame(quant_result.problem_layers[:10])
+                                    st.dataframe(prob_df, use_container_width=True, hide_index=True)
+
+                                # QAT-specific results
+                                if quant_result.is_qat_model:
+                                    st.markdown("#### QAT Model Validation")
+                                    qat_col1, qat_col2 = st.columns(2)
+                                    with qat_col1:
+                                        st.metric(
+                                            "Missing Fake-Quant",
+                                            len(quant_result.missing_fake_quant_nodes),
+                                        )
+                                    with qat_col2:
+                                        st.metric(
+                                            "Scale Mismatches",
+                                            len(quant_result.scale_mismatches),
+                                        )
+
+                                # Download report button
+                                recommendations = linter.get_recommendations(quant_result)
+                                report_lines = [
+                                    f"# Quantization Readiness Report: {model_name}",
+                                    "",
+                                    f"**Score:** {score}/100 ({grade})",
+                                    f"**Quant-Friendly Ops:** {quant_result.quant_friendly_pct:.1f}%",
+                                    "",
+                                    "## Recommendations",
+                                    "",
+                                ]
+                                for rec in recommendations:
+                                    report_lines.append(f"- {rec}")
+                                report_lines.append("")
+                                report_lines.append("## Warnings")
+                                report_lines.append("")
+                                for w in quant_result.warnings:
+                                    report_lines.append(f"- **[{w.severity.value}]** {w.message}")
+                                    if w.recommendation:
+                                        report_lines.append(f"  - {w.recommendation}")
+
+                                st.download_button(
+                                    "Download Quant Report",
+                                    data="\n".join(report_lines),
+                                    file_name=f"{model_name}_quant_report.md",
+                                    mime="text/markdown",
+                                )
+
+                            except Exception as e:
+                                st.warning(f"Could not run quantization analysis: {e}")
 
                     # Memory breakdown by op type
                     if (
