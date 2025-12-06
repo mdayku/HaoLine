@@ -32,7 +32,7 @@
 | Epic 18: Universal IR | **COMPLETE** | 6 | 25/25 | Done |
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
-| Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
+| Epic 21: TFLite | In Progress | 3 | 3/18 | P2 (tflite2onnx now supported) |
 | Epic 22: TensorRT Engine Introspection | **COMPLETE** | 8 | 50/50 | Done |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
@@ -55,7 +55,7 @@
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
-| Epic 42: Format Conversion Testing | In Progress | 6 | 8/38 | **P1** (22 unblocked, 8 need GPU) |
+| Epic 42: Format Conversion Testing | In Progress | 6 | 9/38 | **P1** (23 unblocked, 8 need GPU) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
@@ -921,7 +921,7 @@ FROM ↓     | ONNX | TRT | TFLite | CoreML | OpenVINO | SafeTensors
 -----------+------+-----+--------+--------+----------+------------
 ONNX       |  -   | ✅  | 🔨     | ✅     | ✅       | 🔨
 TensorRT   | ⛔   |  -  | ⛔     | ⛔     | ⛔       | ⛔
-TFLite     | 🔨   | ⛔  |  -     | ⛔     | ⛔       | ⛔
+TFLite     | ✅   | ⛔  |  -     | ⛔     | ⛔       | ⛔
 CoreML     | ⚠️   | ⛔  | ⛔     |  -     | ⛔       | ⛔
 OpenVINO   | ⚠️   | ⛔  | ⛔     | ⛔     |  -       | ⛔
 PyTorch    | ✅   | →   | →      | ✅     | →        | 🔨
@@ -941,7 +941,8 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 
 **Notes:**
 - TensorRT engines are compiled binaries - cannot be converted TO other formats
-- TFLite→ONNX and ONNX→TFLite need Epic 21 (pure Python TFLite parser)
+- TFLite→ONNX now supported via `tflite2onnx` (some ops may be unsupported)
+- ONNX→TFLite needs tf2onnx + TensorFlow (heavy dep)
 - SafeTensors is weights-only, needs architecture info for full model export
 
 ### Story 42.1: ONNX Hub Conversions
@@ -954,7 +955,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [x] **Task 42.1.4**: Test ONNX → OpenVINO conversion ✅ **COMPLETE** (test written, skips if no openvino)
 
 **Other Formats → ONNX:**
-- [ ] **Task 42.1.5**: Test TFLite → ONNX conversion 🔒 **BLOCKED** (needs Epic 21 tflite2onnx)
+- [x] **Task 42.1.5**: Test TFLite → ONNX conversion ✅ **COMPLETE** (tflite2onnx added)
 - [x] **Task 42.1.6**: Test CoreML → ONNX conversion ✅ **COMPLETE** (test written, skips if no coremltools)
 - [x] **Task 42.1.7**: Test OpenVINO → ONNX conversion ✅ **COMPLETE** (test written, skips if no openvino)
 

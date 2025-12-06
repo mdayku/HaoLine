@@ -119,6 +119,9 @@ Examples:
   # Convert Keras .h5 model to ONNX and analyze
   python -m haoline --from-keras model.h5 --keep-onnx converted.onnx
 
+  # Convert TFLite model to ONNX and analyze
+  python -m haoline --from-tflite model.tflite --out-html report.html
+
   # Convert TensorFlow frozen graph to ONNX (requires input/output names)
   python -m haoline --from-frozen-graph model.pb --tf-inputs input:0 --tf-outputs output:0
 
@@ -276,6 +279,13 @@ Examples:
         default=None,
         metavar="MODEL_PATH",
         help="Convert a Keras model (.h5, .keras) to ONNX before analysis. Requires tf2onnx.",
+    )
+    tf_group.add_argument(
+        "--from-tflite",
+        type=pathlib.Path,
+        default=None,
+        metavar="MODEL_PATH",
+        help="Convert a TFLite model (.tflite) to ONNX before analysis. Requires tflite2onnx.",
     )
     tf_group.add_argument(
         "--from-frozen-graph",
@@ -1212,6 +1222,83 @@ def _convert_keras_to_onnx(
         return None, None
     except Exception as e:
         logger.error(f"Keras conversion failed: {e}")
+        if temp_file:
+            try:
+                onnx_path.unlink()
+            except Exception:
+                pass
+        return None, None
+
+    return onnx_path, temp_file
+
+
+def _convert_tflite_to_onnx(
+    tflite_path: pathlib.Path,
+    output_path: pathlib.Path | None,
+    opset_version: int,
+    logger: logging.Logger,
+) -> tuple[pathlib.Path | None, Any]:
+    """
+    Convert a TFLite model (.tflite) to ONNX format.
+
+    Args:
+        tflite_path: Path to TFLite model file
+        output_path: Where to save ONNX file (None = temp file)
+        opset_version: ONNX opset version (currently ignored, tflite2onnx uses own defaults)
+        logger: Logger instance
+
+    Returns:
+        Tuple of (onnx_path, temp_file_handle_or_None)
+    """
+    # Suppress opset_version unused warning - kept for API consistency
+    _ = opset_version
+
+    # Check if tflite2onnx is available
+    try:
+        import tflite2onnx
+    except ImportError:
+        logger.error("tflite2onnx not installed. Install with: pip install haoline[tflite]")
+        return None, None
+
+    tflite_path = tflite_path.resolve()
+    if not tflite_path.exists():
+        logger.error(f"TFLite model not found: {tflite_path}")
+        return None, None
+
+    suffix = tflite_path.suffix.lower()
+    if suffix != ".tflite":
+        logger.warning(f"Unexpected TFLite file extension: {suffix}. Proceeding anyway.")
+
+    # Determine output path
+    temp_file = None
+    if output_path:
+        onnx_path = output_path.resolve()
+        onnx_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        import tempfile
+
+        temp_file = tempfile.NamedTemporaryFile(suffix=".onnx", delete=False)
+        onnx_path = pathlib.Path(temp_file.name)
+        temp_file.close()
+
+    logger.info("Converting TFLite model to ONNX...")
+    logger.info(f"  Source: {tflite_path}")
+    logger.info(f"  Target: {onnx_path}")
+
+    try:
+        # tflite2onnx.convert(tflite_path, onnx_path)
+        tflite2onnx.convert(str(tflite_path), str(onnx_path))
+        logger.info("TFLite model converted successfully")
+
+        # Verify the export
+        import onnx
+
+        onnx_model = onnx.load(str(onnx_path))
+        onnx.checker.check_model(onnx_model)
+        logger.info("ONNX model validated successfully")
+
+    except Exception as e:
+        logger.error(f"TFLite conversion failed: {e}")
         if temp_file:
             try:
                 onnx_path.unlink()
@@ -2476,6 +2563,7 @@ def run_inspect():
         print("  PyTorch       .pt, .pth          --from-pytorch + --input-shape")
         print("  TensorFlow    SavedModel/        --from-tensorflow")
         print("  Keras         .h5, .keras        --from-keras")
+        print("  TFLite        .tflite            --from-tflite")
         print("  Frozen Graph  .pb                --from-frozen-graph + --tf-inputs/outputs")
         print("  JAX/Flax      .pkl, .msgpack     --from-jax + --jax-apply-fn + --input-shape")
 
@@ -2536,6 +2624,7 @@ def run_inspect():
         ("--from-pytorch", args.from_pytorch),
         ("--from-tensorflow", args.from_tensorflow),
         ("--from-keras", args.from_keras),
+        ("--from-tflite", args.from_tflite),
         ("--from-frozen-graph", args.from_frozen_graph),
         ("--from-jax", args.from_jax),
     ]
@@ -2574,6 +2663,15 @@ def run_inspect():
         )
         if model_path is None:
             sys.exit(1)
+    elif args.from_tflite:
+        model_path, temp_onnx_file = _convert_tflite_to_onnx(
+            args.from_tflite,
+            args.keep_onnx,
+            args.opset_version,
+            logger,
+        )
+        if model_path is None:
+            sys.exit(1)
     elif args.from_frozen_graph:
         model_path, temp_onnx_file = _convert_frozen_graph_to_onnx(
             args.from_frozen_graph,
@@ -2602,7 +2700,7 @@ def run_inspect():
             logger.error(
                 "Model path is required. Use --list-hardware to see available profiles, "
                 "or use a conversion flag (--from-pytorch, --from-tensorflow, --from-keras, "
-                "--from-frozen-graph, --from-jax)."
+                "--from-tflite, --from-frozen-graph, --from-jax)."
             )
             sys.exit(1)
 

@@ -98,6 +98,8 @@ safetensors = [
 tflite = [
     "tflite-runtime>=2.14.0;platform_system!='Windows'",
     # tflite-runtime not available on Windows, use tensorflow instead
+    "tflite2onnx>=0.4.0",
+    # For TFLite -> ONNX conversion
 ]
 coreml = [
     "coremltools>=7.0",

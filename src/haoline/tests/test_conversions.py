@@ -902,3 +902,97 @@ class TestPyTorchToTensorRT:
         finally:
             onnx_path.unlink(missing_ok=True)
             engine_path.unlink(missing_ok=True)
+
+
+# ============================================================================
+# Task 42.1.5: TFLite -> ONNX
+# ============================================================================
+
+
+def is_tflite2onnx_available() -> bool:
+    """Check if tflite2onnx is available."""
+    try:
+        import tflite2onnx  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def is_tensorflow_available() -> bool:
+    """Check if TensorFlow is available (needed to create test TFLite models)."""
+    try:
+        import tensorflow as tf  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+@pytest.mark.skipif(
+    not (is_tflite2onnx_available() and is_tensorflow_available()),
+    reason="tflite2onnx or tensorflow not installed",
+)
+class TestTFLiteToOnnx:
+    """Tests for TFLite to ONNX conversion."""
+
+    @pytest.fixture
+    def simple_tflite_model(self) -> Path | None:
+        """Create a simple TFLite model for testing."""
+        import tensorflow as tf
+
+        # Simple Dense model (uses FULLY_CONNECTED which tflite2onnx supports)
+        model = tf.keras.Sequential(
+            [
+                tf.keras.layers.Dense(10, input_shape=(5,), activation="relu", name="dense1"),
+                tf.keras.layers.Dense(2, name="output"),
+            ]
+        )
+        model.compile(optimizer="adam", loss="mse")
+
+        # Convert to TFLite
+        converter = tf.lite.TFLiteConverter.from_keras_model(model)
+        tflite_model = converter.convert()
+
+        with tempfile.NamedTemporaryFile(suffix=".tflite", delete=False) as f:
+            f.write(tflite_model)
+            yield Path(f.name)
+
+        # Cleanup
+        Path(f.name).unlink(missing_ok=True)
+
+    def test_tflite_to_onnx_conversion(self, simple_tflite_model: Path) -> None:
+        """Task 42.1.5: Test TFLite -> ONNX conversion."""
+        import tflite2onnx
+
+        with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as f:
+            onnx_path = Path(f.name)
+
+        try:
+            # Convert
+            tflite2onnx.convert(str(simple_tflite_model), str(onnx_path))
+
+            # Verify ONNX model
+            valid, error = verify_onnx_model(onnx_path)
+            assert valid, f"Converted ONNX invalid: {error}"
+
+            # Check structure
+            info = get_onnx_io_shapes(onnx_path)
+            assert len(info["inputs"]) >= 1
+            assert len(info["outputs"]) >= 1
+            assert info["node_count"] >= 1
+
+        finally:
+            onnx_path.unlink(missing_ok=True)
+
+
+@pytest.mark.skipif(not is_tflite2onnx_available(), reason="tflite2onnx not installed")
+class TestTFLiteToOnnxWithoutTF:
+    """Tests that work without TensorFlow (use pre-existing models)."""
+
+    def test_tflite2onnx_import(self) -> None:
+        """Verify tflite2onnx can be imported."""
+        import tflite2onnx
+
+        assert hasattr(tflite2onnx, "convert")
+        assert hasattr(tflite2onnx, "__version__")
