@@ -545,6 +545,51 @@
 
 ---
 
+## Epic 40: Full Pydantic Dataclass Migration (COMPLETE - 58/58)
+
+*Completed: December 2025 (v0.5.0)*
+
+Complete migration from Python dataclasses to Pydantic BaseModel across the entire codebase.
+
+### Story 40.1: Core Report Models
+- [x] Convert `ModelMetadata` to Pydantic `BaseModel`
+- [x] Convert `GraphSummary` to Pydantic `BaseModel`
+- [x] Convert `DatasetInfo` to Pydantic `BaseModel`
+- [x] Convert `InspectionReport` to Pydantic `BaseModel`
+- [x] Replace `to_dict()` with Pydantic `model_dump()`
+- [x] Replace `to_json()` with Pydantic `model_dump_json()`
+
+### Story 40.2: Analyzer Models
+- [x] Convert `ParamCounts` to Pydantic `BaseModel`
+- [x] Convert `FlopCounts` to Pydantic `BaseModel`
+- [x] Convert `MemoryEstimates` to Pydantic `BaseModel`
+- [x] Update `MetricsEngine` to return Pydantic models
+- [x] Handle multiple eval runs per model
+- [x] Validate eval task matches model type
+
+### Story 40.3: Hardware and Risk Models
+- [x] Convert `HardwareProfile` to Pydantic `BaseModel`
+- [x] Convert `HardwareEstimates` to Pydantic `BaseModel`
+- [x] Convert `RiskSignal` to Pydantic `BaseModel`
+- [x] Convert `Block` and pattern types to Pydantic
+
+### Story 40.4: Schema Consolidation
+- [x] Consolidate schema validation to use report.py models
+- [x] Update all imports across codebase
+- [x] Update CLI to work with Pydantic models
+- [x] Update Streamlit app to work with Pydantic models
+- [x] Update all unit tests for Pydantic models
+
+### Story 40.5: Format Readers & All Remaining Classes
+- [x] Convert `formats/*.py` (11 classes)
+- [x] Convert `report_sections.py` (16 classes)
+- [x] Convert `quantization_linter.py`, `quantization_advisor.py` (8 classes)
+- [x] Convert `compare*.py`, `eval/*.py` (12 classes)
+- [x] Convert `edge_analysis.py`, `hierarchical_graph.py` (6 classes)
+- [x] Convert remaining misc classes (5 classes)
+
+---
+
 ## Epic 41: Standardized Reporting (COMPLETE - 44/44)
 
 *Completed: December 2025*

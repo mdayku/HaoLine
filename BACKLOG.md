@@ -500,6 +500,8 @@
 - [ ] **Task 50.2.4**: Add dependency checks for LLM features (`pip install haoline[llm]`)
 - [ ] **Task 50.2.5**: Add dependency checks for format readers (safetensors, coreml, openvino)
 - [ ] **Task 50.2.6**: Show clear error with install command, not cryptic ImportError
+- [ ] **Task 50.2.7**: Add Streamlit UI feature availability matrix (show which features need GPU/deps)
+- [ ] **Task 50.2.8**: Add "Requires: TensorRT" / "Requires: GPU" badges to blocked features in UI
 
 ### Story 50.3: CLI UX Improvements
 *Better progress, feedback, and interactive features.*
@@ -1002,72 +1004,9 @@
 
 ---
 
-## Epic 40: Full Pydantic Dataclass Migration (P2)
+## Epic 40: Full Pydantic Dataclass Migration - **COMPLETE**
 
-*Complete migration from Python dataclasses to Pydantic BaseModel across the entire codebase.*
-
-**Why:** Epic 39 established Pydantic for validation, but the actual data structures remain as dataclasses. Full migration enables:
-- Automatic JSON serialization via `model_dump()` / `model_dump_json()`
-- Built-in validation on construction
-- Better IDE autocomplete and type inference
-- Field validators and computed properties
-- Immutability options
-
-**Scope:** 12+ dataclasses across 5 modules:
-- `report.py`: `ModelMetadata`, `GraphSummary`, `DatasetInfo`, `InspectionReport`
-- `analyzer.py`: `ParamCounts`, `FlopCounts`, `MemoryEstimates`
-- `hardware.py`: `HardwareProfile`, `HardwareEstimates`
-- `patterns.py`: `Block` and related types
-- `risks.py`: `RiskSignal`
-- `operational_profiling.py`: `BatchSizeSweep`, `ResolutionSweep`, `SystemRequirements`
-
-### Story 40.1: Core Report Models - **COMPLETE**
-- [x] **Task 40.1.1**: Convert `ModelMetadata` to Pydantic `BaseModel`
-- [x] **Task 40.1.2**: Convert `GraphSummary` to Pydantic `BaseModel`
-- [x] **Task 40.1.3**: Convert `DatasetInfo` to Pydantic `BaseModel`
-- [x] **Task 40.1.4**: Convert `InspectionReport` to Pydantic `BaseModel`
-- [x] **Task 40.1.5**: Replace `to_dict()` with Pydantic `model_dump()`
-- [x] **Task 40.1.6**: Replace `to_json()` with Pydantic `model_dump_json()`
-
-### Story 40.2: Analyzer Models - **COMPLETE**
-- [x] **Task 40.2.1**: Convert `ParamCounts` to Pydantic `BaseModel`
-- [x] **Task 40.2.2**: Convert `FlopCounts` to Pydantic `BaseModel`
-- [x] **Task 40.2.3**: Convert `MemoryEstimates` to Pydantic `BaseModel`
-- [x] **Task 40.2.4**: Update `MetricsEngine` to return Pydantic models
-- [x] **Task 40.2.5**: Handle multiple eval runs per model (aggregate or select) — *from Epic 12.4.3*
-- [x] **Task 40.2.6**: Validate eval task matches model type (warn if mismatch) — *from Epic 12.4.4*
-
-### Story 40.3: Hardware and Risk Models - **COMPLETE**
-- [x] **Task 40.3.1**: Convert `HardwareProfile` to Pydantic `BaseModel`
-- [x] **Task 40.3.2**: Convert `HardwareEstimates` to Pydantic `BaseModel`
-- [x] **Task 40.3.3**: Convert `RiskSignal` to Pydantic `BaseModel`
-- [x] **Task 40.3.4**: Convert `Block` and pattern types to Pydantic
-
-### Story 40.4: Schema Consolidation - **COMPLETE**
-- [x] **Task 40.4.1**: Consolidate schema validation to use report.py models
-- [x] **Task 40.4.2**: Update all imports across codebase
-- [x] **Task 40.4.3**: Update CLI to work with Pydantic models
-- [x] **Task 40.4.4**: Update Streamlit app to work with Pydantic models
-- [x] **Task 40.4.5**: Delete `pydantic_models.py` (superseded by report.py)
-- [x] **Task 40.4.6**: Update all unit tests for Pydantic models
-
-### Story 40.5: Format Readers & All Remaining Classes - **COMPLETE**
-*Convert all remaining dataclasses to Pydantic (58 total).*
-
-- [x] **Task 40.5.1-5**: Convert `formats/*.py` (11 classes)
-- [x] **Task 40.5.6**: Convert `report_sections.py` (16 classes)
-- [x] **Task 40.5.7**: Convert `quantization_linter.py`, `quantization_advisor.py` (8 classes)
-- [x] **Task 40.5.8**: Convert `compare*.py`, `eval/*.py` (12 classes)
-- [x] **Task 40.5.9**: Convert visualization/graph helpers (11 classes)
-- [x] **Task 40.5.10**: Run tests (317 passed) and mypy (clean)
-
-### Story 40.6: Deployment and Cleanup - **COMPLETE**
-- [x] **Task 40.6.1**: Deploy v0.5.0 to PyPI (Dec 6, 2025)
-- [x] **Task 40.6.2**: Push to GitHub main (triggers HF Spaces rebuild)
-- [x] **Task 40.6.3**: Verify zero `@dataclass` remaining in codebase
-- [x] **Task 40.6.4**: Verify zero `from dataclasses import` remaining
-
----
+*Archived to PRDBacklogArchive.md - 58 classes migrated to Pydantic (v0.5.0)*
 
 ---
 
