@@ -56,7 +56,7 @@
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
 | Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
-| Epic 49: Format Tiers & HuggingFace | Not Started | 4 | 0/18 | **P2** |
+| Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
 | Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
 | Epic 44: Expanded Op Type Support | Not Started | 3 | 0/14 | P3 |
@@ -161,8 +161,10 @@
 - [x] **Task 20.1.6**: Test with real CoreML model (in test_format_readers.py, CI on Linux)
 - [x] **Task 20.1.7**: Write unit tests for CoreMLReader (6 tests in test_formats.py)
 
-### Story 20.2: CoreML → UniversalGraph Adapter
+### Story 20.2: CoreML → UniversalGraph Adapter (Native Path)
 *Enable interactive graph visualization and layer-by-layer analysis for CoreML models.*
+
+**Alternative:** Epic 49.4 implements CoreML → ONNX hub conversion (simpler, may be lossy). This story is the native approach if hub conversion proves inadequate.
 
 - [ ] **Task 20.2.1**: Implement `CoreMLAdapter.read()` - convert CoreML to UniversalGraph
 - [ ] **Task 20.2.2**: Map CoreML layer types to universal ops
@@ -193,8 +195,10 @@
 - [ ] **Task 21.1.6**: Test with real TFLite model (Linux CI with tflite-runtime)
 - [ ] **Task 21.1.7**: Write unit tests for TFLiteReader
 
-### Story 21.2: TFLite → UniversalGraph Adapter
+### Story 21.2: TFLite → UniversalGraph Adapter (Native Path)
 *Enable interactive graph visualization and layer-by-layer analysis for TFLite models.*
+
+**Alternative:** Epic 49.4 implements TFLite → ONNX hub conversion (simpler, may be lossy). This story is the native approach if hub conversion proves inadequate.
 
 - [ ] **Task 21.2.1**: Implement `TFLiteAdapter.read()` - convert TFLite to UniversalGraph
 - [ ] **Task 21.2.2**: Map TFLite op codes to universal ops
@@ -281,8 +285,10 @@
 - [ ] **Task 23.1.5**: Test with real OpenVINO model (.xml + .bin)
 - [x] **Task 23.1.6**: Write unit tests for OpenVINOReader (5 tests in test_formats.py)
 
-### Story 23.2: OpenVINO → UniversalGraph Adapter
+### Story 23.2: OpenVINO → UniversalGraph Adapter (Native Path)
 *Enable interactive graph visualization and layer-by-layer analysis for OpenVINO models.*
+
+**Alternative:** Epic 49.4 implements OpenVINO → ONNX hub conversion (simpler, may be lossy). This story is the native approach if hub conversion proves inadequate.
 
 - [ ] **Task 23.2.1**: Implement `OpenVINOAdapter.read()` - convert OpenVINO IR to UniversalGraph
 - [ ] **Task 23.2.2**: Map OpenVINO op types to universal ops
@@ -375,13 +381,30 @@
 - [ ] **Task 49.3.3**: Auto-suggest HF model load if config found
 - [ ] **Task 49.3.4**: Support local directory with config + safetensors
 
-### Story 49.4: Implement Missing FLOPs for Non-ONNX Formats
-*Add FLOPs estimation for TFLite, CoreML, OpenVINO ops.*
+### Story 49.4: ONNX Hub Conversions (Full Analysis Path)
+*Convert TFLite/CoreML/OpenVINO → ONNX to enable full analysis capabilities.*
 
-- [ ] **Task 49.4.1**: Map TFLite builtin ops to FLOP formulas
-- [ ] **Task 49.4.2**: Map CoreML layer types to FLOP formulas
-- [ ] **Task 49.4.3**: Map OpenVINO op types to FLOP formulas
-- [ ] **Task 49.4.4**: Add FLOPs to format reader return types
+**Why this approach:** Instead of building native UniversalGraph adapters for each format, convert to ONNX first and reuse all existing analysis code. Trade-off: some conversions may be lossy.
+
+- [ ] **Task 49.4.1**: Implement TFLite → ONNX via `tflite2onnx` or `tf2onnx`
+- [ ] **Task 49.4.2**: Add `--convert-to-onnx` flag for TFLite files
+- [ ] **Task 49.4.3**: Implement CoreML → ONNX via `coremltools.converters.onnx`
+- [ ] **Task 49.4.4**: Add `--convert-to-onnx` flag for CoreML files
+- [ ] **Task 49.4.5**: Implement OpenVINO → ONNX conversion path
+- [ ] **Task 49.4.6**: Add `--convert-to-onnx` flag for OpenVINO files
+- [ ] **Task 49.4.7**: CLI auto-prompt: "Convert to ONNX for full analysis? (y/n)"
+- [ ] **Task 49.4.8**: Streamlit: Add "Convert to ONNX" button for Tier 2/3 formats
+- [ ] **Task 49.4.9**: Document conversion quality/lossiness per format
+
+### Story 49.5: Native FLOPs for Non-ONNX Formats (Optional)
+*Alternative to hub conversion: Add FLOPs directly to format readers.*
+
+**Note:** This is lower priority than 49.4. Only implement if conversion proves too lossy for specific use cases.
+
+- [ ] **Task 49.5.1**: Map TFLite builtin ops to FLOP formulas
+- [ ] **Task 49.5.2**: Map CoreML layer types to FLOP formulas
+- [ ] **Task 49.5.3**: Map OpenVINO op types to FLOP formulas
+- [ ] **Task 49.5.4**: Add FLOPs to format reader return types
 
 ---
 
@@ -905,6 +928,7 @@
 - [ ] **Task 42.1.4**: Test ONNX → OpenVINO conversion (via openvino)
 - [ ] **Task 42.1.5**: Test TFLite → ONNX conversion (tflite2onnx)
 - [ ] **Task 42.1.6**: Test CoreML → ONNX conversion (lossy path)
+- [ ] **Task 42.1.7**: Test OpenVINO → ONNX conversion
 
 ### Story 42.2: Framework-to-ONNX Conversions
 *Test native framework exports to ONNX.*

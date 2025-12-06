@@ -417,9 +417,20 @@ Not all formats support all features. Here's what you get with each:
 **Why the differences?**
 
 - **ONNX/PyTorch**: Full graph structure with UniversalGraph adapters → all features work
-- **TFLite/CoreML/OpenVINO**: Readers exist with op counts, but UniversalGraph adapters pending for interactive visualization
-- **GGUF**: LLM architecture metadata (layers, heads, context length, quantization) but no computational graph - weights only
+- **TFLite/CoreML/OpenVINO**: Graph structure exists; convert to ONNX for full analysis (coming soon)
+- **GGUF**: LLM architecture metadata (layers, heads, quantization) but no computational graph - weights only
 - **SafeTensors**: Weights only - tensor shapes and dtypes, no graph structure
+
+**Full Analysis via ONNX Hub (Coming Soon):**
+
+For TFLite, CoreML, and OpenVINO models, you'll be able to convert to ONNX to unlock all analysis features:
+
+```bash
+# Coming soon: auto-convert for full analysis
+haoline model.tflite --convert-to-onnx --out-html report.html
+haoline model.mlmodel --convert-to-onnx --out-html report.html
+haoline model.xml --convert-to-onnx --out-html report.html
+```
 
 **Tip:** For full analysis of HuggingFace models stored as SafeTensors, load the complete model:
 ```bash
