@@ -123,7 +123,7 @@ class TestSchemaValidation:
             inspector = ModelInspector()
             report = inspector.inspect(model_path)
 
-            is_valid, errors = report.validate()
+            is_valid, errors = report.validate_schema()
             assert is_valid, f"Validation failed: {errors}"
             assert len(errors) == 0
         finally:
@@ -200,7 +200,7 @@ class TestSchemaValidation:
             report = inspector.inspect(model_path)
 
             # Should not raise
-            report.validate_strict()
+            report.validate_schema_strict()
         finally:
             model_path.unlink()
 
