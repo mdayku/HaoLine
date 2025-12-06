@@ -2369,6 +2369,8 @@ def main():
                             # Build the full interactive D3.js graph
                             import logging
 
+                            from haoline.analyzer import ONNXGraphLoader
+
                             graph_logger = logging.getLogger("haoline.graph")
 
                             # Load graph info
@@ -2450,6 +2452,7 @@ def main():
 
                             import pandas as pd
 
+                            from haoline.analyzer import ONNXGraphLoader
                             from haoline.layer_summary import LayerSummaryBuilder
 
                             layer_logger = logging.getLogger("haoline.layer")

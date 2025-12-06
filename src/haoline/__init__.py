@@ -23,7 +23,7 @@ Example usage:
     print(report.to_json())
 """
 
-__version__ = "0.6.5"
+__version__ = "0.6.6"
 
 from .analyzer import MetricsEngine, ONNXGraphLoader
 from .compare_visualizations import (
