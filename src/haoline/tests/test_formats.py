@@ -610,3 +610,81 @@ class TestTRTEngineReader:
         assert format_bytes(1024) == "1.00 KB"
         assert format_bytes(1024 * 1024) == "1.00 MB"
         assert format_bytes(1024 * 1024 * 1024) == "1.00 GB"
+
+
+class TestTRTComparison:
+    """Tests for TRT comparison module."""
+
+    def test_layer_mapping_fields(self) -> None:
+        """Test LayerMapping model."""
+        from haoline.formats.trt_comparison import LayerMapping
+
+        mapping = LayerMapping(
+            trt_layer_name="conv1_bn1_relu1",
+            trt_layer_type="Fused",
+            trt_precision="FP16",
+            onnx_nodes=["conv1", "bn1", "relu1"],
+            onnx_op_types=["Conv", "BatchNorm", "Relu"],
+            is_fusion=True,
+            fusion_description="Conv + BatchNorm + Relu",
+        )
+        assert mapping.is_fusion is True
+        assert len(mapping.onnx_nodes) == 3
+        assert mapping.trt_precision == "FP16"
+
+    def test_precision_change_fields(self) -> None:
+        """Test PrecisionChange model."""
+        from haoline.formats.trt_comparison import PrecisionChange
+
+        change = PrecisionChange(
+            layer_name="conv1",
+            original_precision="FP32",
+            trt_precision="FP16",
+            reason="TRT auto-selection",
+        )
+        assert change.original_precision == "FP32"
+        assert change.trt_precision == "FP16"
+
+    def test_shape_change_fields(self) -> None:
+        """Test ShapeChange model."""
+        from haoline.formats.trt_comparison import ShapeChange
+
+        change = ShapeChange(
+            tensor_name="input",
+            onnx_shape=(-1, 3, 224, 224),
+            trt_shape=(1, 3, 224, 224),
+            is_dynamic_to_static=True,
+        )
+        assert change.is_dynamic_to_static is True
+        assert change.trt_shape == (1, 3, 224, 224)
+
+    def test_comparison_report_summary(self) -> None:
+        """Test TRTComparisonReport summary generation."""
+        from haoline.formats.trt_comparison import TRTComparisonReport
+
+        report = TRTComparisonReport(
+            onnx_path=Path("model.onnx"),
+            trt_path=Path("model.engine"),
+            onnx_node_count=100,
+            trt_layer_count=25,
+            fusion_count=15,
+            removed_node_count=10,
+        )
+        summary = report.summary()
+        assert "100" in summary  # ONNX nodes
+        assert "25" in summary  # TRT layers
+        assert "4.0x" in summary  # Compression ratio
+        assert "15" in summary  # Fusions
+
+    def test_onnx_node_info_fields(self) -> None:
+        """Test ONNXNodeInfo model."""
+        from haoline.formats.trt_comparison import ONNXNodeInfo
+
+        node = ONNXNodeInfo(
+            name="Conv_0",
+            op_type="Conv",
+            inputs=["input", "weight", "bias"],
+            outputs=["conv_output"],
+        )
+        assert node.op_type == "Conv"
+        assert len(node.inputs) == 3

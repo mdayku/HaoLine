@@ -644,6 +644,18 @@ Examples:
         "Prevents huge graphs from crashing.",
     )
 
+    # TensorRT comparison
+    trt_group = parser.add_argument_group("TensorRT Comparison Options")
+    trt_group.add_argument(
+        "--compare-trt",
+        type=pathlib.Path,
+        default=None,
+        metavar="ENGINE_PATH",
+        help="Compare ONNX model with its compiled TensorRT engine. "
+        "Shows layer mappings, fusions, precision changes. "
+        "Usage: haoline model.onnx --compare-trt model.engine",
+    )
+
     return parser.parse_args()
 
 
@@ -1834,6 +1846,174 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
     print("\n[TensorRT analysis complete]")
 
 
+def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path, logger) -> None:
+    """Handle ONNX vs TensorRT engine comparison."""
+    try:
+        from .formats.trt_comparison import compare_onnx_trt
+    except ImportError as e:
+        logger.error(f"Failed to import TRT comparison module: {e}")
+        return
+
+    print(f"\n{'=' * 60}")
+    print("ONNX ↔ TensorRT Comparison")
+    print(f"{'=' * 60}\n")
+    print(f"ONNX:  {onnx_path.name}")
+    print(f"TRT:   {trt_path.name}")
+    print()
+
+    try:
+        report = compare_onnx_trt(onnx_path, trt_path)
+    except Exception as e:
+        logger.error(f"Comparison failed: {e}")
+        return
+
+    # Summary
+    compression = report.onnx_node_count / max(report.trt_layer_count, 1)
+    print(f"ONNX Nodes:      {report.onnx_node_count}")
+    print(f"TRT Layers:      {report.trt_layer_count}")
+    print(f"Compression:     {compression:.1f}x")
+    print()
+
+    print(f"Fusions:         {report.fusion_count}")
+    print(f"Removed Nodes:   {report.removed_node_count}")
+    print(f"Precision Changes: {len(report.precision_changes)}")
+    print()
+
+    # Top fusions
+    if report.layer_mappings:
+        fusions = [m for m in report.layer_mappings if m.is_fusion]
+        if fusions:
+            print("Top Fusions (N ONNX ops → 1 TRT kernel):")
+            for fusion in fusions[:10]:
+                ops = fusion.fusion_description or f"{len(fusion.onnx_nodes)} ops"
+                print(f"  {fusion.trt_layer_name[:50]}")
+                print(f"    → {ops}")
+            if len(fusions) > 10:
+                print(f"  ... and {len(fusions) - 10} more fusions")
+            print()
+
+    # Precision changes
+    if report.precision_changes:
+        print("Precision Changes:")
+        prec_summary: dict[str, int] = {}
+        for change in report.precision_changes:
+            prec_summary[change.trt_precision] = prec_summary.get(change.trt_precision, 0) + 1
+        for prec, count in sorted(prec_summary.items(), key=lambda x: -x[1]):
+            print(f"  {prec}: {count} layers")
+        print()
+
+    # Removed nodes (optimized away)
+    if report.removed_nodes:
+        print(f"Removed/Optimized Nodes ({len(report.removed_nodes)}):")
+        for node in report.removed_nodes[:10]:
+            print(f"  • {node}")
+        if len(report.removed_nodes) > 10:
+            print(f"  ... and {len(report.removed_nodes) - 10} more")
+        print()
+
+    # Unmapped warnings
+    if report.unmapped_onnx_nodes:
+        print(f"⚠ Unmapped ONNX Nodes: {len(report.unmapped_onnx_nodes)}")
+        for node in report.unmapped_onnx_nodes[:5]:
+            print(f"    {node}")
+        if len(report.unmapped_onnx_nodes) > 5:
+            print(f"    ... and {len(report.unmapped_onnx_nodes) - 5} more")
+        print()
+
+    # JSON output
+    if args.out_json:
+        import json
+
+        output_data = {
+            "comparison": "onnx_vs_trt",
+            "onnx_path": str(onnx_path),
+            "trt_path": str(trt_path),
+            "onnx_node_count": report.onnx_node_count,
+            "trt_layer_count": report.trt_layer_count,
+            "compression_ratio": compression,
+            "fusion_count": report.fusion_count,
+            "removed_node_count": report.removed_node_count,
+            "precision_changes": [
+                {
+                    "layer": c.layer_name,
+                    "from": c.original_precision,
+                    "to": c.trt_precision,
+                }
+                for c in report.precision_changes
+            ],
+            "fusions": [
+                {
+                    "trt_layer": m.trt_layer_name,
+                    "onnx_nodes": m.onnx_nodes,
+                    "description": m.fusion_description,
+                }
+                for m in report.layer_mappings
+                if m.is_fusion
+            ],
+            "removed_nodes": report.removed_nodes,
+        }
+        with open(args.out_json, "w") as f:
+            json.dump(output_data, f, indent=2)
+        print(f"JSON report written to: {args.out_json}")
+
+    # Markdown output
+    if args.out_md:
+        md_lines = [
+            "# ONNX ↔ TensorRT Comparison",
+            "",
+            f"**ONNX:** `{onnx_path.name}`",
+            f"**TRT:** `{trt_path.name}`",
+            "",
+            "## Summary",
+            "",
+            "| Metric | Value |",
+            "|--------|-------|",
+            f"| ONNX Nodes | {report.onnx_node_count} |",
+            f"| TRT Layers | {report.trt_layer_count} |",
+            f"| Compression | {compression:.1f}x |",
+            f"| Fusions | {report.fusion_count} |",
+            f"| Removed Nodes | {report.removed_node_count} |",
+            f"| Precision Changes | {len(report.precision_changes)} |",
+            "",
+        ]
+
+        if report.fusion_count > 0:
+            md_lines.extend(
+                [
+                    "## Top Fusions",
+                    "",
+                    "| TRT Layer | Fused ONNX Ops |",
+                    "|-----------|----------------|",
+                ]
+            )
+            fusions = [m for m in report.layer_mappings if m.is_fusion][:15]
+            for f in fusions:
+                desc = f.fusion_description or f"{len(f.onnx_nodes)} ops"
+                md_lines.append(f"| {f.trt_layer_name[:40]} | {desc} |")
+            md_lines.append("")
+
+        if report.removed_nodes:
+            md_lines.extend(
+                [
+                    "## Removed/Optimized Nodes",
+                    "",
+                    "These ONNX nodes were optimized away by TensorRT:",
+                    "",
+                ]
+            )
+            for node in report.removed_nodes[:20]:
+                md_lines.append(f"- `{node}`")
+            if len(report.removed_nodes) > 20:
+                md_lines.append(f"- ... and {len(report.removed_nodes) - 20} more")
+            md_lines.append("")
+
+        with open(args.out_md, "w") as f:
+            f.write("\n".join(md_lines))
+        print(f"Markdown report written to: {args.out_md}")
+
+    print("\n[ONNX ↔ TRT comparison complete]")
+
+
 def run_inspect():
     """Main entry point for the model_inspect CLI."""
     # Load environment variables from .env file if present
@@ -2158,6 +2338,18 @@ def run_inspect():
         if not model_path.exists():
             logger.error(f"Model file not found: {model_path}")
             sys.exit(1)
+
+        # Handle --compare-trt: ONNX vs TensorRT comparison
+        if args.compare_trt:
+            if model_path.suffix.lower() != ".onnx":
+                logger.error("--compare-trt requires an ONNX model as the primary input")
+                sys.exit(1)
+            trt_path = args.compare_trt.resolve()
+            if not trt_path.exists():
+                logger.error(f"TensorRT engine not found: {trt_path}")
+                sys.exit(1)
+            _handle_trt_comparison(args, model_path, trt_path, logger)
+            sys.exit(0)
 
         # Check for TensorRT engine files - handle separately
         if model_path.suffix.lower() in (".engine", ".plan"):

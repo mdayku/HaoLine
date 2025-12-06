@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 23/42 | **P2** |
+| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 31/42 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -257,14 +257,14 @@
 - [ ] **Task 22.2.5**: Parse timing cache if present
 - [x] **Task 22.2.6**: Identify precision per layer (FP32/FP16/INT8/TF32)
 
-### Story 22.3: ONNX ↔ TRT Diff View [Phase 3]
+### Story 22.3: ONNX ↔ TRT Diff View [Phase 3] - **PARTIAL**
 *Visual comparison between source ONNX and compiled TRT engine.*
 
-- [ ] **Task 22.3.1**: Map TRT layers back to original ONNX nodes (by name matching)
-- [ ] **Task 22.3.2**: Highlight fused operations (N ONNX ops → 1 TRT layer)
-- [ ] **Task 22.3.3**: Show precision auto-selection decisions per layer
+- [x] **Task 22.3.1**: Map TRT layers back to original ONNX nodes (by name matching)
+- [x] **Task 22.3.2**: Highlight fused operations (N ONNX ops → 1 TRT layer)
+- [x] **Task 22.3.3**: Show precision auto-selection decisions per layer
 - [ ] **Task 22.3.4**: Visualize layer rewrites (e.g., attention → Flash Attention)
-- [ ] **Task 22.3.5**: Display shape changes (dynamic → static binding)
+- [x] **Task 22.3.5**: Display shape changes (dynamic → static binding)
 - [ ] **Task 22.3.6**: Generate side-by-side graph comparison in HTML report
 
 ### Story 22.4: TRT Performance Metadata Panel [Phase 4]
@@ -285,13 +285,13 @@
 - [x] **Task 22.5.3**: Display hardware binding info (GPU arch, compute capability)
 - [x] **Task 22.5.4**: List builder configuration (max batch, workspace, DLA cores)
 
-### Story 22.6: ONNX vs TRT Comparison Mode [Phase 3]
+### Story 22.6: ONNX vs TRT Comparison Mode [Phase 3] - **PARTIAL**
 *Side-by-side analysis showing what changed and performance impact.*
 
-- [ ] **Task 22.6.1**: Add `haoline compare model.onnx model.engine` CLI support
-- [ ] **Task 22.6.2**: Compute layer count delta (before/after fusion)
-- [ ] **Task 22.6.3**: Show precision changes with accuracy impact notes
-- [ ] **Task 22.6.4**: Generate comparison report (JSON/MD/HTML formats)
+- [x] **Task 22.6.1**: Add `haoline model.onnx --compare-trt model.engine` CLI support
+- [x] **Task 22.6.2**: Compute layer count delta (before/after fusion)
+- [x] **Task 22.6.3**: Show precision changes with accuracy impact notes
+- [x] **Task 22.6.4**: Generate comparison report (JSON/MD/HTML formats)
 - [ ] **Task 22.6.5**: Visualize memory reduction from optimizations
 
 ### Story 22.7: CLI & Streamlit Integration [Phase 1] - **COMPLETE**
