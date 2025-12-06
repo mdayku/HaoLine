@@ -90,6 +90,25 @@ from haoline.hierarchical_graph import HierarchicalGraphBuilder
 from haoline.html_export import generate_html as generate_graph_html
 from haoline.patterns import PatternAnalyzer
 
+# Demo models for quick start
+DEMO_MODELS = {
+    "MNIST": {
+        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/mnist/model/mnist-12.onnx",
+        "size": "26 KB",
+        "desc": "Handwritten digits",
+    },
+    "MobileNetV2": {
+        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/mobilenet/model/mobilenetv2-12.onnx",
+        "size": "14 MB",
+        "desc": "Mobile-optimized CNN",
+    },
+    "EfficientNet": {
+        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx",
+        "size": "50 MB",
+        "desc": "State-of-the-art efficiency",
+    },
+}
+
 # Custom CSS - Sleek dark theme with mint/emerald accents
 st.markdown(
     """
@@ -1326,6 +1345,60 @@ def main():
                 """,
                     unsafe_allow_html=True,
                 )
+
+            # Demo models - quick start buttons
+            st.markdown("#### Try a Demo Model")
+            demo_col1, demo_col2, demo_col3 = st.columns(3)
+
+            with demo_col1:
+                if st.button("MNIST (26 KB)", use_container_width=True, help="Tiny model - instant"):
+                    st.session_state["demo_model"] = "MNIST"
+            with demo_col2:
+                if st.button("MobileNetV2 (14 MB)", use_container_width=True, help="Medium model"):
+                    st.session_state["demo_model"] = "MobileNetV2"
+            with demo_col3:
+                if st.button("EfficientNet (50 MB)", use_container_width=True, help="Larger model"):
+                    st.session_state["demo_model"] = "EfficientNet"
+
+    # Handle demo model download
+    if "demo_model" in st.session_state and st.session_state["demo_model"]:
+        demo_name = st.session_state["demo_model"]
+        demo_info = DEMO_MODELS[demo_name]
+        st.session_state["demo_model"] = None  # Clear to prevent re-download
+
+        with st.spinner(f"Downloading {demo_name} ({demo_info['size']})..."):
+            import urllib.request
+
+            try:
+                # Download to temp file
+                with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as tmp:
+                    urllib.request.urlretrieve(demo_info["url"], tmp.name)
+                    demo_path = tmp.name
+
+                # Run analysis
+                inspector = ModelInspector()
+                report = inspector.inspect(demo_path)
+
+                # Apply hardware estimates
+                if selected_hardware == "auto":
+                    profile = detect_local_hardware()
+                else:
+                    profile = get_profile(selected_hardware)
+
+                if profile and report.flop_counts:
+                    estimator = HardwareEstimator(profile)
+                    report.performance_estimates = estimator.estimate(report.flop_counts)
+
+                # Add to history
+                import os
+                file_size = os.path.getsize(demo_path)
+                result = add_to_history(f"{demo_name}.onnx", report, file_size)
+
+                st.success(f"Loaded {demo_name} - {demo_info['desc']}")
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"Failed to download {demo_name}: {e}")
 
     # Analysis
     if uploaded_file is not None:
