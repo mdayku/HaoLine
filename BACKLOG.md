@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | Not Started | 7 | 0/42 | **P2** |
+| Epic 22: TensorRT Engine Introspection | In Progress | 7 | 12/42 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -57,6 +57,7 @@
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
 | Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
+| Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
 | Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
 | Epic 44: Expanded Op Type Support | Not Started | 3 | 0/14 | P3 |
@@ -234,16 +235,16 @@
 
 ---
 
-### Story 22.1: Engine File Loader [Phase 1]
+### Story 22.1: Engine File Loader [Phase 1] - **COMPLETE**
 *Load .engine/.plan TRT blobs using TensorRT runtime APIs.*
 
-- [ ] **Task 22.1.1**: Add `tensorrt` extra to pyproject.toml (tensorrt>=10.0)
-- [ ] **Task 22.1.2**: Create `TRTEngineReader` class in `src/haoline/formats/tensorrt.py`
-- [ ] **Task 22.1.3**: Implement `TRTEngineReader.read()` to deserialize engine files
-- [ ] **Task 22.1.4**: Extract engine metadata (TRT version, build flags, calibration info)
-- [ ] **Task 22.1.5**: Handle engine compatibility checks (GPU arch, TRT version mismatch)
-- [ ] **Task 22.1.6**: Support both `.engine` and `.plan` file extensions
-- [ ] **Task 22.1.7**: Add `is_tensorrt_file()` and `is_available()` helper functions
+- [x] **Task 22.1.1**: Add `tensorrt` extra to pyproject.toml (tensorrt>=10.0)
+- [x] **Task 22.1.2**: Create `TRTEngineReader` class in `src/haoline/formats/tensorrt.py`
+- [x] **Task 22.1.3**: Implement `TRTEngineReader.read()` to deserialize engine files
+- [x] **Task 22.1.4**: Extract engine metadata (TRT version, build flags, calibration info)
+- [x] **Task 22.1.5**: Handle engine compatibility checks (GPU arch, TRT version mismatch)
+- [x] **Task 22.1.6**: Support both `.engine` and `.plan` file extensions
+- [x] **Task 22.1.7**: Add `is_tensorrt_file()` and `is_available()` helper functions
 
 ### Story 22.2: Fused Graph Reconstruction [Phase 2]
 *Parse the optimized TRT graph and reconstruct the execution plan.*
@@ -275,12 +276,12 @@
 - [ ] **Task 22.4.5**: Show layer timing breakdown chart (HTML/Streamlit)
 - [ ] **Task 22.4.6**: Extract device memory footprint
 
-### Story 22.5: TRT Engine Summary Block [Phase 1]
+### Story 22.5: TRT Engine Summary Block [Phase 1] - **PARTIAL**
 *Comprehensive summary matching HaoLine report format.*
 
-- [ ] **Task 22.5.1**: Generate engine overview (layer count, total memory, precision mix)
-- [ ] **Task 22.5.2**: Show optimization summary (fusions applied, layers removed)
-- [ ] **Task 22.5.3**: Display hardware binding info (GPU arch, compute capability)
+- [x] **Task 22.5.1**: Generate engine overview (layer count, total memory, precision mix)
+- [ ] **Task 22.5.2**: Show optimization summary (fusions applied, layers removed) - *fusion counts done, formatting pending*
+- [x] **Task 22.5.3**: Display hardware binding info (GPU arch, compute capability)
 - [ ] **Task 22.5.4**: List builder configuration (max batch, workspace, DLA cores)
 
 ### Story 22.6: ONNX vs TRT Comparison Mode [Phase 3]
@@ -292,17 +293,17 @@
 - [ ] **Task 22.6.4**: Generate comparison report (JSON/MD/HTML formats)
 - [ ] **Task 22.6.5**: Visualize memory reduction from optimizations
 
-### Story 22.7: CLI & Streamlit Integration [Phase 1]
+### Story 22.7: CLI & Streamlit Integration [Phase 1] - **PARTIAL**
 *Full integration with HaoLine CLI and web UI.*
 
-- [ ] **Task 22.7.1**: Register TensorRT in `formats/__init__.py` detect_format()
+- [x] **Task 22.7.1**: Register TensorRT in `formats/__init__.py` detect_format()
 - [ ] **Task 22.7.2**: Add `.engine` and `.plan` to CLI accepted formats
 - [ ] **Task 22.7.3**: Add TensorRT to Streamlit file_uploader accepted types
 - [ ] **Task 22.7.4**: Create TRT-specific report sections (fusions, precision breakdown)
 - [ ] **Task 22.7.5**: Add "TensorRT Analysis" tab in Streamlit with engine details
-- [ ] **Task 22.7.6**: Handle graceful degradation when TRT not installed (skip with message)
+- [x] **Task 22.7.6**: Handle graceful degradation when TRT not installed (skip with message)
 - [ ] **Task 22.7.7**: Update HuggingFace Spaces requirements (note: TRT requires GPU, may not work on free tier)
-- [ ] **Task 22.7.8**: Write unit tests for TRTEngineReader
+- [x] **Task 22.7.8**: Write unit tests for TRTEngineReader (9 tests + integration test)
 
 ---
 
@@ -438,6 +439,46 @@
 - [ ] **Task 49.5.2**: Map CoreML layer types to FLOP formulas
 - [ ] **Task 49.5.3**: Map OpenVINO op types to FLOP formulas
 - [ ] **Task 49.5.4**: Add FLOPs to format reader return types
+
+---
+
+## Epic 50: CLI Modernization with Typer (P3)
+
+*Modernize CLI experience with better UX, dependency prompting, and shell completion.*
+
+**Why Typer:**
+- Built on Click, modern Pythonic API
+- Automatic help generation from type hints
+- Shell completion out of the box
+- Better error messages
+- Cleaner code than argparse
+
+### Story 50.1: Migrate to Typer
+*Replace argparse with Typer for main CLI.*
+
+- [ ] **Task 50.1.1**: Add `typer` dependency to pyproject.toml
+- [ ] **Task 50.1.2**: Refactor `cli.py` main parser to Typer app
+- [ ] **Task 50.1.3**: Migrate all CLI arguments to Typer options/arguments
+- [ ] **Task 50.1.4**: Add shell completion support (bash, zsh, fish, PowerShell)
+- [ ] **Task 50.1.5**: Update CLI help strings for Typer format
+
+### Story 50.2: Graceful Dependency Prompting
+*When a feature requires missing dependencies, show helpful install commands.*
+
+- [ ] **Task 50.2.1**: Create `check_dependency()` helper that returns install command
+- [ ] **Task 50.2.2**: Add dependency checks for TensorRT features (`pip install haoline[tensorrt]`)
+- [ ] **Task 50.2.3**: Add dependency checks for runtime profiling (`pip install haoline[runtime]`)
+- [ ] **Task 50.2.4**: Add dependency checks for LLM features (`pip install haoline[llm]`)
+- [ ] **Task 50.2.5**: Add dependency checks for format readers (safetensors, coreml, openvino)
+- [ ] **Task 50.2.6**: Show clear error with install command, not cryptic ImportError
+
+### Story 50.3: CLI UX Improvements
+*Better progress, feedback, and interactive features.*
+
+- [ ] **Task 50.3.1**: Add progress bars for long operations (analysis, conversion)
+- [ ] **Task 50.3.2**: Add `--quiet` and `--verbose` flags consistently
+- [ ] **Task 50.3.3**: Add colored output for warnings/errors (with `--no-color` flag)
+- [ ] **Task 50.3.4**: Add `haoline doctor` command to check system setup (GPU, deps, versions)
 
 ---
 
