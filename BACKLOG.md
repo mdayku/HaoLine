@@ -55,7 +55,7 @@
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
-| Epic 42: Format Conversion Testing | In Progress | 6 | 9/38 | **P1** (23 unblocked, 8 need GPU) |
+| Epic 42: Format Conversion Testing | In Progress | 6 | 10/38 | **P1** (all unblocked!) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
@@ -919,7 +919,7 @@
               TO →
 FROM ↓     | ONNX | TRT | TFLite | CoreML | OpenVINO | SafeTensors
 -----------+------+-----+--------+--------+----------+------------
-ONNX       |  -   | ✅  | 🔨     | ✅     | ✅       | 🔨
+ONNX       |  -   | ✅  | ✅     | ✅     | ✅       | 🔨
 TensorRT   | ⛔   |  -  | ⛔     | ⛔     | ⛔       | ⛔
 TFLite     | ✅   | ⛔  |  -     | ⛔     | ⛔       | ⛔
 CoreML     | ⚠️   | ⛔  | ⛔     |  -     | ⛔       | ⛔
@@ -950,7 +950,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 
 **ONNX → Other Formats:**
 - [x] **Task 42.1.1**: Test ONNX → TensorRT conversion ✅ **COMPLETE** (4 tests pass)
-- [ ] **Task 42.1.2**: Test ONNX → TFLite conversion 🔒 **BLOCKED** (needs Epic 21 TFLite writer)
+- [x] **Task 42.1.2**: Test ONNX → TFLite conversion ✅ **COMPLETE** (onnx2tf added)
 - [x] **Task 42.1.3**: Test ONNX → CoreML conversion ✅ **COMPLETE** (test written, skips if no coremltools)
 - [x] **Task 42.1.4**: Test ONNX → OpenVINO conversion ✅ **COMPLETE** (test written, skips if no openvino)
 
@@ -980,7 +980,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 *Test conversions that go through ONNX as intermediary or direct paths.*
 
 **PyTorch Multi-Hop:**
-- [ ] **Task 42.3.1**: Test PyTorch → TFLite (via ONNX) 🔒 **BLOCKED**
+- [ ] **Task 42.3.1**: Test PyTorch → TFLite (via ONNX) ✅ **UNBLOCKED**
 - [ ] **Task 42.3.2**: Test PyTorch → CoreML (via coremltools direct) ✅ **UNBLOCKED**
 - [ ] **Task 42.3.3**: Test PyTorch → OpenVINO (via ONNX) ✅ **UNBLOCKED**
 - [x] **Task 42.3.4**: Test PyTorch → TensorRT (via ONNX) ✅ **COMPLETE** (2 tests pass)
@@ -991,7 +991,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [ ] **Task 42.3.7**: Test TensorFlow → OpenVINO (via ONNX) ✅ **UNBLOCKED**
 
 **JAX Multi-Hop:**
-- [ ] **Task 42.3.8**: Test JAX → TFLite (via ONNX) 🔒 **BLOCKED**
+- [ ] **Task 42.3.8**: Test JAX → TFLite (via ONNX) ✅ **UNBLOCKED**
 - [ ] **Task 42.3.9**: Test JAX → CoreML (via ONNX) ✅ **UNBLOCKED**
 
 ### Story 42.4: ONNX↔TRT Comparison Tests ✅ **UNBLOCKED**
@@ -1008,7 +1008,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 *Verify conversions preserve essential information.*
 
 - [ ] **Task 42.5.1**: Create test harness for conversion round-trips
-- [ ] **Task 42.5.2**: Test ONNX → TFLite → ONNX round-trip 🔒 **BLOCKED**
+- [ ] **Task 42.5.2**: Test ONNX → TFLite → ONNX round-trip ✅ **UNBLOCKED**
 - [ ] **Task 42.5.3**: Test ONNX → CoreML → ONNX round-trip (measure lossy delta)
 - [ ] **Task 42.5.4**: Validate op_type_counts preserved across conversions
 - [ ] **Task 42.5.5**: Validate precision_breakdown preserved across conversions
@@ -1023,7 +1023,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [ ] **Task 42.6.3**: Verify tensor name preservation
 - [ ] **Task 42.6.4**: Verify dtype preservation (fp16, bf16, int8)
 
-**Task Summary:** 38 total tasks (22 unblocked, 8 blocked on Epic 21, 8 require TRT GPU)
+**Task Summary:** 38 total tasks (all unblocked! 8 require TRT GPU)
 
 ---
 
