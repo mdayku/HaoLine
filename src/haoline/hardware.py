@@ -18,8 +18,9 @@ import logging
 import os
 import platform
 import subprocess
-from dataclasses import dataclass
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 # Try to import psutil for CPU info, but don't require it
 try:
@@ -30,14 +31,15 @@ except ImportError:
     _HAS_PSUTIL = False
 
 
-@dataclass
-class HardwareProfile:
+class HardwareProfile(BaseModel):
     """
     Hardware specification for performance estimates.
 
     All values are theoretical peaks - actual performance will vary
     based on memory access patterns, kernel efficiency, etc.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
     vendor: str  # "nvidia", "amd", "apple", "intel", "generic"
@@ -972,9 +974,10 @@ NVIDIA_DGX_A100_320GB = HardwareProfile(
 # ============================================================================
 
 
-@dataclass
-class CloudInstanceProfile:
+class CloudInstanceProfile(BaseModel):
     """Cloud instance with GPU specs and pricing."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
     provider: str  # "aws", "azure", "gcp"
@@ -1632,9 +1635,10 @@ class HardwareDetector:
 # ============================================================================
 
 
-@dataclass
-class HardwareEstimates:
+class HardwareEstimates(BaseModel):
     """Estimated performance characteristics for a model on specific hardware."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     device: str
     precision: str
@@ -1816,9 +1820,10 @@ NVLINK_BANDWIDTH: dict[str, int] = {
 }
 
 
-@dataclass
-class MultiGPUProfile:
+class MultiGPUProfile(BaseModel):
     """Profile for multi-GPU configurations."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
     base_profile: HardwareProfile
@@ -2038,9 +2043,10 @@ def get_cloud_instance(name: str) -> CloudInstanceProfile | None:
 # ============================================================================
 
 
-@dataclass
-class SystemRequirements:
+class SystemRequirements(BaseModel):
     """Minimum and Recommended system requirements."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     minimum_gpu: HardwareProfile
     recommended_gpu: HardwareProfile
@@ -2195,9 +2201,10 @@ class SystemRequirementsRecommender:
         )
 
 
-@dataclass
-class BatchSizeSweep:
+class BatchSizeSweep(BaseModel):
     """Results of a batch size parameter sweep."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     batch_sizes: list[int]
     latencies: list[float]
