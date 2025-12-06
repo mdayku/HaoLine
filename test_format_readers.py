@@ -205,18 +205,26 @@ def test_tflite():
 
     print(f"\nIs TFLite file: {is_tflite_file(model_path)}")
 
-    reader = TFLiteReader(model_path)
-    info = reader.read()
+    try:
+        reader = TFLiteReader(model_path)
+        info = reader.read()
 
-    print("\n--- TFLite Model Info ---")
-    print(f"Description: {info.description}")
-    print(f"Total params: {info.total_params:,}")
-    print(f"Total size: {info.total_size_bytes / 1e6:.2f} MB")
-    print(f"Num tensors: {len(info.tensors)}")
-    print(f"Op types: {info.op_type_counts}")
+        print("\n--- TFLite Model Info ---")
+        print(f"Description: {info.description}")
+        print(f"Total params: {info.total_params:,}")
+        print(f"Total size: {info.total_size_bytes / 1e6:.2f} MB")
+        print(f"Num tensors: {len(info.tensors)}")
+        print(f"Op types: {info.op_type_counts}")
 
-    print("\n[SUCCESS] TFLite reader works correctly!")
-    return True
+        print("\n[SUCCESS] TFLite reader works correctly!")
+        return True
+    except (SystemError, ImportError, AttributeError) as e:
+        # Catch numpy version incompatibility with tflite-runtime
+        if "numpy" in str(e).lower() or "ARRAY_API" in str(e):
+            print(f"\n[SKIP] NumPy version incompatibility with tflite-runtime: {e}")
+            print("This happens when tflite-runtime is compiled for numpy<2 but numpy>=2 is installed")
+            return None
+        raise
 
 
 def test_coreml():

@@ -113,6 +113,8 @@ jobs:
       - name: Install package with format dependencies
         run: |
           python -m pip install --upgrade pip
+          # Pin numpy<2 for tflite-runtime compatibility
+          pip install "numpy<2"
           # Install base package + only format-specific deps (NOT full - too slow)
           pip install -e ".[safetensors,coreml,openvino,tflite]"
           pip install huggingface_hub
