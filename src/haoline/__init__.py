@@ -90,6 +90,7 @@ from .patterns import PatternAnalyzer
 from .pdf_generator import PDFGenerator, generate_pdf
 from .pdf_generator import is_available as is_pdf_available
 from .quantization_linter import (
+    LayerRiskScore,
     QuantIssueType,
     QuantizationLinter,
     QuantizationLintResult,
@@ -202,6 +203,7 @@ __all__ = [
     "QuantizationLinter",
     "QuantizationLintResult",
     "QuantWarning",
+    "LayerRiskScore",
     "Severity",
     "QuantIssueType",
     "lint_model",

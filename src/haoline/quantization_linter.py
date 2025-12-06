@@ -86,6 +86,31 @@ class QuantWarning:
 
 
 @dataclass
+class LayerRiskScore:
+    """Risk assessment for a single layer's quantization impact."""
+
+    name: str
+    op_type: str
+    risk_score: int  # 0-100, higher = more risky to quantize
+    risk_level: str  # "critical", "high", "medium", "low"
+    reason: str
+    recommendation: str
+    factors: dict  # Breakdown of risk factors
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for serialization."""
+        return {
+            "name": self.name,
+            "op_type": self.op_type,
+            "risk_score": self.risk_score,
+            "risk_level": self.risk_level,
+            "reason": self.reason,
+            "recommendation": self.recommendation,
+            "factors": self.factors,
+        }
+
+
+@dataclass
 class OpQuantInfo:
     """Quantization characteristics for an operator type."""
 
@@ -308,6 +333,9 @@ class QuantizationLintResult:
     # Problem layers (for targeted recommendations)
     problem_layers: list[dict] = field(default_factory=list)
 
+    # Per-layer risk scores (Task 33.3.2)
+    layer_risk_scores: list[LayerRiskScore] = field(default_factory=list)
+
     # QAT validation results
     is_qat_model: bool = False  # True if model has fake-quant nodes
     missing_fake_quant_nodes: list[str] = field(default_factory=list)
@@ -333,6 +361,7 @@ class QuantizationLintResult:
             "quantization_ops": self.quantization_ops,
             "dynamic_shape_nodes": self.dynamic_shape_nodes,
             "problem_layers": self.problem_layers,
+            "layer_risk_scores": [lr.to_dict() for lr in self.layer_risk_scores],
             "is_qat_model": self.is_qat_model,
             "missing_fake_quant_nodes": self.missing_fake_quant_nodes,
             "inconsistent_fake_quant": self.inconsistent_fake_quant,
@@ -926,35 +955,117 @@ class QuantizationLinter:
     def _identify_problem_layers(
         self, graph_info: GraphInfo, result: QuantizationLintResult
     ) -> None:
-        """Identify specific problem layers with recommendations."""
-        for node in graph_info.nodes:
-            op_type = node.op_type
+        """Identify specific problem layers with risk scores and recommendations."""
+        total_nodes = len(graph_info.nodes)
 
-            # Check if this node is problematic
-            is_problem = False
+        for idx, node in enumerate(graph_info.nodes):
+            op_type = node.op_type
+            risk_score = 0
+            factors: dict[str, int] = {}
             reason = ""
             recommendation = ""
 
+            # Factor 1: Op type severity (0-50 points)
             if op_type in _NO_INT8_KERNEL_OPS:
-                is_problem = True
+                # High-impact ops get higher scores
+                if op_type in ("Softmax", "LayerNormalization", "Attention", "MultiHeadAttention"):
+                    factors["op_severity"] = 45
+                elif op_type in ("LSTM", "GRU", "RNN"):
+                    factors["op_severity"] = 40
+                elif op_type in ("Exp", "Log", "Pow", "Sqrt"):
+                    factors["op_severity"] = 30
+                else:
+                    factors["op_severity"] = 25
                 reason = "No INT8 kernel"
                 info = _OP_QUANT_INFO.get(op_type)
                 recommendation = info.notes if info else "Keep at FP16"
 
             elif op_type in result.custom_ops:
-                is_problem = True
-                reason = "Custom op"
+                factors["op_severity"] = 50  # Custom ops are highest risk
+                reason = "Custom op - unknown INT8 support"
                 recommendation = "Verify INT8 support in target runtime"
 
-            if is_problem:
+            elif op_type in _ACCURACY_SENSITIVE_OPS:
+                factors["op_severity"] = 20
+                reason = "Accuracy-sensitive op"
+                info = _OP_QUANT_INFO.get(op_type)
+                recommendation = info.notes if info else "Monitor accuracy during QAT"
+
+            else:
+                # Quant-friendly or neutral ops
+                factors["op_severity"] = 0
+
+            # Factor 2: Position in graph (0-20 points)
+            # Early layers affect more downstream ops
+            if total_nodes > 1:
+                position_factor = 1 - (idx / total_nodes)
+                factors["position"] = int(position_factor * 15)
+            else:
+                factors["position"] = 0
+
+            # Factor 3: Check if in residual path (0-15 points)
+            # Nodes feeding into Add ops are often in residual connections
+            is_in_residual = False
+            for other_node in graph_info.nodes:
+                if other_node.op_type == "Add" and node.name in str(other_node.inputs):
+                    is_in_residual = True
+                    break
+            if is_in_residual and op_type in _ACCURACY_SENSITIVE_OPS:
+                factors["residual_path"] = 15
+            else:
+                factors["residual_path"] = 0
+
+            # Factor 4: Final layer penalty (0-15 points)
+            # Classifier layers are very sensitive
+            is_final = idx >= total_nodes - 3  # Last 3 layers
+            if is_final and op_type in ("Gemm", "MatMul", "Conv"):
+                factors["final_layer"] = 15
+                if not reason:
+                    reason = "Final classifier layer"
+                    recommendation = "Consider keeping at FP16 for accuracy"
+
+            # Calculate total risk score
+            risk_score = sum(factors.values())
+            risk_score = min(100, risk_score)
+
+            # Determine risk level
+            if risk_score >= 70:
+                risk_level = "critical"
+            elif risk_score >= 50:
+                risk_level = "high"
+            elif risk_score >= 25:
+                risk_level = "medium"
+            else:
+                risk_level = "low"
+
+            # Only add to problem layers if there's actual risk
+            if risk_score >= 20:
                 result.problem_layers.append(
                     {
                         "name": node.name,
                         "op_type": op_type,
                         "reason": reason,
                         "recommendation": recommendation,
+                        "risk_score": risk_score,
                     }
                 )
+
+                # Add detailed risk score
+                result.layer_risk_scores.append(
+                    LayerRiskScore(
+                        name=node.name,
+                        op_type=op_type,
+                        risk_score=risk_score,
+                        risk_level=risk_level,
+                        reason=reason or "Quantization risk factors detected",
+                        recommendation=recommendation or "Review before quantization",
+                        factors=factors,
+                    )
+                )
+
+        # Sort by risk score (highest first)
+        result.layer_risk_scores.sort(key=lambda x: x.risk_score, reverse=True)
+        result.problem_layers.sort(key=lambda x: x.get("risk_score", 0), reverse=True)
 
     def get_recommendations(self, result: QuantizationLintResult) -> list[str]:
         """
