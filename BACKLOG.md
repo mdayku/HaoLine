@@ -1099,10 +1099,10 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 
 *Sample model preloading merged into Epic 11 (Streamlit Web UI). Visual risk indicators and comparison polish already covered by Epic 41.*
 
-**New Story 11.4 (in Epic 11):** Sample Model Preloading
-- [ ] Bundle 2-3 small sample models (ResNet18, TinyBERT, YOLO-nano)
-- [ ] Add "Try a sample model" dropdown in Streamlit
-- [ ] Cache sample model analysis results for instant display
+**New Story 11.4 (in Epic 11):** Sample Model Preloading ✅ **COMPLETE**
+- [x] Bundle 3 demo models (MNIST, SqueezeNet, EfficientNet-Lite4)
+- [x] Add "Try a demo model" buttons in Streamlit
+- [x] Download + analyze demo models on demand
 
 ---
 
@@ -1110,9 +1110,11 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 
 *Layer-level diff and visual diff merged into Epic 18 (Universal IR). Structural comparison tools (`diff()`, `is_structurally_equal()`) already exist in `universal_ir.py`.*
 
-**New Story 18.7 (in Epic 18):** Enhanced Diff Visualization
-- [ ] Extend `diff()` to include layer-level alignment by name
-- [ ] Add added/removed/modified layer categorization
+**New Story 18.7 (in Epic 18):** Enhanced Diff Visualization (PARTIAL)
+- [x] Basic `diff()` exists (op counts, param diffs, missing nodes)
+- [x] `is_structurally_equal()` implemented
+- [ ] Layer-level alignment by name (not yet)
+- [ ] added/removed/modified layer categorization (partial)
 - [ ] Visualize diff in graph view (green=added, red=removed, yellow=modified)
 - [ ] Generate "what changed" summary paragraph
 
@@ -1147,8 +1149,9 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 *Quantization efficiency scoring merged into Epic 33 (QAT Linters). Readiness scoring and recommendations already exist. Efficiency metrics extend that work.*
 
 **New Story 33.6 (in Epic 33):** Quantization Efficiency Scoring
+*Note: We have quantization DETECTION + LINTING done (is_quantized, quantized_ops, lint warnings). This story is about EFFICIENCY metrics.*
 - [ ] Calculate compression ratio (original size / quantized size)
 - [ ] Estimate theoretical speedup from precision reduction
-- [ ] Add "efficiency score" (0-100) based on size + speed gains
+- [ ] Add quantization-specific "efficiency score" (0-100)
 - [ ] Detect over-quantization (INT4 on accuracy-sensitive layers)
 - [ ] Generate quantization efficiency report
