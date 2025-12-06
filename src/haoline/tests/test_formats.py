@@ -740,7 +740,7 @@ class TestTRTQuantBottleneckAnalysis:
 
     def test_quant_bottleneck_analysis_model(self) -> None:
         """Test QuantBottleneckAnalysis Pydantic model."""
-        from haoline.formats.tensorrt import QuantBottleneckAnalysis, BottleneckZone
+        from haoline.formats.tensorrt import BottleneckZone, QuantBottleneckAnalysis
 
         zone = BottleneckZone(
             start_idx=5,

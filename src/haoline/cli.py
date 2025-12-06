@@ -1754,16 +1754,22 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
     print("=" * 40)
     print("Quantization Fusion Summary")
     print("=" * 40)
-    print(f"  INT8 layers: {bottleneck_analysis.int8_layer_count} ({int(bottleneck_analysis.quantization_ratio * 100)}%)")
+    print(
+        f"  INT8 layers: {bottleneck_analysis.int8_layer_count} ({int(bottleneck_analysis.quantization_ratio * 100)}%)"
+    )
     print(f"  FP16 layers: {bottleneck_analysis.fp16_layer_count}")
-    print(f"  FP32 fallback: {bottleneck_analysis.fp32_layer_count} ({int(bottleneck_analysis.fp32_fallback_ratio * 100)}%)")
+    print(
+        f"  FP32 fallback: {bottleneck_analysis.fp32_layer_count} ({int(bottleneck_analysis.fp32_fallback_ratio * 100)}%)"
+    )
 
     if bottleneck_analysis.largest_bottleneck:
         lb = bottleneck_analysis.largest_bottleneck
         print(f"  Largest bottleneck: {lb.layer_count} consecutive FP32 layers ({lb.severity})")
 
     if bottleneck_analysis.estimated_speedup_potential > 1.05:
-        print(f"  Estimated speedup potential: {bottleneck_analysis.estimated_speedup_potential:.1f}x")
+        print(
+            f"  Estimated speedup potential: {bottleneck_analysis.estimated_speedup_potential:.1f}x"
+        )
 
     print()
 
@@ -1779,7 +1785,9 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
 
         if bottleneck_analysis.bottleneck_zones:
             print("FP32 Bottleneck Zones:")
-            for zone in sorted(bottleneck_analysis.bottleneck_zones, key=lambda z: -z.layer_count)[:5]:
+            for zone in sorted(bottleneck_analysis.bottleneck_zones, key=lambda z: -z.layer_count)[
+                :5
+            ]:
                 types_str = ", ".join(set(zone.layer_types[:3]))
                 print(f"  [{zone.severity}] {zone.layer_count} layers: {types_str}")
             if len(bottleneck_analysis.bottleneck_zones) > 5:
@@ -1849,7 +1857,9 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
                 "estimated_speedup_potential": bottleneck_analysis.estimated_speedup_potential,
                 "failed_fusion_count": len(bottleneck_analysis.failed_fusions),
                 "bottleneck_zone_count": len(bottleneck_analysis.bottleneck_zones),
-                "largest_bottleneck_size": bottleneck_analysis.largest_bottleneck.layer_count if bottleneck_analysis.largest_bottleneck else 0,
+                "largest_bottleneck_size": bottleneck_analysis.largest_bottleneck.layer_count
+                if bottleneck_analysis.largest_bottleneck
+                else 0,
                 "recommendations": bottleneck_analysis.recommendations,
             },
         }
