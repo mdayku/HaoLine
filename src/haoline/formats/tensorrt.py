@@ -166,6 +166,275 @@ class TRTEngineInfo(BaseModel):
         return self.model_dump(mode="json")
 
 
+# ============================================================================
+# Quantization Bottleneck Analysis (Story 22.8)
+# ============================================================================
+
+
+class FailedFusionPattern(BaseModel):
+    """A pattern that should have fused but appears as separate layers."""
+
+    model_config = ConfigDict(frozen=True)
+
+    pattern_type: str  # "Conv+BN+ReLU", "MatMul+Add", "LayerNorm+Add", etc.
+    layer_names: list[str]  # Names of the separate layers
+    layer_indices: list[int]  # Indices in the layer list
+    expected_fused_name: str  # What it should be called if fused
+    reason: str  # Why this is a problem
+    speed_impact: str  # "High", "Medium", "Low"
+
+
+class BottleneckZone(BaseModel):
+    """A contiguous region of non-quantized (FP32) layers."""
+
+    model_config = ConfigDict(frozen=True)
+
+    start_idx: int
+    end_idx: int
+    layer_count: int
+    layer_names: list[str]
+    layer_types: list[str]
+    estimated_time_pct: float = 0.0  # % of inference time (if timing available)
+    severity: str = "Medium"  # "Critical", "High", "Medium", "Low"
+
+
+class QuantBottleneckAnalysis(BaseModel):
+    """Complete quantization bottleneck analysis for a TRT engine."""
+
+    model_config = ConfigDict(frozen=True)
+
+    # Summary metrics
+    int8_layer_count: int = 0
+    fp16_layer_count: int = 0
+    fp32_layer_count: int = 0
+    total_layer_count: int = 0
+
+    # Derived metrics
+    quantization_ratio: float = 0.0  # % of layers that are INT8
+    fp32_fallback_ratio: float = 0.0  # % of layers that fell back to FP32
+
+    # Bottleneck details
+    failed_fusions: list[FailedFusionPattern] = Field(default_factory=list)
+    bottleneck_zones: list[BottleneckZone] = Field(default_factory=list)
+
+    # Estimated impact
+    estimated_speedup_potential: float = 1.0  # e.g., 1.7 = could be 1.7x faster
+    recommendations: list[str] = Field(default_factory=list)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def largest_bottleneck(self) -> BottleneckZone | None:
+        """The largest bottleneck zone by layer count."""
+        if not self.bottleneck_zones:
+            return None
+        return max(self.bottleneck_zones, key=lambda z: z.layer_count)
+
+
+def analyze_quant_bottlenecks(engine_info: TRTEngineInfo) -> QuantBottleneckAnalysis:
+    """
+    Analyze a TensorRT engine for quantization bottlenecks.
+
+    Args:
+        engine_info: Parsed TRT engine information.
+
+    Returns:
+        QuantBottleneckAnalysis with failed fusions, bottleneck zones, and recommendations.
+    """
+    layers = engine_info.layers
+
+    # Count by precision
+    int8_count = sum(1 for lyr in layers if lyr.precision == "INT8")
+    fp16_count = sum(1 for lyr in layers if lyr.precision == "FP16")
+    fp32_count = sum(1 for lyr in layers if lyr.precision in ("FP32", "Mixed", "Unknown"))
+    total = len(layers)
+
+    # Detect failed fusions
+    failed_fusions = _detect_failed_fusions(layers)
+
+    # Detect bottleneck zones (consecutive FP32 layers)
+    bottleneck_zones = _detect_bottleneck_zones(layers)
+
+    # Calculate ratios
+    quant_ratio = int8_count / total if total > 0 else 0.0
+    fp32_ratio = fp32_count / total if total > 0 else 0.0
+
+    # Estimate speedup potential based on FP32 ratio
+    # Rough heuristic: INT8 is ~2-4x faster than FP32
+    # If 30% of layers are FP32, potential speedup = 1 + (0.3 * 2.0) = 1.6x
+    speedup_potential = 1.0 + (fp32_ratio * 2.0) if fp32_ratio > 0.1 else 1.0
+
+    # Generate recommendations
+    recommendations = _generate_recommendations(
+        failed_fusions, bottleneck_zones, fp32_ratio, int8_count
+    )
+
+    return QuantBottleneckAnalysis(
+        int8_layer_count=int8_count,
+        fp16_layer_count=fp16_count,
+        fp32_layer_count=fp32_count,
+        total_layer_count=total,
+        quantization_ratio=quant_ratio,
+        fp32_fallback_ratio=fp32_ratio,
+        failed_fusions=failed_fusions,
+        bottleneck_zones=bottleneck_zones,
+        estimated_speedup_potential=round(speedup_potential, 2),
+        recommendations=recommendations,
+    )
+
+
+def _detect_failed_fusions(layers: list[TRTLayerInfo]) -> list[FailedFusionPattern]:
+    """Detect ops that should have fused but appear separately."""
+    failed = []
+
+    # Common fusion patterns that should appear as single layer
+    # Pattern: (sequence of layer types, expected fused name, speed impact)
+    FUSION_PATTERNS = [
+        (["Convolution", "Scale", "Activation"], "Conv+BN+ReLU", "High"),
+        (["Convolution", "Scale"], "Conv+BN", "Medium"),
+        (["Convolution", "Activation"], "Conv+ReLU", "Medium"),
+        (["MatrixMultiply", "ElementWise"], "MatMul+Add", "Medium"),
+        (["Shuffle", "Scale", "Shuffle"], "LayerNorm", "High"),
+        (["SoftMax", "Scale"], "ScaledSoftmax", "Low"),
+    ]
+
+    for i in range(len(layers)):
+        for pattern_types, expected_name, impact in FUSION_PATTERNS:
+            pattern_len = len(pattern_types)
+            if i + pattern_len > len(layers):
+                continue
+
+            # Check if this sequence matches the pattern
+            window = layers[i : i + pattern_len]
+
+            # Skip if already fused
+            if any(lyr.is_fused for lyr in window):
+                continue
+
+            # Check type match (flexible matching)
+            matches = True
+            for j, expected_type in enumerate(pattern_types):
+                actual_type = window[j].type
+                if expected_type.lower() not in actual_type.lower():
+                    matches = False
+                    break
+
+            if matches:
+                # Check if these layers are all FP32 (missed quantization opportunity)
+                all_fp32 = all(lyr.precision in ("FP32", "Mixed") for lyr in window)
+                if all_fp32:
+                    failed.append(
+                        FailedFusionPattern(
+                            pattern_type=expected_name,
+                            layer_names=[lyr.name for lyr in window],
+                            layer_indices=list(range(i, i + pattern_len)),
+                            expected_fused_name=f"{expected_name}_{i}",
+                            reason=f"Sequential {expected_name} pattern not fused, all layers FP32",
+                            speed_impact=impact,
+                        )
+                    )
+
+    return failed
+
+
+def _detect_bottleneck_zones(layers: list[TRTLayerInfo]) -> list[BottleneckZone]:
+    """Find contiguous regions of FP32 layers."""
+    zones = []
+    current_zone_start = None
+    current_zone_layers: list[TRTLayerInfo] = []
+
+    for i, layer in enumerate(layers):
+        is_fp32 = layer.precision in ("FP32", "Mixed", "Unknown")
+
+        if is_fp32:
+            if current_zone_start is None:
+                current_zone_start = i
+            current_zone_layers.append(layer)
+        else:
+            # End of FP32 zone
+            if current_zone_start is not None and len(current_zone_layers) >= 2:
+                # Only report zones with 2+ layers as bottlenecks
+                severity = _zone_severity(len(current_zone_layers))
+                zones.append(
+                    BottleneckZone(
+                        start_idx=current_zone_start,
+                        end_idx=i - 1,
+                        layer_count=len(current_zone_layers),
+                        layer_names=[lyr.name for lyr in current_zone_layers],
+                        layer_types=[lyr.type for lyr in current_zone_layers],
+                        severity=severity,
+                    )
+                )
+            current_zone_start = None
+            current_zone_layers = []
+
+    # Handle zone at end
+    if current_zone_start is not None and len(current_zone_layers) >= 2:
+        severity = _zone_severity(len(current_zone_layers))
+        zones.append(
+            BottleneckZone(
+                start_idx=current_zone_start,
+                end_idx=len(layers) - 1,
+                layer_count=len(current_zone_layers),
+                layer_names=[lyr.name for lyr in current_zone_layers],
+                layer_types=[lyr.type for lyr in current_zone_layers],
+                severity=severity,
+            )
+        )
+
+    return zones
+
+
+def _zone_severity(layer_count: int) -> str:
+    """Determine severity based on zone size."""
+    if layer_count >= 10:
+        return "Critical"
+    elif layer_count >= 5:
+        return "High"
+    elif layer_count >= 3:
+        return "Medium"
+    return "Low"
+
+
+def _generate_recommendations(
+    failed_fusions: list[FailedFusionPattern],
+    bottleneck_zones: list[BottleneckZone],
+    fp32_ratio: float,
+    int8_count: int,
+) -> list[str]:
+    """Generate actionable recommendations based on analysis."""
+    recs = []
+
+    if fp32_ratio > 0.5:
+        recs.append(
+            "High FP32 fallback (>50%) - Consider re-calibrating with more representative data"
+        )
+    elif fp32_ratio > 0.2:
+        recs.append("Moderate FP32 fallback - Check calibration dataset covers edge cases")
+
+    if int8_count == 0:
+        recs.append("No INT8 layers detected - Ensure TensorRT builder has INT8 mode enabled")
+
+    high_impact_fusions = [f for f in failed_fusions if f.speed_impact == "High"]
+    if high_impact_fusions:
+        recs.append(
+            f"{len(high_impact_fusions)} high-impact fusion(s) failed - "
+            "Consider using TensorRT plugins or restructuring model"
+        )
+
+    critical_zones = [z for z in bottleneck_zones if z.severity == "Critical"]
+    if critical_zones:
+        largest = max(critical_zones, key=lambda z: z.layer_count)
+        recs.append(
+            f"Critical bottleneck: {largest.layer_count} consecutive FP32 layers - "
+            "Focus calibration on these layers"
+        )
+
+    if not recs:
+        recs.append("Quantization looks good! Most layers are using INT8/FP16.")
+
+    return recs
+
+
 class TRTEngineReader:
     """Reader for TensorRT engine files (.engine, .plan)."""
 
