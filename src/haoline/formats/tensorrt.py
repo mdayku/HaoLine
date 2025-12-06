@@ -440,12 +440,14 @@ class TRTEngineReader:
             # TRT 10+ has get_layer_information
             if hasattr(inspector, "get_layer_information"):
                 import json
+                from typing import cast
 
                 detail_json = inspector.get_layer_information(
                     layer_idx, trt.LayerInformationFormat.JSON
                 )
                 if detail_json:
-                    return json.loads(detail_json)
+                    result = json.loads(detail_json)
+                    return cast(dict[str, Any], result)
         except Exception:
             pass
         return None

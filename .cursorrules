@@ -111,9 +111,9 @@ This keeps format testing consolidated and prevents script sprawl.
 
 **Current extras structure:**
 - Framework converters: `pytorch`, `tensorflow`, `ultralytics`, `jax`
-- Format readers: `safetensors`, `tflite`, `coreml`, `openvino`
+- Format readers: `safetensors`, `tflite`, `coreml`, `openvino`, `tensorrt`
 - Features: `llm`, `web`, `pdf`, `gpu`, `runtime`
-- Bundle: `full` (everything cross-platform)
+- Bundle: `full` (everything cross-platform, excludes `tensorrt` which requires NVIDIA GPU)
 
 **Checklist when adding dependency:**
 - [ ] Added to pyproject.toml extras

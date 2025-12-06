@@ -2018,9 +2018,9 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
                 ]
             )
             fusions = [m for m in report.layer_mappings if m.is_fusion][:15]
-            for f in fusions:
-                desc = f.fusion_description or f"{len(f.onnx_nodes)} ops"
-                md_lines.append(f"| {f.trt_layer_name[:40]} | {desc} |")
+            for fusion in fusions:
+                desc = fusion.fusion_description or f"{len(fusion.onnx_nodes)} ops"
+                md_lines.append(f"| {fusion.trt_layer_name[:40]} | {desc} |")
             md_lines.append("")
 
         if report.removed_nodes:

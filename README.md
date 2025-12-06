@@ -140,6 +140,7 @@ Install only what you need:
 | `tflite` | `pip install haoline[tflite]` | `.tflite` (Linux/Mac only) |
 | `coreml` | `pip install haoline[coreml]` | `.mlmodel`, `.mlpackage` (Apple) |
 | `openvino` | `pip install haoline[openvino]` | `.xml`/`.bin` (Intel) |
+| `tensorrt` | `pip install haoline[tensorrt]` | `.engine`, `.plan` (NVIDIA GPU required) |
 | `gguf` | *included by default* | `.gguf` (llama.cpp) - pure Python |
 
 ### Other Extras
