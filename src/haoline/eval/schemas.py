@@ -54,12 +54,10 @@ class EvalResult(BaseModel):
         ""
     )
     dataset: Annotated[str, Field(default="", description="Dataset used for evaluation")] = ""
-    metrics: Annotated[
-        list[EvalMetric], Field(default_factory=list, description="List of evaluation metrics")
-    ] = []
-    metadata: Annotated[
-        dict[str, Any], Field(default_factory=dict, description="Tool-specific extras")
-    ] = {}
+    metrics: list[EvalMetric] = Field(
+        default_factory=list, description="List of evaluation metrics"
+    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Tool-specific extras")
 
     def model_post_init(self, __context: Any) -> None:
         """Set timestamp if not provided."""
@@ -512,19 +510,15 @@ class CombinedReport(BaseModel):
     model_path: Annotated[str, Field(default="", description="Path to model file")] = ""
 
     # Architecture analysis (from haoline inspect)
-    architecture: Annotated[
-        dict[str, Any],
-        Field(
-            default_factory=dict,
-            description="Architecture summary: params_total, flops_total, etc.",
-        ),
-    ] = {}
+    architecture: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Architecture summary: params_total, flops_total, etc.",
+    )
 
     # Evaluation results (from external tools)
-    eval_results: Annotated[
-        list[EvalResult],
-        Field(default_factory=list, description="Evaluation results from external tools"),
-    ] = []
+    eval_results: list[EvalResult] = Field(
+        default_factory=list, description="Evaluation results from external tools"
+    )
 
     # Computed summaries
     primary_accuracy_metric: Annotated[

@@ -558,8 +558,8 @@ class VisualizationGenerator:
         fig, ax = plt.subplots(figsize=(10, 7), dpi=THEME.figure_dpi)
 
         # Create pie with no labels (use legend instead)
-        # Note: pie returns 2 or 3 values depending on labels/autopct
-        wedges, autotexts = ax.pie(  # type: ignore[misc]
+        # pie() returns (patches, texts, autotexts) when autopct is provided
+        wedges, _texts, autotexts = ax.pie(
             sizes,
             labels=None,  # No inline labels
             colors=colors,
@@ -1012,8 +1012,8 @@ class VisualizationGenerator:
         ax.set_facecolor(THEME.plot_background)
 
         colors = THEME.palette[: len(values)]
-        # Note: pie returns 2 or 3 values depending on labels/autopct
-        wedges, autotexts = ax.pie(  # type: ignore[misc]
+        # pie() returns (patches, texts, autotexts) when autopct is provided
+        wedges, _texts, autotexts = ax.pie(
             values,
             labels=None,
             autopct=lambda pct: f"{pct:.1f}%" if pct > 3 else "",
