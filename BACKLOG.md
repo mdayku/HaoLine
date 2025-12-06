@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 4/10 | P2 |
 | Epic 20: CoreML | In Progress | 2 | 5/12 | P2 |
 | Epic 21: TFLite | In Progress | 2 | 5/12 | P2 |
-| Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | P3 |
+| Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | **P2** |
 | Epic 23: OpenVINO | In Progress | 2 | 4/10 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 4/8 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -48,7 +48,7 @@
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
 | Epic 33: QAT Linters | Not Started | 4 | 0/22 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
-| Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | P3 |
+| Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
 | Epic 38: Docker Distribution | Not Started | 1 | 0/5 | P3 |
@@ -725,7 +725,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 ---
 
-## Epic 22: TensorRT Engine Introspection (P3)
+## Epic 22: TensorRT Engine Introspection (P2)
 
 *Deep analysis of NVIDIA TensorRT compiled engines. Inspired by [TRT Engine Explorer](https://github.com/NVIDIA/TensorRT/tree/main/tools/experimental/trt-engine-explorer).*
 
@@ -1196,7 +1196,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 ---
 
-## Epic 35: TensorRT-Aware Graph Visualization (P3)
+## Epic 35: TensorRT-Aware Graph Visualization (P2)
 
 *Enhance graph visualization with TRT fusion hints and inspector-quality UX.*
 
