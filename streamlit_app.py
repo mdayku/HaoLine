@@ -13,6 +13,7 @@ Run locally:
 Deploy to HuggingFace Spaces or Streamlit Cloud for public access.
 """
 
+import json
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -1064,13 +1065,29 @@ def main():
 
         # LLM Summary
         st.markdown("### AI Summary")
-        enable_llm = st.checkbox("Generate AI Summary", value=False, help="Requires OpenAI API key")
+        import os
 
-        api_key = None
+        env_api_key = os.environ.get("OPENAI_API_KEY", "")
+        enable_llm = st.checkbox(
+            "Generate AI Summary",
+            value=st.session_state.get("enable_llm", False),
+            help="Requires OpenAI API key",
+            key="enable_llm_checkbox",
+        )
+        st.session_state["enable_llm"] = enable_llm
+
         if enable_llm:
-            api_key = st.text_input(
-                "OpenAI API Key", type="password", help="Used once per analysis, never stored"
-            )
+            if env_api_key:
+                st.success("Using API key from environment")
+                st.session_state["openai_api_key_value"] = env_api_key
+            else:
+                api_key = st.text_input(
+                    "OpenAI API Key",
+                    type="password",
+                    help="Used once per analysis, never stored",
+                    key="openai_api_key_input",
+                )
+                st.session_state["openai_api_key_value"] = api_key
             st.caption("For maximum security, run `haoline` locally instead.")
 
         # Privacy notice
@@ -1780,8 +1797,9 @@ def main():
 
                             if st.button("Run Batch Benchmark", type="secondary"):
                                 try:
-                                    from haoline.operational_profiling import OperationalProfiler
                                     import logging
+
+                                    from haoline.operational_profiling import OperationalProfiler
 
                                     bench_logger = logging.getLogger("haoline.bench")
                                     profiler = OperationalProfiler(logger=bench_logger)
@@ -1911,6 +1929,65 @@ def main():
                                 )
                                 st.bar_chart(op_df.set_index("Op Type")["Time (ms)"])
 
+                    # AI Summary (if enabled and API key provided)
+                    llm_enabled = st.session_state.get("enable_llm", False)
+                    llm_api_key = st.session_state.get("openai_api_key_value", "")
+
+                    if llm_enabled:
+                        st.markdown("### AI Analysis")
+
+                        if not llm_api_key:
+                            st.warning(
+                                "AI Summary is enabled but no API key is set. "
+                                "Enter your OpenAI API key in the sidebar."
+                            )
+                        elif not llm_api_key.startswith("sk-"):
+                            st.error(
+                                f"Invalid API key format. Keys should start with 'sk-'. "
+                                f"Got: {llm_api_key[:10]}..."
+                            )
+                        else:
+                            with st.spinner("Generating AI summary..."):
+                                try:
+                                    from haoline.llm_summarizer import LLMSummarizer
+
+                                    summarizer = LLMSummarizer(api_key=llm_api_key)
+                                    llm_result = summarizer.summarize(report)
+
+                                    if llm_result and llm_result.success:
+                                        # Short summary
+                                        if llm_result.short_summary:
+                                            st.markdown(
+                                                f"""<div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+                                                border-left: 4px solid #10b981; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+                                                <p style="font-weight: 600; color: #10b981; margin-bottom: 0.5rem;">AI Summary</p>
+                                                <p style="color: #e5e5e5; line-height: 1.6;">{llm_result.short_summary}</p>
+                                                </div>""",
+                                                unsafe_allow_html=True,
+                                            )
+
+                                        # Detailed analysis
+                                        if llm_result.detailed_summary:
+                                            with st.expander("Detailed Analysis", expanded=True):
+                                                st.markdown(llm_result.detailed_summary)
+
+                                        # Show model/tokens info
+                                        st.caption(
+                                            f"Generated by {llm_result.model_used} "
+                                            f"({llm_result.tokens_used} tokens)"
+                                        )
+                                    elif llm_result and llm_result.error_message:
+                                        st.error(f"AI summary failed: {llm_result.error_message}")
+                                    else:
+                                        st.warning("AI summary generation returned empty result.")
+                                except ImportError:
+                                    st.error(
+                                        "LLM summarizer not available. Install with: "
+                                        "`pip install haoline[llm]`"
+                                    )
+                                except Exception as e:
+                                    st.error(f"Error generating AI summary: {e}")
+
                 with tab2:
                     if include_graph:
                         st.markdown("### Interactive Architecture Graph")
@@ -2038,8 +2115,8 @@ def main():
                                             "FLOPs": format_number(layer.flops)
                                             if layer.flops > 0
                                             else "-",
-                                            "Output Shape": str(layer.output_shape)
-                                            if layer.output_shape
+                                            "Output Shape": ", ".join(layer.output_shapes)
+                                            if layer.output_shapes
                                             else "-",
                                         }
                                     )
@@ -2286,7 +2363,11 @@ def main():
                             from haoline.format_adapters import load_model
 
                             ir_graph = load_model(Path(tmp_path))
-                            ir_json = ir_graph.model_dump_json(indent=2)
+                            # Exclude tensor data (numpy arrays) - they're huge and not JSON-serializable
+                            ir_dict = ir_graph.model_dump(
+                                exclude={"tensors": {"__all__": {"data"}}}
+                            )
+                            ir_json = json.dumps(ir_dict, indent=2, default=str)
                             st.download_button(
                                 label="Download Universal IR",
                                 data=ir_json,

@@ -257,6 +257,10 @@ class SystemRequirements:
     def recommended_vram_gb(self) -> float | None:
         return self._vram_gb(self.recommended)
 
+    @property
+    def optimal_vram_gb(self) -> float | None:
+        return self._vram_gb(self.optimal)
+
 
 class OperationalProfiler:
     """
