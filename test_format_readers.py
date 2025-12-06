@@ -210,11 +210,12 @@ def test_tflite():
         info = reader.read()
 
         print("\n--- TFLite Model Info ---")
-        print(f"Description: {info.description}")
+        print(f"Description: {info.description or '(none)'}")
         print(f"Total params: {info.total_params:,}")
         print(f"Total size: {info.total_size_bytes / 1e6:.2f} MB")
         print(f"Num tensors: {len(info.tensors)}")
-        print(f"Op types: {info.op_type_counts}")
+        print(f"Input indices: {info.inputs}")
+        print(f"Output indices: {info.outputs}")
 
         print("\n[SUCCESS] TFLite reader works correctly!")
         return True
