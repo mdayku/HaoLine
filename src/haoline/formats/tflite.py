@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 # TFLite FlatBuffer identifier
 TFLITE_IDENTIFIER = b"TFL3"
 
-# TFLite tensor types
+# TFLite tensor types (by ID for pure Python parsing)
 TFLITE_TYPES: dict[int, tuple[str, int]] = {
     0: ("FLOAT32", 4),
     1: ("FLOAT16", 2),
@@ -43,6 +43,24 @@ TFLITE_TYPES: dict[int, tuple[str, int]] = {
     15: ("UINT32", 4),
     16: ("UINT16", 2),
     17: ("INT4", 0),  # Packed
+}
+
+# Bytes per element for dtype strings (from numpy dtype names)
+DTYPE_BYTES: dict[str, int] = {
+    "float32": 4,
+    "float16": 2,
+    "int32": 4,
+    "uint8": 1,
+    "int64": 8,
+    "bool": 1,
+    "int16": 2,
+    "complex64": 8,
+    "int8": 1,
+    "float64": 8,
+    "complex128": 16,
+    "uint64": 8,
+    "uint16": 2,
+    "uint32": 4,
 }
 
 # TFLite builtin operators
@@ -109,21 +127,15 @@ class TFLiteTensorInfo(BaseModel):
 
     name: str
     shape: tuple[int, ...]
-    type_id: int
+    dtype: str  # e.g., "float32", "int8", "uint8"
     buffer_idx: int
     quantization: dict[str, Any] | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def type_name(self) -> str:
-        """Human-readable type name."""
-        return TFLITE_TYPES.get(self.type_id, ("UNKNOWN", 4))[0]
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
     def bytes_per_element(self) -> int:
         """Bytes per element."""
-        return TFLITE_TYPES.get(self.type_id, ("UNKNOWN", 4))[1]
+        return DTYPE_BYTES.get(self.dtype.lower(), 4)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -275,11 +287,20 @@ class TFLiteReader:
                     "scale": td["quantization"][0],
                     "zero_point": td["quantization"][1],
                 }
+            # Convert numpy dtype to string name
+            dtype_val = td["dtype"]
+            if hasattr(dtype_val, "__name__"):
+                dtype_str = dtype_val.__name__  # numpy.float32 -> "float32"
+            elif hasattr(dtype_val, "name"):
+                dtype_str = dtype_val.name
+            else:
+                dtype_str = str(dtype_val)
+
             tensors.append(
                 TFLiteTensorInfo(
                     name=td["name"],
                     shape=tuple(td["shape"]),
-                    type_id=td["dtype"],
+                    dtype=dtype_str,
                     buffer_idx=td.get("buffer_idx", 0),
                     quantization=quant,
                 )
