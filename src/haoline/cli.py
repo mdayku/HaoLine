@@ -2531,7 +2531,7 @@ def run_inspect():
                 logger.info(f"QAT readiness report written to {args.quant_advice_report}")
 
         # Store in report for JSON output
-        report.quantization_lint = quant_lint_result  # type: ignore
+        report.quantization_lint = quant_lint_result
 
     # Generate LLM summaries if requested
     llm_summary = None

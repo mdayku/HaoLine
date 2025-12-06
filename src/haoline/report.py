@@ -36,6 +36,7 @@ if TYPE_CHECKING:
         SystemRequirements,
     )
     from .patterns import Block, PatternAnalyzer
+    from .quantization_linter import QuantizationLintResult
     from .risks import RiskAnalyzer, RiskSignal
     from .universal_ir import UniversalGraph
 
@@ -258,6 +259,9 @@ class InspectionReport:
     # Universal IR (optional, format-agnostic graph representation)
     # Enables cross-format comparison, structural diff, and advanced visualization
     universal_graph: UniversalGraph | None = None
+
+    # Quantization analysis (optional, set by CLI if --lint-quantization specified)
+    quantization_lint: QuantizationLintResult | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert report to a JSON-serializable dictionary."""
@@ -1298,6 +1302,95 @@ class InspectionReport:
                         f'<p class="recommendation"><strong>Recommendation:</strong> {risk.recommendation}</p>'
                     )
                 html_parts.append("</div>")
+            html_parts.append("</section>")
+
+        # Quantization Analysis (Task 33.5.4)
+        if self.quantization_lint:
+            ql = self.quantization_lint
+            score = ql.readiness_score
+            # Grade color
+            if score >= 90:
+                grade, color = "A", "#3fb950"
+            elif score >= 75:
+                grade, color = "B", "#84cc16"
+            elif score >= 60:
+                grade, color = "C", "#d29922"
+            elif score >= 40:
+                grade, color = "D", "#ff6b6b"
+            else:
+                grade, color = "F", "#ef4444"
+
+            html_parts.append('<section class="quant-analysis">')
+            html_parts.append("<h2>INT8 Quantization Readiness</h2>")
+
+            # Score card
+            html_parts.append(
+                f"""
+                <div style="display: flex; align-items: center; gap: 2rem; margin-bottom: 1.5rem;">
+                    <div style="text-align: center; padding: 1.5rem; background: {color}22;
+                         border: 2px solid {color}; border-radius: 12px; min-width: 120px;">
+                        <div style="font-size: 2.5rem; font-weight: bold; color: {color};">{grade}</div>
+                        <div style="font-size: 1.2rem; color: var(--text-secondary);">{score}/100</div>
+                    </div>
+                    <div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <strong>Quant-Friendly Ops:</strong> {ql.quant_friendly_pct:.1f}%
+                        </div>
+                        <div style="margin-bottom: 0.5rem;">
+                            <strong>Total Ops:</strong> {ql.total_ops}
+                        </div>
+                        <div>
+                            <strong>Issues Found:</strong> {len(ql.warnings)}
+                            {f" ({ql.critical_count} critical)" if hasattr(ql, "critical_count") and ql.critical_count else ""}
+                        </div>
+                    </div>
+                </div>
+                """
+            )
+
+            # Warnings
+            if ql.warnings:
+                html_parts.append("<h3>Issues</h3>")
+                severity_colors = {
+                    "critical": "#ef4444",
+                    "high": "#ff6b6b",
+                    "medium": "#d29922",
+                    "low": "#84cc16",
+                    "info": "#00d4ff",
+                }
+                for w in sorted(ql.warnings, key=lambda x: x.severity.value)[:10]:
+                    sev_color = severity_colors.get(w.severity.value, "#8b949e")
+                    html_parts.append(
+                        f"""
+                        <div style="padding: 0.75rem; margin: 0.5rem 0; border-left: 3px solid {sev_color};
+                             background: {sev_color}11;">
+                            <span style="color: {sev_color}; font-weight: bold;">[{w.severity.value.upper()}]</span>
+                            <span>{w.message}</span>
+                            {f'<br><span style="color: var(--text-secondary); margin-left: 2rem;">→ {w.recommendation}</span>' if w.recommendation else ""}
+                        </div>
+                        """
+                    )
+                if len(ql.warnings) > 10:
+                    html_parts.append(
+                        f'<p style="color: var(--text-secondary);">... and {len(ql.warnings) - 10} more issues</p>'
+                    )
+
+            # Problem layers
+            if ql.problem_layers:
+                html_parts.append("<h3>Problem Layers</h3>")
+                html_parts.append("<table>")
+                html_parts.append(
+                    "<tr><th>Layer</th><th>Op Type</th><th>Issue</th><th>Recommendation</th></tr>"
+                )
+                for layer in ql.problem_layers[:8]:
+                    html_parts.append(
+                        f"<tr><td>{layer.get('name', 'N/A')}</td>"
+                        f"<td>{layer.get('op_type', 'N/A')}</td>"
+                        f"<td>{layer.get('reason', 'N/A')}</td>"
+                        f"<td>{layer.get('recommendation', 'N/A')}</td></tr>"
+                    )
+                html_parts.append("</table>")
+
             html_parts.append("</section>")
 
         html_parts.append("</div></body></html>")
