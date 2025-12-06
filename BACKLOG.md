@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | In Progress | 8 | 40/50 | **P2** |
+| Epic 22: TensorRT Engine Introspection | In Progress | 8 | 42/50 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -306,7 +306,7 @@
 - [x] **Task 22.7.7**: Update HuggingFace Spaces requirements (note: TRT requires GPU, may not work on free tier)
 - [x] **Task 22.7.8**: Write unit tests for TRTEngineReader (9 tests + integration test)
 
-### Story 22.8: Quantization Bottleneck Analysis [Phase 4] - **IN PROGRESS (6/8)**
+### Story 22.8: Quantization Bottleneck Analysis [Phase 4] - **COMPLETE (8/8)**
 *Engine-level insight into failed fusions and speed bottlenecks (per user feedback).*
 
 **User Pain Point:** "When I create a QAT module, TRT engine explorer shows nodes I need to fix for higher speed."
@@ -329,8 +329,8 @@
   Estimated speed gap vs ideal QAT: 1.7×
   ```
 - [x] **Task 22.8.6**: Add `--quant-bottlenecks` CLI flag to show bottleneck analysis
-- [ ] **Task 22.8.7**: Add bottleneck heatmap to Streamlit TRT view (red zones for FP32)
-- [ ] **Task 22.8.8**: Parse timing cache/profiling data if available for actual timings
+- [x] **Task 22.8.7**: Add bottleneck heatmap to Streamlit TRT view (red zones for FP32)
+- [x] **Task 22.8.8**: Parse timing cache/profiling data if available for actual timings
 
 ---
 
