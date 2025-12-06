@@ -46,7 +46,7 @@
 | **OPTIMIZATION** ||||
 | Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
-| Epic 33: QAT Linters | In Progress | 5 | 40/41 | **P1** |
+| Epic 33: QAT Linters | **COMPLETE** | 5 | 41/41 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
 | Epic 36: Layer Visualization | Not Started | 5 | 0/25 | **P2** |
@@ -1148,7 +1148,7 @@ User's Eval Tool → JSON/CSV → HaoLine Import → Unified Report
 
 **Reports & Integration:**
 - [x] **Task 33.4.10**: Generate "QAT Readiness Report" (Markdown/HTML) with LLM summary — `generate_qat_readiness_report()`
-- [ ] **Task 33.4.11**: Integrate recommendations into compare mode (FP32 vs INT8)
+- [x] **Task 33.4.11**: Integrate recommendations into compare mode (FP32 vs INT8) — Compare view shows quant analysis when comparing FP32 vs INT8 models
 - [x] **Task 33.4.12**: Add LLM recommendations to Streamlit UI (optional, uses API key) — Quantization Recommendations section
 - [x] **Task 33.4.13**: Add `--quant-llm-advice` CLI flag for LLM-powered guidance — `--quant-llm-advice`, `--quant-advice-report`
 

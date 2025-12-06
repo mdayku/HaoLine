@@ -643,6 +643,115 @@ def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
     else:
         st.info("Models have similar characteristics.")
 
+    # Quantization Recommendations (Task 33.4.11)
+    # Detect if comparing FP32 vs INT8/quantized models
+    is_a_quantized = model_a.report.param_counts and model_a.report.param_counts.is_quantized
+    is_b_quantized = model_b.report.param_counts and model_b.report.param_counts.is_quantized
+
+    # Show quantization analysis if one is FP32 and one is INT8
+    if is_a_quantized != is_b_quantized:
+        st.markdown("---")
+        st.markdown("### Quantization Analysis")
+
+        if is_b_quantized and not is_a_quantized:
+            fp32_model, int8_model = model_a, model_b
+            fp32_label, int8_label = "A (FP32)", "B (INT8)"
+        else:
+            fp32_model, int8_model = model_b, model_a
+            fp32_label, int8_label = "B (FP32)", "A (INT8)"
+
+        st.info(f"Comparing {fp32_label} against {int8_label} quantized version")
+
+        # Calculate savings
+        params_fp32 = fp32_model.report.param_counts.total if fp32_model.report.param_counts else 0
+        params_int8 = int8_model.report.param_counts.total if int8_model.report.param_counts else 0
+
+        mem_fp32 = (
+            fp32_model.report.memory_estimates.model_size_bytes
+            if fp32_model.report.memory_estimates
+            else 0
+        )
+        mem_int8 = (
+            int8_model.report.memory_estimates.model_size_bytes
+            if int8_model.report.memory_estimates
+            else 0
+        )
+
+        # Size reduction metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if mem_fp32 > 0:
+                size_reduction = (1 - mem_int8 / mem_fp32) * 100
+                st.metric(
+                    "Size Reduction",
+                    f"{size_reduction:.1f}%",
+                    delta=f"-{format_bytes(mem_fp32 - mem_int8)}",
+                )
+        with col2:
+            st.metric(
+                "FP32 Size",
+                format_bytes(mem_fp32),
+            )
+        with col3:
+            st.metric(
+                "INT8 Size",
+                format_bytes(mem_int8),
+            )
+
+        # Run quantization analysis on FP32 model to show what to watch
+        try:
+            from haoline.analyzer import ONNXGraphLoader
+            from haoline.quantization_advisor import advise_quantization
+            from haoline.quantization_linter import QuantizationLinter
+
+            # Check if we can load the FP32 model for analysis
+            if hasattr(fp32_model, "path") and fp32_model.path:
+                with st.expander("Quantization Recommendations", expanded=True):
+                    try:
+                        graph_loader = ONNXGraphLoader()
+                        _, graph_info = graph_loader.load(fp32_model.path)
+                        linter = QuantizationLinter()
+                        lint_result = linter.lint(graph_info)
+
+                        # Get advice
+                        advice = advise_quantization(lint_result, graph_info, use_llm=False)
+
+                        # Display
+                        st.markdown(
+                            f"**FP32 Model Readiness Score:** {lint_result.readiness_score}/100"
+                        )
+                        st.markdown(f"> {advice.strategy}")
+
+                        if advice.op_substitutions:
+                            st.markdown("**Recommended optimizations before quantization:**")
+                            for sub in advice.op_substitutions:
+                                st.markdown(
+                                    f"- Replace `{sub.original_op}` with `{sub.replacement_op}`"
+                                )
+
+                        if lint_result.warnings:
+                            st.warning(
+                                f"FP32 model has {len(lint_result.warnings)} quantization-related warnings. "
+                                "Review these if accuracy degradation is observed."
+                            )
+
+                    except Exception as e:
+                        st.caption(f"Could not analyze FP32 model: {e}")
+        except ImportError:
+            pass  # Quantization advisor not available
+
+    # Also show if both models might benefit from quantization (neither is quantized)
+    elif not is_a_quantized and not is_b_quantized:
+        with st.expander("Quantization Potential"):
+            st.markdown("Neither model is quantized. Consider INT8 quantization for:")
+            st.markdown("- **2-4x smaller model size**")
+            st.markdown("- **2-4x faster inference** (with INT8-optimized hardware)")
+            st.markdown("- **Lower memory bandwidth** requirements")
+            st.markdown("")
+            st.markdown(
+                "Use the **Analyze** mode with **Quantization Analysis** enabled to assess readiness."
+            )
+
 
 def render_compare_mode():
     """Render the model comparison interface."""
