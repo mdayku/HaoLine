@@ -137,6 +137,9 @@ Examples:
   # Custom resolutions for object detection
   python -m haoline yolo.onnx --hardware rtx4090 --sweep-resolutions "320x320,640x640,1280x1280"
 
+  # List supported input formats
+  python -m haoline --list-formats
+
   # List available format conversions
   python -m haoline --list-conversions
 
@@ -615,6 +618,11 @@ Examples:
         "--list-conversions",
         action="store_true",
         help="List available format conversion paths and exit.",
+    )
+    convert_group.add_argument(
+        "--list-formats",
+        action="store_true",
+        help="List all supported input formats and exit.",
     )
 
     # Universal IR export
@@ -2449,6 +2457,41 @@ def run_inspect():
         print("\n" + "-" * 70)
         print("Prices are approximate on-demand rates (us-east-1 or equivalent)")
         print("Use --cloud <instance> to get cost estimates for your model")
+        print("=" * 70 + "\n")
+        sys.exit(0)
+
+    # Handle --list-formats
+    if args.list_formats:
+        print("\n" + "=" * 70)
+        print("Supported Input Formats")
+        print("=" * 70)
+
+        print("\n[FULL ANALYSIS] - Graph structure + parameters")
+        print("-" * 50)
+        print("  ONNX          .onnx              Native support")
+        print("  TensorRT      .engine, .plan     Requires NVIDIA GPU")
+
+        print("\n[AUTO-CONVERT TO ONNX] - Converted then analyzed")
+        print("-" * 50)
+        print("  PyTorch       .pt, .pth          --from-pytorch + --input-shape")
+        print("  TensorFlow    SavedModel/        --from-tensorflow")
+        print("  Keras         .h5, .keras        --from-keras")
+        print("  Frozen Graph  .pb                --from-frozen-graph + --tf-inputs/outputs")
+        print("  JAX/Flax      .pkl, .msgpack     --from-jax + --jax-apply-fn + --input-shape")
+
+        print("\n[WEIGHTS-ONLY] - Limited analysis (no graph)")
+        print("-" * 50)
+        print("  SafeTensors   .safetensors       Tensor shapes + dtypes only")
+        print("  GGUF          .gguf              LLM quantization info")
+
+        print("\n[CLI-ONLY READERS] - Requires optional dependencies")
+        print("-" * 50)
+        print("  TFLite        .tflite            pip install haoline  (header parsing)")
+        print("  CoreML        .mlpackage         pip install haoline[coreml]")
+        print("  OpenVINO      .xml + .bin        pip install haoline[openvino]")
+
+        print("\n" + "-" * 70)
+        print("Use --list-conversions to see format conversion paths")
         print("=" * 70 + "\n")
         sys.exit(0)
 

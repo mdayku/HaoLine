@@ -1457,6 +1457,39 @@ def main():
 
             st.caption("Key is used once per analysis, never stored permanently.")
 
+        # Format Capabilities
+        st.markdown("---")
+        with st.expander("📁 Supported Formats", expanded=False):
+            st.markdown(
+                """
+**Full Analysis (graph + params):**
+| Format | Extension | Status |
+|--------|-----------|--------|
+| ONNX | `.onnx` | ✅ Native |
+| TensorRT | `.engine`, `.plan` | ✅ GPU required |
+
+**Auto-Convert to ONNX:**
+| Format | Extension | Status |
+|--------|-----------|--------|
+| PyTorch | `.pt`, `.pth` | ✅ + shape |
+| TensorFlow | SavedModel dir | ✅ tf2onnx |
+| Keras | `.h5`, `.keras` | ✅ tf2onnx |
+| JAX/Flax | `.pkl`, `.msgpack` | ✅ + apply fn |
+
+**Weights-Only (limited):**
+| Format | Extension | Notes |
+|--------|-----------|-------|
+| SafeTensors | `.safetensors` | ⚠️ No graph |
+| GGUF | `.gguf` | ⚠️ LLM quants |
+
+**CLI-Only Formats:**
+- TFLite (`.tflite`) - header parsing
+- CoreML (`.mlpackage`) - needs coremltools
+- OpenVINO (`.xml`+`.bin`) - needs openvino
+                """,
+                unsafe_allow_html=True,
+            )
+
         # Privacy notice
         st.markdown("---")
         st.markdown(
@@ -1514,10 +1547,13 @@ def main():
                 """
             <div style="text-align: center; padding: 1rem 2rem; margin-top: -0.5rem;">
                 <p style="font-size: 0.9rem; margin-bottom: 0.75rem; color: #a3a3a3;">
-                    <span style="color: #10b981; font-weight: 600;">ONNX</span> ✓ &nbsp;&nbsp;
-                    <span style="color: #10b981; font-weight: 600;">TensorRT</span> ✓ &nbsp;&nbsp;
-                    <span style="color: #a3a3a3;">PyTorch</span> ↻ &nbsp;&nbsp;
-                    <span style="color: #a3a3a3;">SafeTensors</span> ↻
+                    <span style="color: #10b981; font-weight: 600;">ONNX</span> ✓ &nbsp;
+                    <span style="color: #10b981; font-weight: 600;">TensorRT</span> ✓ &nbsp;
+                    <span style="color: #f59e0b;">PyTorch</span> ↻ &nbsp;
+                    <span style="color: #737373;">SafeTensors</span> ⚠
+                </p>
+                <p style="font-size: 0.7rem; color: #525252; margin-top: 0.25rem;">
+                    ✓ Full analysis &nbsp;|&nbsp; ↻ Auto-converts to ONNX &nbsp;|&nbsp; ⚠ Weights only
                 </p>
             </div>
             """,
