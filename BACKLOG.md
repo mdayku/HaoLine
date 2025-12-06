@@ -55,7 +55,7 @@
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
-| Epic 42: Format Conversion Testing | Blocked | 4 | 0/24 | P1 (after 19-24) |
+| Epic 42: Format Conversion Testing | **Partial** | 4 | 0/24 | **P1** (11 tasks unblocked) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
@@ -1053,26 +1053,28 @@
 
 **Relationship to Epic 49:** This epic tests EXISTING conversions. When Epic 49 adds new paths (HuggingFace → ONNX), add corresponding tests here.
 
-### Story 42.1: ONNX Hub Conversions
+**Status:** Partially unblocked - Stories 42.1 (partial) and 42.2 can start now!
+
+### Story 42.1: ONNX Hub Conversions - **PARTIAL UNBLOCK**
 *Test ONNX as the interchange format (most common path).*
 
-- [ ] **Task 42.1.1**: Test ONNX → TensorRT conversion (requires TRT runtime)
-- [ ] **Task 42.1.2**: Test ONNX → TFLite conversion (via tf2onnx reverse)
-- [ ] **Task 42.1.3**: Test ONNX → CoreML conversion (via coremltools)
-- [ ] **Task 42.1.4**: Test ONNX → OpenVINO conversion (via openvino)
-- [ ] **Task 42.1.5**: Test TFLite → ONNX conversion (tflite2onnx)
-- [ ] **Task 42.1.6**: Test CoreML → ONNX conversion (lossy path)
-- [ ] **Task 42.1.7**: Test OpenVINO → ONNX conversion
+- [ ] **Task 42.1.1**: Test ONNX → TensorRT conversion (requires TRT runtime) ✅ **UNBLOCKED**
+- [ ] **Task 42.1.2**: Test ONNX → TFLite conversion (via tf2onnx reverse) - needs Epic 21
+- [ ] **Task 42.1.3**: Test ONNX → CoreML conversion (via coremltools) ✅ **UNBLOCKED**
+- [ ] **Task 42.1.4**: Test ONNX → OpenVINO conversion (via openvino) ✅ **UNBLOCKED**
+- [ ] **Task 42.1.5**: Test TFLite → ONNX conversion (tflite2onnx) - needs Epic 21
+- [ ] **Task 42.1.6**: Test CoreML → ONNX conversion (lossy path) ✅ **UNBLOCKED**
+- [ ] **Task 42.1.7**: Test OpenVINO → ONNX conversion ✅ **UNBLOCKED**
 
-### Story 42.2: Framework-to-ONNX Conversions
+### Story 42.2: Framework-to-ONNX Conversions - **FULLY UNBLOCKED**
 *Test native framework exports to ONNX.*
 
-- [ ] **Task 42.2.1**: Test PyTorch → ONNX with simple CNN model
-- [ ] **Task 42.2.2**: Test PyTorch → ONNX with Ultralytics YOLO model
-- [ ] **Task 42.2.3**: Test PyTorch → ONNX with transformer model
-- [ ] **Task 42.2.4**: Test TensorFlow SavedModel → ONNX conversion
-- [ ] **Task 42.2.5**: Test Keras .h5 → ONNX conversion
-- [ ] **Task 42.2.6**: Test TensorFlow frozen graph → ONNX conversion
+- [ ] **Task 42.2.1**: Test PyTorch → ONNX with simple CNN model ✅ **UNBLOCKED**
+- [ ] **Task 42.2.2**: Test PyTorch → ONNX with Ultralytics YOLO model ✅ **UNBLOCKED**
+- [ ] **Task 42.2.3**: Test PyTorch → ONNX with transformer model ✅ **UNBLOCKED**
+- [ ] **Task 42.2.4**: Test TensorFlow SavedModel → ONNX conversion ✅ **UNBLOCKED**
+- [ ] **Task 42.2.5**: Test Keras .h5 → ONNX conversion ✅ **UNBLOCKED**
+- [ ] **Task 42.2.6**: Test TensorFlow frozen graph → ONNX conversion ✅ **UNBLOCKED**
 
 ### Story 42.3: Framework Multi-Hop Conversions
 *Test conversions that go through ONNX as intermediary.*
