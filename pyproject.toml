@@ -78,8 +78,10 @@ pytorch = [
     "torch>=2.0.0",
 ]
 tensorflow = [
+    "tensorflow>=2.14.0",
     "tf2onnx>=1.16.0",
-    # Note: tensorflow itself is huge, tf2onnx will pull minimal deps
+    "tf_keras>=2.14.0",
+    # tensorflow is large (~500MB), only install if needed
 ]
 ultralytics = [
     "ultralytics>=8.0.0",
@@ -101,7 +103,10 @@ tflite = [
     "tflite2onnx>=0.4.0",
     # For TFLite -> ONNX conversion
     "onnx2tf>=1.20.0",
-    # For ONNX -> TFLite conversion (requires tensorflow)
+    # For ONNX -> TFLite conversion
+    "tensorflow>=2.14.0",
+    "tf_keras>=2.14.0",
+    # onnx2tf requires tensorflow + tf_keras
 ]
 coreml = [
     "coremltools>=7.0",

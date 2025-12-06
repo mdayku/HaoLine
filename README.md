@@ -137,7 +137,7 @@ Install only what you need:
 | `ultralytics` | `pip install haoline[ultralytics]` | YOLO models (v5, v8, v11) |
 | `jax` | `pip install haoline[jax]` | JAX/Flax model conversion |
 | `safetensors` | `pip install haoline[safetensors]` | `.safetensors` (HuggingFace weights) |
-| `tflite` | `pip install haoline[tflite]` | `.tflite` (Linux/Mac only) |
+| `tflite` | `pip install haoline[tflite]` | `.tflite` + ONNX↔TFLite conversion |
 | `coreml` | `pip install haoline[coreml]` | `.mlmodel`, `.mlpackage` (Apple) |
 | `openvino` | `pip install haoline[openvino]` | `.xml`/`.bin` (Intel) |
 | `tensorrt` | `pip install haoline[tensorrt]` | `.engine`, `.plan` (NVIDIA GPU required) |
@@ -420,7 +420,7 @@ The Universal IR includes:
 | Keras (.h5, .keras) | ✅ Full | Requires tf2onnx |
 | GGUF (.gguf) | ✅ Read | llama.cpp LLMs (`pip install haoline`) |
 | SafeTensors (.safetensors) | ⚠️ Weights Only | HuggingFace weights (`pip install haoline[safetensors]`) |
-| TFLite (.tflite) | ✅ Read | Mobile/edge, Linux/Mac (`pip install haoline[tflite]`) |
+| TFLite (.tflite) | ✅ Full | Mobile/edge, ONNX↔TFLite conversion (`pip install haoline[tflite]`) |
 | CoreML (.mlmodel, .mlpackage) | ✅ Read | Apple devices (`pip install haoline[coreml]`) |
 | OpenVINO (.xml) | ✅ Read | Intel inference (`pip install haoline[openvino]`) |
 | TensorRT (.engine, .plan) | ✅ Read | NVIDIA optimized engines (`pip install haoline[tensorrt]`) |
