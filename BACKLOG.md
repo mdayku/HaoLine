@@ -919,16 +919,30 @@
               TO →
 FROM ↓     | ONNX | TRT | TFLite | CoreML | OpenVINO | SafeTensors
 -----------+------+-----+--------+--------+----------+------------
-ONNX       |  -   | ✅  | BLOCKED| ✅     | ✅       | ❌
-TensorRT   | ❌   |  -  | ❌     | ❌     | ❌       | ❌
-TFLite     | BLOCKED| ❌ |  -    | ❌     | ❌       | ❌
-CoreML     | ⚠️   | ❌  | ❌     |  -     | ❌       | ❌
-OpenVINO   | ⚠️   | ❌  | ❌     | ❌     |  -       | ❌
-PyTorch    | ✅   | via | via    | ✅     | via      | ✅
-TensorFlow | ✅   | via | ✅     | ✅     | via      | ❌
-JAX        | ✅   | via | via    | via    | via      | ❌
+ONNX       |  -   | ✅  | 🔨     | ✅     | ✅       | 🔨
+TensorRT   | ⛔   |  -  | ⛔     | ⛔     | ⛔       | ⛔
+TFLite     | 🔨   | ⛔  |  -     | ⛔     | ⛔       | ⛔
+CoreML     | ⚠️   | ⛔  | ⛔     |  -     | ⛔       | ⛔
+OpenVINO   | ⚠️   | ⛔  | ⛔     | ⛔     |  -       | ⛔
+PyTorch    | ✅   | →   | →      | ✅     | →        | 🔨
+TensorFlow | ✅   | →   | ✅     | ✅     | →        | ⛔
+JAX        | ✅   | →   | →      | →      | →        | ⛔
 ```
-Legend: ✅=Supported, ⚠️=Lossy, BLOCKED=Needs Epic 21, via=Through ONNX, ❌=Not supported
+
+**Legend:**
+| Symbol | Meaning | Test Status |
+|--------|---------|-------------|
+| ✅ | **Implemented & working** | Needs test |
+| ⚠️ | **Implemented but lossy** (some data lost) | Needs test |
+| 🔨 | **Planned** - Epic exists, not yet built | Blocked |
+| → | **Via ONNX** - convert to ONNX first | Needs test |
+| ⛔ | **Not feasible** - compiled/proprietary format, no export path | N/A |
+| - | Same format (no conversion needed) | N/A |
+
+**Notes:**
+- TensorRT engines are compiled binaries - cannot be converted TO other formats
+- TFLite→ONNX and ONNX→TFLite need Epic 21 (pure Python TFLite parser)
+- SafeTensors is weights-only, needs architecture info for full model export
 
 ### Story 42.1: ONNX Hub Conversions
 *Test ONNX as the interchange format (most common path).*
