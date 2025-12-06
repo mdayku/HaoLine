@@ -55,7 +55,7 @@
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
-| Epic 42: Format Conversion Testing | In Progress | 6 | 0/38 | **P1** (22 unblocked, 8 need GPU) |
+| Epic 42: Format Conversion Testing | In Progress | 6 | 1/38 | **P1** (22 unblocked, 8 need GPU) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
@@ -948,7 +948,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 *Test ONNX as the interchange format (most common path).*
 
 **ONNX → Other Formats:**
-- [ ] **Task 42.1.1**: Test ONNX → TensorRT conversion ✅ **UNBLOCKED** (requires NVIDIA GPU)
+- [x] **Task 42.1.1**: Test ONNX → TensorRT conversion ✅ **COMPLETE** (4 tests pass)
 - [ ] **Task 42.1.2**: Test ONNX → TFLite conversion 🔒 **BLOCKED** (needs Epic 21 TFLite writer)
 - [ ] **Task 42.1.3**: Test ONNX → CoreML conversion ✅ **UNBLOCKED**
 - [ ] **Task 42.1.4**: Test ONNX → OpenVINO conversion ✅ **UNBLOCKED**
