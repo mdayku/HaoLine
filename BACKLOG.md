@@ -33,7 +33,7 @@
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 2/18 | P2 (needs pure Python parser) |
-| Epic 22: TensorRT Engine Introspection | Not Started | 6 | 0/34 | **P2** |
+| Epic 22: TensorRT Engine Introspection | Not Started | 7 | 0/42 | **P2** |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
@@ -220,16 +220,34 @@
 
 *Deep analysis of NVIDIA TensorRT compiled engines. Inspired by [TRT Engine Explorer](https://github.com/NVIDIA/TensorRT/tree/main/tools/experimental/trt-engine-explorer).*
 
-### Story 22.1: Engine File Loader
-*Load .engine/.plan TRT blobs using TensorRT runtime APIs.*
-- [ ] **Task 22.1.1**: Add tensorrt dependency (optional, requires NVIDIA GPU)
-- [ ] **Task 22.1.2**: Implement `TRTEngineLoader.load()` to deserialize engine files
-- [ ] **Task 22.1.3**: Extract engine metadata (TRT version, build flags, calibration info)
-- [ ] **Task 22.1.4**: Handle engine compatibility checks (GPU arch, TRT version)
-- [ ] **Task 22.1.5**: Support both `.engine` and `.plan` file formats
+**Requirements:**
+- NVIDIA GPU (tested on RTX 4050, Ada Lovelace)
+- CUDA 12.x
+- TensorRT 10.x Python bindings (`pip install haoline[tensorrt]`)
+- Engine files must be built for compatible GPU architecture
 
-### Story 22.2: Fused Graph Reconstruction
+**Phasing:**
+- Phase 1: Foundation (Stories 22.1, 22.5, 22.7) - Load, summarize, integrate
+- Phase 2: Optimization Understanding (Story 22.2) - See what TRT did
+- Phase 3: ONNX ↔ TRT Comparison (Stories 22.3, 22.6) - Side-by-side analysis
+- Phase 4: Performance Deep Dive (Story 22.4) - Profiling data extraction
+
+---
+
+### Story 22.1: Engine File Loader [Phase 1]
+*Load .engine/.plan TRT blobs using TensorRT runtime APIs.*
+
+- [ ] **Task 22.1.1**: Add `tensorrt` extra to pyproject.toml (tensorrt>=10.0)
+- [ ] **Task 22.1.2**: Create `TRTEngineReader` class in `src/haoline/formats/tensorrt.py`
+- [ ] **Task 22.1.3**: Implement `TRTEngineReader.read()` to deserialize engine files
+- [ ] **Task 22.1.4**: Extract engine metadata (TRT version, build flags, calibration info)
+- [ ] **Task 22.1.5**: Handle engine compatibility checks (GPU arch, TRT version mismatch)
+- [ ] **Task 22.1.6**: Support both `.engine` and `.plan` file extensions
+- [ ] **Task 22.1.7**: Add `is_tensorrt_file()` and `is_available()` helper functions
+
+### Story 22.2: Fused Graph Reconstruction [Phase 2]
 *Parse the optimized TRT graph and reconstruct the execution plan.*
+
 - [ ] **Task 22.2.1**: Extract layer list from engine (names, types, shapes)
 - [ ] **Task 22.2.2**: Identify fused operations (Conv+BN+ReLU → single kernel)
 - [ ] **Task 22.2.3**: Detect removed/optimized-away layers
@@ -237,39 +255,54 @@
 - [ ] **Task 22.2.5**: Parse timing cache if present
 - [ ] **Task 22.2.6**: Identify precision per layer (FP32/FP16/INT8/TF32)
 
-### Story 22.3: ONNX ↔ TRT Diff View
+### Story 22.3: ONNX ↔ TRT Diff View [Phase 3]
 *Visual comparison between source ONNX and compiled TRT engine.*
-- [ ] **Task 22.3.1**: Map TRT layers back to original ONNX nodes
+
+- [ ] **Task 22.3.1**: Map TRT layers back to original ONNX nodes (by name matching)
 - [ ] **Task 22.3.2**: Highlight fused operations (N ONNX ops → 1 TRT layer)
-- [ ] **Task 22.3.3**: Show precision auto-selection decisions
+- [ ] **Task 22.3.3**: Show precision auto-selection decisions per layer
 - [ ] **Task 22.3.4**: Visualize layer rewrites (e.g., attention → Flash Attention)
 - [ ] **Task 22.3.5**: Display shape changes (dynamic → static binding)
-- [ ] **Task 22.3.6**: Generate side-by-side graph comparison HTML
+- [ ] **Task 22.3.6**: Generate side-by-side graph comparison in HTML report
 
-### Story 22.4: TRT Performance Metadata Panel
-*Extract and display engine profiling information.*
-- [ ] **Task 22.4.1**: Extract per-layer latency (if profiling was enabled)
+### Story 22.4: TRT Performance Metadata Panel [Phase 4]
+*Extract and display engine profiling information (if profiling was enabled during build).*
+
+- [ ] **Task 22.4.1**: Extract per-layer latency from profiling data
 - [ ] **Task 22.4.2**: Show workspace size allocation per layer
 - [ ] **Task 22.4.3**: Display kernel/tactic selection choices
 - [ ] **Task 22.4.4**: Identify memory-bound vs compute-bound layers
-- [ ] **Task 22.4.5**: Show layer timing breakdown chart
+- [ ] **Task 22.4.5**: Show layer timing breakdown chart (HTML/Streamlit)
 - [ ] **Task 22.4.6**: Extract device memory footprint
 
-### Story 22.5: TRT Engine Summary Block
-*Comprehensive summary matching PRD format.*
-- [ ] **Task 22.5.1**: Generate engine overview (layers, params, memory)
-- [ ] **Task 22.5.2**: Show optimization summary (fusions applied, precision mix)
-- [ ] **Task 22.5.3**: Display hardware binding info (GPU arch, compute capability)
-- [ ] **Task 22.5.4**: List builder configuration used (max batch, workspace, etc.)
+### Story 22.5: TRT Engine Summary Block [Phase 1]
+*Comprehensive summary matching HaoLine report format.*
 
-### Story 22.6: ONNX vs TRT Comparison Mode
+- [ ] **Task 22.5.1**: Generate engine overview (layer count, total memory, precision mix)
+- [ ] **Task 22.5.2**: Show optimization summary (fusions applied, layers removed)
+- [ ] **Task 22.5.3**: Display hardware binding info (GPU arch, compute capability)
+- [ ] **Task 22.5.4**: List builder configuration (max batch, workspace, DLA cores)
+
+### Story 22.6: ONNX vs TRT Comparison Mode [Phase 3]
 *Side-by-side analysis showing what changed and performance impact.*
-- [ ] **Task 22.6.1**: Load both ONNX source and TRT engine
+
+- [ ] **Task 22.6.1**: Add `haoline compare model.onnx model.engine` CLI support
 - [ ] **Task 22.6.2**: Compute layer count delta (before/after fusion)
-- [ ] **Task 22.6.3**: Show speedup contributions per optimization
-- [ ] **Task 22.6.4**: Display precision changes with accuracy impact notes
-- [ ] **Task 22.6.5**: Generate comparison report (JSON/MD/HTML)
-- [ ] **Task 22.6.6**: Visualize memory reduction from optimizations
+- [ ] **Task 22.6.3**: Show precision changes with accuracy impact notes
+- [ ] **Task 22.6.4**: Generate comparison report (JSON/MD/HTML formats)
+- [ ] **Task 22.6.5**: Visualize memory reduction from optimizations
+
+### Story 22.7: CLI & Streamlit Integration [Phase 1]
+*Full integration with HaoLine CLI and web UI.*
+
+- [ ] **Task 22.7.1**: Register TensorRT in `formats/__init__.py` detect_format()
+- [ ] **Task 22.7.2**: Add `.engine` and `.plan` to CLI accepted formats
+- [ ] **Task 22.7.3**: Add TensorRT to Streamlit file_uploader accepted types
+- [ ] **Task 22.7.4**: Create TRT-specific report sections (fusions, precision breakdown)
+- [ ] **Task 22.7.5**: Add "TensorRT Analysis" tab in Streamlit with engine details
+- [ ] **Task 22.7.6**: Handle graceful degradation when TRT not installed (skip with message)
+- [ ] **Task 22.7.7**: Update HuggingFace Spaces requirements (note: TRT requires GPU, may not work on free tier)
+- [ ] **Task 22.7.8**: Write unit tests for TRTEngineReader
 
 ---
 
