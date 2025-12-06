@@ -32,7 +32,7 @@
 | Epic 18: Universal IR | **COMPLETE** | 6 | 25/25 | Done |
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
-| Epic 21: TFLite | In Progress | 3 | 5/18 | P2 (tflite2onnx + onnx2tf) |
+| Epic 21: TFLite | In Progress | 3 | 4/18 | P2 (ONNX→TFLite blocked) |
 | Epic 22: TensorRT Engine Introspection | **COMPLETE** | 8 | 50/50 | Done |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
@@ -55,7 +55,7 @@
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
 | Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
-| Epic 42: Format Conversion Testing | In Progress | 6 | 16/38 | **P1** (all unblocked!) |
+| Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 (ONNX→TFLite blocked) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
@@ -213,7 +213,7 @@
 
 ### Story 21.3: TFLite Writer
 - [ ] **Task 21.3.1**: Implement TFLiteAdapter.write() via tf.lite.TFLiteConverter
-- [x] **Task 21.3.2**: Support ONNX → TFLite conversion (via TF intermediary) ✅ **COMPLETE** (onnx2tf in Epic 42)
+- [ ] **Task 21.3.2**: Support ONNX → TFLite conversion ⛔ **BLOCKED** (onnx2tf/onnx-tf broken with TF 2.16+)
 - [ ] **Task 21.3.3**: Add quantization options (dynamic, full int8)
 - [ ] **Task 21.3.4**: Add representative dataset hook for calibration
 - [x] **Task 21.3.5**: Add `--convert-to tflite` CLI flag ✅ **COMPLETE** (Epic 42)
@@ -942,7 +942,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 **Notes:**
 - TensorRT engines are compiled binaries - cannot be converted TO other formats
 - TFLite→ONNX now supported via `tflite2onnx` (some ops may be unsupported)
-- ONNX→TFLite needs tf2onnx + TensorFlow (heavy dep)
+- ONNX→TFLite is **BLOCKED** - both onnx2tf and onnx-tf are broken with TF 2.16+/Keras 3.x
 - SafeTensors is weights-only, needs architecture info for full model export
 
 ### Story 42.1: ONNX Hub Conversions
@@ -950,7 +950,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 
 **ONNX → Other Formats:**
 - [x] **Task 42.1.1**: Test ONNX → TensorRT conversion ✅ **COMPLETE** (4 tests pass)
-- [x] **Task 42.1.2**: Test ONNX → TFLite conversion ✅ **COMPLETE** (onnx2tf added)
+- [ ] **Task 42.1.2**: Test ONNX → TFLite conversion ⛔ **BLOCKED** (onnx2tf/onnx-tf broken with TF 2.16+)
 - [x] **Task 42.1.3**: Test ONNX → CoreML conversion ✅ **COMPLETE** (test written, skips if no coremltools)
 - [x] **Task 42.1.4**: Test ONNX → OpenVINO conversion ✅ **COMPLETE** (test written, skips if no openvino)
 
