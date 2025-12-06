@@ -167,19 +167,37 @@ def test_tflite():
     import urllib.request
     from pathlib import Path
 
-    # Download MobileNetV2 TFLite from TensorFlow's hosted models
+    # Download MobileNetV2 TFLite from TensorFlow Hub
     model_dir = Path("./test_models")
-    model_path = model_dir / "mobilenet_v2_1.0_224.tflite"
+    model_dir.mkdir(exist_ok=True)
+    model_path = model_dir / "mobilenet_v2.tflite"
 
     if not model_path.exists():
-        print("\nDownloading TFLite model from TensorFlow...")
-        url = "https://storage.googleapis.com/download.tensorflow.org/models/tflite/mobilenet_v2_1.0_224.tflite"
-        try:
-            urllib.request.urlretrieve(url, model_path)
-            print(f"Downloaded: {model_path}")
-        except Exception as e:
-            print(f"Failed to download: {e}")
-            return False
+        print("\nDownloading TFLite model from TensorFlow Hub...")
+        # Try multiple sources in order of preference
+        urls = [
+            # TF Hub hosted model (more reliable)
+            "https://tfhub.dev/tensorflow/lite-model/mobilenet_v2_1.0_224/1/default/1?lite-format=tflite",
+            # Kaggle mirror
+            "https://storage.googleapis.com/tfhub-lite-models/tensorflow/lite-model/mobilenet_v2_1.0_224/1/default/1.tflite",
+        ]
+        downloaded = False
+        for url in urls:
+            try:
+                print(f"  Trying: {url[:60]}...")
+                req = urllib.request.Request(url, headers={"User-Agent": "HaoLine/1.0"})
+                with urllib.request.urlopen(req, timeout=30) as response:
+                    with open(model_path, "wb") as f:
+                        f.write(response.read())
+                print(f"Downloaded: {model_path}")
+                downloaded = True
+                break
+            except Exception as e:
+                print(f"  Failed: {e}")
+                continue
+        if not downloaded:
+            print("[SKIP] Could not download TFLite model from any source")
+            return None
     else:
         print(f"\nUsing cached: {model_path}")
 
@@ -214,22 +232,60 @@ def test_coreml():
         print("Install with: pip install coremltools")
         return None
 
-    # Download a small CoreML model from HuggingFace
-    from huggingface_hub import hf_hub_download
+    from pathlib import Path
 
-    print("\nDownloading CoreML model...")
-    try:
-        # MobileNetV2 CoreML model
-        model_path = hf_hub_download(
-            repo_id="apple/mobilenet-v2-coreml",
-            filename="MobileNetV2.mlmodel",
-            cache_dir="./test_models/cache",
-        )
-        print(f"Downloaded: {model_path}")
-    except Exception as e:
-        print(f"Failed to download: {e}")
-        print("[SKIP] Could not download CoreML model")
-        return None
+    import coremltools as ct
+    import numpy as np
+
+    # Create a simple CoreML model for testing (no download needed)
+    print("\nCreating test CoreML model...")
+    model_dir = Path("./test_models")
+    model_dir.mkdir(exist_ok=True)
+    model_path = model_dir / "test_model.mlmodel"
+
+    if not model_path.exists():
+        try:
+            # Create a simple MLP model using coremltools
+            from coremltools.models.neural_network import NeuralNetworkBuilder
+
+            input_features = [("input", ct.models.datatypes.Array(10))]
+            output_features = [("output", ct.models.datatypes.Array(5))]
+
+            builder = NeuralNetworkBuilder(input_features, output_features)
+            builder.add_inner_product(
+                name="fc1",
+                input_name="input",
+                output_name="fc1_out",
+                input_channels=10,
+                output_channels=20,
+                W=np.random.randn(10, 20).astype(np.float32),
+                b=np.zeros(20, dtype=np.float32),
+                has_bias=True,
+            )
+            builder.add_activation(
+                name="relu1", non_linearity="RELU", input_name="fc1_out", output_name="relu1_out"
+            )
+            builder.add_inner_product(
+                name="fc2",
+                input_name="relu1_out",
+                output_name="output",
+                input_channels=20,
+                output_channels=5,
+                W=np.random.randn(20, 5).astype(np.float32),
+                b=np.zeros(5, dtype=np.float32),
+                has_bias=True,
+            )
+
+            spec = builder.spec
+            model = ct.models.MLModel(spec)
+            model.save(str(model_path))
+            print(f"Created: {model_path}")
+        except Exception as e:
+            print(f"Failed to create CoreML model: {e}")
+            print("[SKIP] Could not create CoreML test model")
+            return None
+    else:
+        print(f"Using cached: {model_path}")
 
     from haoline.formats.coreml import CoreMLReader, is_coreml_file
 
