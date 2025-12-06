@@ -890,6 +890,175 @@ def render_compare_mode():
         )
 
 
+def _handle_tensorrt_streamlit(uploaded_file) -> None:
+    """Handle TensorRT engine file analysis in Streamlit."""
+    import tempfile
+
+    # Check TensorRT availability
+    try:
+        from haoline.formats.tensorrt import (
+            TRTEngineReader,
+            analyze_quant_bottlenecks,
+            format_bytes,
+            is_available,
+        )
+    except ImportError:
+        st.error("""
+        **TensorRT support not installed.**
+        
+        Install with: `pip install haoline[tensorrt]`
+        
+        Note: Requires NVIDIA GPU and CUDA 12.x
+        """)
+        return
+
+    if not is_available():
+        st.warning("""
+        **TensorRT requires NVIDIA GPU** — This feature is not available on HuggingFace Spaces free tier.
+        
+        **Options:**
+        1. Use the CLI locally with a GPU:
+           ```bash
+           pip install haoline[tensorrt]
+           haoline model.engine --quant-bottlenecks
+           ```
+        
+        2. Use our AWS-hosted version (coming soon) for full GPU features.
+        """)
+        return
+
+    # Save to temp file
+    with tempfile.NamedTemporaryFile(suffix=".engine", delete=False) as tmp:
+        tmp.write(uploaded_file.getvalue())
+        tmp_path = tmp.name
+
+    try:
+        with st.spinner("Analyzing TensorRT engine..."):
+            reader = TRTEngineReader(tmp_path)
+            info = reader.read()
+            bottleneck_analysis = analyze_quant_bottlenecks(info)
+
+        # Display results
+        st.markdown("## TensorRT Engine Analysis")
+
+        # Overview metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Layers", info.layer_count)
+        with col2:
+            fused_pct = int(info.fusion_ratio * 100)
+            st.metric("Fused", f"{info.fused_layer_count} ({fused_pct}%)")
+        with col3:
+            st.metric("Device Memory", format_bytes(info.device_memory_bytes))
+        with col4:
+            quant_pct = int(bottleneck_analysis.quantization_ratio * 100)
+            st.metric("INT8 Layers", f"{bottleneck_analysis.int8_layer_count} ({quant_pct}%)")
+
+        # Engine info
+        st.markdown("### Engine Overview")
+        st.markdown(f"""
+        | Property | Value |
+        |----------|-------|
+        | **TensorRT Version** | {info.trt_version} |
+        | **Device** | {info.device_name} |
+        | **Compute Capability** | SM {info.compute_capability[0]}.{info.compute_capability[1]} |
+        | **Max Batch Size** | {info.builder_config.max_batch_size} |
+        """)
+
+        # Quantization Bottleneck Analysis (Task 22.8.7)
+        st.markdown("### Quantization Bottleneck Analysis")
+
+        # Precision breakdown with color-coded bar
+        total = bottleneck_analysis.total_layer_count
+        if total > 0:
+            int8_pct = bottleneck_analysis.int8_layer_count / total
+            fp16_pct = bottleneck_analysis.fp16_layer_count / total
+            fp32_pct = bottleneck_analysis.fp32_layer_count / total
+
+            # Visual bar
+            st.markdown(
+                f"""
+                <div style="display: flex; height: 30px; border-radius: 5px; overflow: hidden; margin-bottom: 1rem;">
+                    <div style="width: {int8_pct * 100}%; background: #10b981;" title="INT8: {bottleneck_analysis.int8_layer_count}"></div>
+                    <div style="width: {fp16_pct * 100}%; background: #f59e0b;" title="FP16: {bottleneck_analysis.fp16_layer_count}"></div>
+                    <div style="width: {fp32_pct * 100}%; background: #ef4444;" title="FP32: {bottleneck_analysis.fp32_layer_count}"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #a3a3a3;">
+                    <span style="color: #10b981;">■ INT8: {bottleneck_analysis.int8_layer_count}</span>
+                    <span style="color: #f59e0b;">■ FP16: {bottleneck_analysis.fp16_layer_count}</span>
+                    <span style="color: #ef4444;">■ FP32: {bottleneck_analysis.fp32_layer_count}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        # Speedup potential
+        if bottleneck_analysis.estimated_speedup_potential > 1.05:
+            st.warning(
+                f"**Estimated speedup potential:** {bottleneck_analysis.estimated_speedup_potential:.1f}x "
+                f"— {int(bottleneck_analysis.fp32_fallback_ratio * 100)}% of layers are FP32 fallback"
+            )
+
+        # Bottleneck zones heatmap
+        if bottleneck_analysis.bottleneck_zones:
+            st.markdown("#### FP32 Bottleneck Zones")
+
+            for zone in sorted(bottleneck_analysis.bottleneck_zones, key=lambda z: -z.layer_count)[:5]:
+                severity_color = {
+                    "Critical": "#ef4444",
+                    "High": "#f97316",
+                    "Medium": "#f59e0b",
+                    "Low": "#84cc16",
+                }.get(zone.severity, "#a3a3a3")
+
+                types_str = ", ".join(set(zone.layer_types[:3]))
+                st.markdown(
+                    f"""
+                    <div style="background: #1a1a1a; border-left: 4px solid {severity_color}; padding: 0.5rem 1rem; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0;">
+                        <strong style="color: {severity_color};">[{zone.severity}]</strong>
+                        <span style="color: #f5f5f5;">{zone.layer_count} consecutive FP32 layers</span>
+                        <br><span style="color: #737373; font-size: 0.85rem;">Types: {types_str}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            if len(bottleneck_analysis.bottleneck_zones) > 5:
+                st.caption(f"... and {len(bottleneck_analysis.bottleneck_zones) - 5} more zones")
+
+        # Failed fusions
+        if bottleneck_analysis.failed_fusions:
+            with st.expander(f"Failed Fusions ({len(bottleneck_analysis.failed_fusions)})", expanded=False):
+                for ff in bottleneck_analysis.failed_fusions[:10]:
+                    impact_color = {"High": "#ef4444", "Medium": "#f59e0b", "Low": "#84cc16"}.get(
+                        ff.speed_impact, "#a3a3a3"
+                    )
+                    st.markdown(
+                        f"<span style='color: {impact_color};'>■</span> **{ff.pattern_type}**: {', '.join(ff.layer_names[:3])}",
+                        unsafe_allow_html=True,
+                    )
+
+        # Recommendations
+        if bottleneck_analysis.recommendations:
+            st.markdown("#### Recommendations")
+            for rec in bottleneck_analysis.recommendations:
+                st.markdown(f"- {rec}")
+
+        # Layer type distribution
+        with st.expander("Layer Type Distribution", expanded=False):
+            import pandas as pd
+
+            layer_types = info.layer_type_counts
+            df = pd.DataFrame(
+                sorted(layer_types.items(), key=lambda x: -x[1]),
+                columns=["Type", "Count"],
+            )
+            st.bar_chart(df.set_index("Type"))
+
+    except Exception as e:
+        st.error(f"Failed to analyze TensorRT engine: {e}")
+
+
 def analyze_model_file(uploaded_file) -> AnalysisResult | None:
     """Analyze an uploaded model file and return the result."""
     from haoline import ModelInspector
@@ -1265,8 +1434,8 @@ def main():
         # File upload - support multiple formats
         uploaded_file = st.file_uploader(
             "Upload your model",
-            type=["onnx", "pt", "pth", "safetensors"],
-            help="ONNX (recommended), PyTorch (.pt/.pth), or SafeTensors",
+            type=["onnx", "pt", "pth", "safetensors", "engine", "plan"],
+            help="ONNX (recommended), PyTorch (.pt/.pth), SafeTensors, or TensorRT (.engine/.plan)",
         )
 
         if uploaded_file is None:
@@ -1331,11 +1500,11 @@ def main():
                     </tr>
                     <tr>
                         <td><strong>TensorRT</strong></td>
-                        <td class="cap-no">CLI only</td>
+                        <td class="cap-warn">GPU only</td>
                         <td class="cap-no">N/A</td>
                         <td class="cap-no">N/A</td>
                         <td class="cap-no">No</td>
-                        <td class="cap-warn">CLI: layer analysis, ONNX comparison (requires GPU)</td>
+                        <td class="cap-warn">Quant bottleneck analysis (requires NVIDIA GPU)</td>
                     </tr>
                     <tr>
                         <td><strong>TFLite</strong></td>
@@ -1729,6 +1898,11 @@ def main():
             main_export("model-name", output="model.onnx")
             ```
             """)
+            st.stop()
+
+        elif file_ext in [".engine", ".plan"]:
+            # TensorRT engine analysis
+            _handle_tensorrt_streamlit(uploaded_file)
             st.stop()
 
         # Save ONNX to temp file (if not already set by conversion)
