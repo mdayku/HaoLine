@@ -102,11 +102,13 @@ tflite = [
     # tflite-runtime not available on Windows, use tensorflow instead
     "tflite2onnx>=0.4.0",
     # For TFLite -> ONNX conversion
-    "onnx2tf>=1.20.0",
-    # For ONNX -> TFLite conversion
+    "onnx2tf>=1.17.0,<1.18.0",
+    # For ONNX -> TFLite conversion (pinned - 1.20+ has broken deps)
     "tensorflow>=2.14.0",
     "tf_keras>=2.14.0",
-    # onnx2tf requires tensorflow + tf_keras
+    "onnx_graphsurgeon>=0.3.0",
+    "sng4onnx>=1.0.0",
+    # onnx2tf requires: tensorflow, tf_keras, onnx_graphsurgeon, sng4onnx
 ]
 coreml = [
     "coremltools>=7.0",
