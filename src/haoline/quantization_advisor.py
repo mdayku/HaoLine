@@ -657,8 +657,8 @@ class QuantizationAdvisor:
         except Exception as e:
             logger.warning(f"LLM advice generation failed: {e}, using fallback")
             advice = _generate_fallback_advice(lint_result, graph_info)
-            advice.error_message = str(e)
-            return advice
+            # Use model_copy since QuantizationAdvice is frozen
+            return advice.model_copy(update={"error_message": str(e)})
 
     def _generate_llm_advice(
         self,

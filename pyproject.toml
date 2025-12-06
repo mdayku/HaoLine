@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "haoline"
-version = "0.6.7"
+version = "0.6.8"
 description = "HaoLine (皓线) - Universal Model Inspector. See what's really inside your models."
 readme = "README.md"
 license = "MIT"
