@@ -500,8 +500,8 @@
 - [ ] **Task 50.2.4**: Add dependency checks for LLM features (`pip install haoline[llm]`)
 - [ ] **Task 50.2.5**: Add dependency checks for format readers (safetensors, coreml, openvino)
 - [ ] **Task 50.2.6**: Show clear error with install command, not cryptic ImportError
-- [ ] **Task 50.2.7**: Add Streamlit UI feature availability matrix (show which features need GPU/deps)
-- [ ] **Task 50.2.8**: Add "Requires: TensorRT" / "Requires: GPU" badges to blocked features in UI
+- [x] **Task 50.2.7**: Add Streamlit UI feature availability matrix (show which features need GPU/deps)
+- [x] **Task 50.2.8**: Add "Requires: TensorRT" / "Requires: GPU" badges to blocked features in UI
 
 ### Story 50.3: CLI UX Improvements
 *Better progress, feedback, and interactive features.*
