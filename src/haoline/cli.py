@@ -655,6 +655,14 @@ Examples:
         "Shows layer mappings, fusions, precision changes. "
         "Usage: haoline model.onnx --compare-trt model.engine",
     )
+    trt_group.add_argument(
+        "--quant-bottlenecks",
+        action="store_true",
+        default=False,
+        help="Show quantization bottleneck analysis for TRT engines. "
+        "Identifies failed fusions, FP32 fallback zones, and speed impact. "
+        "Usage: haoline model.engine --quant-bottlenecks",
+    )
 
     return parser.parse_args()
 
@@ -1736,6 +1744,54 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
             print(f"  {prec}: {count}")
         print()
 
+    # Quantization bottleneck analysis (--quant-bottlenecks or always show summary)
+    show_bottlenecks = getattr(args, "quant_bottlenecks", False)
+    from .formats.tensorrt import analyze_quant_bottlenecks
+
+    bottleneck_analysis = analyze_quant_bottlenecks(info)
+
+    # Always show summary, detailed analysis with --quant-bottlenecks
+    print("=" * 40)
+    print("Quantization Fusion Summary")
+    print("=" * 40)
+    print(f"  INT8 layers: {bottleneck_analysis.int8_layer_count} ({int(bottleneck_analysis.quantization_ratio * 100)}%)")
+    print(f"  FP16 layers: {bottleneck_analysis.fp16_layer_count}")
+    print(f"  FP32 fallback: {bottleneck_analysis.fp32_layer_count} ({int(bottleneck_analysis.fp32_fallback_ratio * 100)}%)")
+
+    if bottleneck_analysis.largest_bottleneck:
+        lb = bottleneck_analysis.largest_bottleneck
+        print(f"  Largest bottleneck: {lb.layer_count} consecutive FP32 layers ({lb.severity})")
+
+    if bottleneck_analysis.estimated_speedup_potential > 1.05:
+        print(f"  Estimated speedup potential: {bottleneck_analysis.estimated_speedup_potential:.1f}x")
+
+    print()
+
+    # Detailed analysis with --quant-bottlenecks
+    if show_bottlenecks:
+        if bottleneck_analysis.failed_fusions:
+            print("Failed Fusions (should have fused but didn't):")
+            for ff in bottleneck_analysis.failed_fusions[:5]:  # Show top 5
+                print(f"  [{ff.speed_impact}] {ff.pattern_type}: {', '.join(ff.layer_names[:3])}")
+            if len(bottleneck_analysis.failed_fusions) > 5:
+                print(f"  ... and {len(bottleneck_analysis.failed_fusions) - 5} more")
+            print()
+
+        if bottleneck_analysis.bottleneck_zones:
+            print("FP32 Bottleneck Zones:")
+            for zone in sorted(bottleneck_analysis.bottleneck_zones, key=lambda z: -z.layer_count)[:5]:
+                types_str = ", ".join(set(zone.layer_types[:3]))
+                print(f"  [{zone.severity}] {zone.layer_count} layers: {types_str}")
+            if len(bottleneck_analysis.bottleneck_zones) > 5:
+                print(f"  ... and {len(bottleneck_analysis.bottleneck_zones) - 5} more zones")
+            print()
+
+        if bottleneck_analysis.recommendations:
+            print("Recommendations:")
+            for rec in bottleneck_analysis.recommendations:
+                print(f"  - {rec}")
+            print()
+
     # JSON output if requested
     if args.out_json:
         import json
@@ -1784,6 +1840,18 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
                 }
                 for layer in info.layers
             ],
+            "quant_bottleneck_analysis": {
+                "int8_layer_count": bottleneck_analysis.int8_layer_count,
+                "fp16_layer_count": bottleneck_analysis.fp16_layer_count,
+                "fp32_layer_count": bottleneck_analysis.fp32_layer_count,
+                "quantization_ratio": bottleneck_analysis.quantization_ratio,
+                "fp32_fallback_ratio": bottleneck_analysis.fp32_fallback_ratio,
+                "estimated_speedup_potential": bottleneck_analysis.estimated_speedup_potential,
+                "failed_fusion_count": len(bottleneck_analysis.failed_fusions),
+                "bottleneck_zone_count": len(bottleneck_analysis.bottleneck_zones),
+                "largest_bottleneck_size": bottleneck_analysis.largest_bottleneck.layer_count if bottleneck_analysis.largest_bottleneck else 0,
+                "recommendations": bottleneck_analysis.recommendations,
+            },
         }
         with open(args.out_json, "w") as f:
             json.dump(output_data, f, indent=2)
