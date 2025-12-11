@@ -96,9 +96,9 @@ from haoline.hierarchical_graph import HierarchicalGraphBuilder
 from haoline.html_export import generate_html as generate_graph_html
 from haoline.layer_summary import LayerSummaryBuilder
 from haoline.patterns import PatternAnalyzer
+from haoline.analyzer import ONNXGraphLoader
 from haoline.quantization_advisor import advise_quantization
 from haoline.quantization_linter import QuantizationLinter
-from haoline.analyzer import ONNXGraphLoader
 
 # Demo models for quick start
 DEMO_MODELS = {
@@ -637,7 +637,7 @@ def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
 
     # Table
     with st.expander("View detailed comparison table"):
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
 
     # Summary
     st.markdown("### Summary")
@@ -731,10 +731,6 @@ def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
 
         # Run quantization analysis on FP32 model to show what to watch
         try:
-            from haoline.analyzer import ONNXGraphLoader
-            from haoline.quantization_advisor import advise_quantization
-            from haoline.quantization_linter import QuantizationLinter
-
             # Check if we can load the FP32 model for analysis
             if hasattr(fp32_model, "path") and fp32_model.path:
                 with st.expander("Quantization Recommendations", expanded=True):
@@ -744,16 +740,19 @@ def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
                         linter = QuantizationLinter()
                         lint_result = linter.lint(graph_info)
 
-                        # Get advice
-                        advice = advise_quantization(lint_result, graph_info, use_llm=False)
+                        try:
+                            advice = advise_quantization(lint_result, graph_info, use_llm=False)
+                        except Exception as e:
+                            advice = None
+                            st.warning(f"Quantization advice unavailable: {e}")
 
-                        # Display
                         st.markdown(
                             f"**FP32 Model Readiness Score:** {lint_result.readiness_score}/100"
                         )
-                        st.markdown(f"> {advice.strategy}")
+                        if advice and advice.strategy:
+                            st.markdown(f"> {advice.strategy}")
 
-                        if advice.op_substitutions:
+                        if advice and advice.op_substitutions:
                             st.markdown("**Recommended optimizations before quantization:**")
                             for sub in advice.op_substitutions:
                                 st.markdown(
@@ -768,8 +767,8 @@ def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
 
                     except Exception as e:
                         st.caption(f"Could not analyze FP32 model: {e}")
-        except ImportError:
-            pass  # Quantization advisor not available
+        except Exception:
+            pass  # Quantization advisor not available or failed
 
     # Also show if both models might benefit from quantization (neither is quantized)
     elif not is_a_quantized and not is_b_quantized:
@@ -1938,7 +1937,7 @@ def main():
                 op_counts = report.graph_summary.op_type_counts
                 sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)
                 op_data = [{"Operator": op, "Count": count} for op, count in sorted_ops[:20]]
-                st.dataframe(op_data, use_container_width=True)
+                st.dataframe(op_data, width="stretch")
 
         with tab4:
             st.markdown("### Layer Details")
@@ -1982,7 +1981,7 @@ def main():
                     else:
                         df_filtered = df
 
-                    st.dataframe(df_filtered, use_container_width=True, hide_index=True)
+                    st.dataframe(df_filtered, width="stretch", hide_index=True)
 
                     csv_bytes = df.to_csv(index=False).encode("utf-8")
                     json_bytes = df.to_json(orient="records", indent=2).encode("utf-8")
@@ -2036,10 +2035,15 @@ def main():
                         st.write(", ".join(sorted(lint_result.accuracy_sensitive_ops)))
 
                     # Advisor (heuristic only to avoid API key requirement)
-                    advice = advise_quantization(
-                        lint_result, graph_info, api_key=None, use_llm=False
-                    )
-                    if advice.recommendations:
+                    try:
+                        advice = advise_quantization(
+                            lint_result, graph_info, api_key=None, use_llm=False
+                        )
+                    except Exception as e:
+                        advice = None
+                        st.warning(f"Quantization advice unavailable: {e}")
+
+                    if advice and advice.recommendations:
                         st.markdown("#### Recommendations")
                         for rec in advice.recommendations:
                             st.markdown(f"- {rec}")
@@ -2058,7 +2062,7 @@ def main():
                                 }
                             )
                         risk_df = pd.DataFrame(risk_rows)
-                        st.dataframe(risk_df, use_container_width=True, hide_index=True)
+                        st.dataframe(risk_df, width="stretch", hide_index=True)
 
                 except Exception as e:
                     st.warning(f"Quantization lint not available: {e}")
@@ -2572,7 +2576,7 @@ def main():
                                 )
                             ]
                         )
-                        st.dataframe(prec_df, use_container_width=True, hide_index=True)
+                        st.dataframe(prec_df, width="stretch", hide_index=True)
 
                         # Quantization indicator
                         if report.param_counts.is_quantized:
@@ -2586,12 +2590,6 @@ def main():
                     if include_quant_analysis:
                         with st.expander("INT8 Quantization Readiness", expanded=True):
                             try:
-                                from haoline.analyzer import ONNXGraphLoader
-                                from haoline.quantization_linter import (
-                                    QuantizationLinter,
-                                    Severity,
-                                )
-
                                 # Get model name for reports
                                 model_name = uploaded_file.name.replace(".onnx", "")
 
@@ -2696,7 +2694,7 @@ def main():
                                 if quant_result.problem_layers:
                                     st.markdown("#### Problem Layers")
                                     prob_df = pd.DataFrame(quant_result.problem_layers[:10])
-                                    st.dataframe(prob_df, use_container_width=True, hide_index=True)
+                                    st.dataframe(prob_df, width="stretch", hide_index=True)
 
                                 # QAT-specific results
                                 if quant_result.is_qat_model:
@@ -2756,14 +2754,18 @@ def main():
                                         generate_qat_readiness_report,
                                     )
 
-                                    advice = advise_quantization(
-                                        quant_result,
-                                        graph_info,
-                                        api_key=st.session_state.get("openai_api_key_value", "")
-                                        if use_llm_for_quant
-                                        else None,
-                                        use_llm=use_llm_for_quant,
-                                    )
+                                    try:
+                                        advice = advise_quantization(
+                                            quant_result,
+                                            graph_info,
+                                            api_key=st.session_state.get("openai_api_key_value", "")
+                                            if use_llm_for_quant
+                                            else None,
+                                            use_llm=use_llm_for_quant,
+                                        )
+                                    except Exception as e:
+                                        advice = None
+                                        st.warning(f"Quantization advice unavailable: {e}")
 
                                     # Architecture badge
                                     arch_colors = {
@@ -2867,7 +2869,7 @@ def main():
                                     )[:8]
                                 ]
                             )
-                            st.dataframe(mem_df, use_container_width=True, hide_index=True)
+                            st.dataframe(mem_df, width="stretch", hide_index=True)
 
                     # Memory Usage Overview (Story 41.3.2)
                     if report.memory_estimates:
@@ -3210,7 +3212,7 @@ def main():
                                     for lp in sorted_layers
                                 ]
                             )
-                            st.dataframe(timing_df, use_container_width=True, hide_index=True)
+                            st.dataframe(timing_df, width="stretch", hide_index=True)
 
                             # Time by op type chart
                             time_by_op: dict[str, float] = {}
@@ -3442,7 +3444,7 @@ def main():
                                     layer_df = pd.DataFrame(layer_data)
                                     st.dataframe(
                                         layer_df,
-                                        use_container_width=True,
+                                        width="stretch",
                                         hide_index=True,
                                         height=400,
                                     )

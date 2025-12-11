@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Streamlit: load graph_info from current tmp_path (fixes UnboundLocalError on HF Spaces after conversions).
 - Doc updates aligned with auto-convert behavior (PRD/PRDBacklogArchive).
 
+# 0.8.3 - 2025-12-11
+
+### Fixed
+- Streamlit: guard quantization advisor outputs to avoid pydantic validation crashes; align graph loader imports; remove `use_container_width` deprecation warnings.
+- .gitignore: ignore zips and HAOLINE_CODEBASE.md.
+
 # 0.8.0 - 2025-12-11
 
 ### Added
