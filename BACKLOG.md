@@ -29,7 +29,7 @@
 | Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| Epic 18: Universal IR | **COMPLETE** | 6 | 25/25 | Done |
+| Epic 18: Universal IR | **COMPLETE** (+18.8 pending) | 7 | 25/31 | Done |
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 4/18 | P2 (ONNX→TFLite blocked) |
@@ -54,10 +54,10 @@
 | Epic 38: Docker Distribution | In Progress | 1 | 1/5 | P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
-| Epic 41: Standardized Reporting | **COMPLETE** | 5 | 44/44 | Done |
+| Epic 41: Standardized Reporting | **COMPLETE** (+41.7 pending) | 6 | 44/50 | Done |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 (ONNX→TFLite blocked) |
-| Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/27 | **P2** |
-| Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/15 | P3 |
+| Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/30 | **P2** |
+| Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/18 | P3 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
 | Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
@@ -114,7 +114,17 @@
 - **Epic 25: Privacy/Trust** (9/9) - Local-first, output controls, enterprise documentation
 - **Epic 33: QAT Linters** (41/41) - Quantization readiness, QAT validation, recommendations
 - **Epic 39: Pydantic Migration** (12/12) - Schema validation, Pydantic models
-- **Epic 41: Standardized Reporting** (44/44) - CLI-Streamlit parity, enhanced LLM prompts
+- **Epic 41: Standardized Reporting** (44/44 + 41.7 in progress) - CLI-Streamlit parity, enhanced LLM prompts
+
+**New Story 41.7 (in Epic 41):** Output Parity Gap Closure
+*Address remaining gaps between CLI and Streamlit capabilities.*
+
+- [ ] **Task 41.7.1**: Document PyTorch upload limitation in Streamlit (needs local torch install)
+- [ ] **Task 41.7.2**: Fix or remove PDF export in Streamlit (playwright issues on HF Spaces)
+- [ ] **Task 41.7.3**: Add "CLI Only" badges to Streamlit for features requiring local install
+- [ ] **Task 41.7.4**: Add "Export as CLI command" button (generate equivalent haoline CLI command)
+- [ ] **Task 41.7.5**: Ensure JSON report schema identical between CLI and Streamlit
+- [ ] **Task 41.7.6**: Add format support comparison table to docs (what works where)
 
 ---
 
@@ -329,6 +339,9 @@
 - [ ] **Task 49.2.4**: Streamlit: Disable graph tab for formats without graph
 - [ ] **Task 49.2.5**: Show "Convert to ONNX for full analysis" prompt for Tier 3/4 formats
 - [ ] **Task 49.2.6**: Add format tier badge in reports (Full/Graph/Metadata/Weights)
+- [ ] **Task 49.2.7**: Show "Feature unavailable for [format]" with upgrade path in UI
+- [ ] **Task 49.2.8**: Add "Why is this grayed out?" help tooltip explaining format limitations
+- [ ] **Task 49.2.9**: Generate "Format Capabilities Report" section showing what was/wasn't analyzed
 
 ### Story 49.3: SafeTensors → ONNX Path
 *If SafeTensors is alongside config.json, auto-load and convert.*
@@ -396,6 +409,9 @@
 - [ ] **Task 50.2.6**: Show clear error with install command, not cryptic ImportError
 - [x] **Task 50.2.7**: Add Streamlit UI feature availability matrix (show which features need GPU/deps)
 - [x] **Task 50.2.8**: Add "Requires: TensorRT" / "Requires: GPU" badges to blocked features in UI
+- [ ] **Task 50.2.9**: Add `--check-deps` CLI flag to audit installed vs available features
+- [ ] **Task 50.2.10**: Update `--list-formats` to show "Available" vs "Needs: pip install haoline[X]"
+- [ ] **Task 50.2.11**: Add PDF export dependency check (playwright + chromium install)
 
 ### Story 50.3: CLI UX Improvements
 *Better progress, feedback, and interactive features.*
@@ -1118,6 +1134,16 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [ ] Visualize diff in graph view (green=added, red=removed, yellow=modified)
 - [ ] Generate "what changed" summary paragraph
 
+**New Story 18.8 (in Epic 18):** Universal IR Documentation & Honest Assessment
+*Document what the Universal IR can and cannot do for transparency.*
+
+- [ ] **Task 18.8.1**: Add Universal IR capabilities section to Architecture.md
+- [ ] **Task 18.8.2**: Document fidelity rating per format (High/Medium/Low with explanation)
+- [ ] **Task 18.8.3**: Document limitations: no semantic equivalence, static-only, no fusion awareness
+- [ ] **Task 18.8.4**: Add "Format Fidelity" table to README.md (ONNX=High, SafeTensors=Low, etc.)
+- [ ] **Task 18.8.5**: Add limitations disclaimer to Streamlit UI ("Static analysis only")
+- [ ] **Task 18.8.6**: Document what each format CAN provide (graph vs params vs metadata only)
+
 ---
 
 ## Epic 47: Model Card & Standards Compliance (P4)
@@ -1155,3 +1181,38 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [ ] Add quantization-specific "efficiency score" (0-100)
 - [ ] Detect over-quantization (INT4 on accuracy-sensitive layers)
 - [ ] Generate quantization efficiency report
+
+---
+
+## Dec 2025 Deep Research Analysis Integration
+
+*Tasks from deep research codebase analysis (Dec 11, 2025) were feathered into existing epics:*
+
+### Output Parity & CLI Optimization
+- **Story 41.7** (Epic 41): Output Parity Gap Closure - 6 tasks
+- **Story 50.2** (Epic 50): Dependency Prompting - 3 new tasks (50.2.9-50.2.11)
+
+### Universal IR Documentation
+- **Story 18.8** (Epic 18): Universal IR Honest Assessment - 6 tasks
+  - Document capabilities vs limitations
+  - Format fidelity ratings (High/Medium/Low)
+  - Static analysis disclaimer
+
+### Format-Aware UX
+- **Story 49.2** (Epic 49): Format-Aware UI/CLI - 3 new tasks (49.2.7-49.2.9)
+  - "Feature unavailable" messaging
+  - Help tooltips explaining limitations
+  - Format capabilities report section
+
+### What Was Already Complete (Research Missed)
+- HuggingFace Spaces deployment (Epic 11) - LIVE
+- Streamlit UI with core features (Epic 11) - COMPLETE
+- Hardware profiling (Epic 6) - COMPLETE
+- LLM summarization (Epic 7) - COMPLETE
+- Compare mode (Epic 6) - COMPLETE
+- 9 format readers (Epics 19-24) - COMPLETE or in progress
+
+### Remaining CPU Limitations (Cannot Address)
+- TensorRT engine analysis requires GPU
+- Runtime benchmarking requires GPU
+- These are documented in format capabilities matrix
