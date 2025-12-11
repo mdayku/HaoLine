@@ -87,7 +87,7 @@ class ProgressIndicator:
             print(f"  {message}\n")
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         os.path.basename(__file__),
@@ -1796,7 +1796,9 @@ def _generate_quant_report_markdown(result: QuantizationLintResult, model_name: 
     return "\n".join(lines)
 
 
-def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
+def _handle_tensorrt_analysis(
+    args: argparse.Namespace, model_path: pathlib.Path, logger: logging.Logger
+) -> None:
     """Handle TensorRT engine file analysis.
 
     TensorRT engines require special handling since they're compiled,
@@ -2124,7 +2126,12 @@ def _handle_tensorrt_analysis(args, model_path: pathlib.Path, logger) -> None:
     print("\n[TensorRT analysis complete]")
 
 
-def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path, logger) -> None:
+def _handle_trt_comparison(
+    args: argparse.Namespace,
+    onnx_path: pathlib.Path,
+    trt_path: pathlib.Path,
+    logger: logging.Logger,
+) -> None:
     """Handle ONNX vs TensorRT engine comparison."""
     try:
         from .formats.trt_comparison import compare_onnx_trt
@@ -2383,7 +2390,7 @@ def _handle_trt_comparison(args, onnx_path: pathlib.Path, trt_path: pathlib.Path
     print("\n[ONNX ↔ TRT comparison complete]")
 
 
-def run_inspect():
+def run_inspect() -> None:
     """Main entry point for the model_inspect CLI."""
     # Load environment variables from .env file if present
     try:
