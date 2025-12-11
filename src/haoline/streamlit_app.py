@@ -152,12 +152,14 @@ st.markdown(
         background: transparent !important;
     }
 
-    /* Header styling */
-    .main-header {
-        font-family: 'Inter', sans-serif;
-        background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+    /* Header styling - high specificity */
+    .main-header, h1.main-header, .stApp h1.main-header {
+        font-family: 'Inter', sans-serif !important;
+        background: linear-gradient(135deg, #10b981 0%, #34d399 50%, #6ee7b7 100%) !important;
+        -webkit-background-clip: text !important;
+        background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        color: transparent !important;
         font-size: 3.5rem;
         font-weight: 700;
         text-align: center;
@@ -175,9 +177,11 @@ st.markdown(
         letter-spacing: 0.02em;
     }
 
-    /* Metric styling */
-    [data-testid="stMetricValue"] {
-        color: var(--accent-primary) !important;
+    /* Metric styling - high specificity */
+    [data-testid="stMetricValue"],
+    .stApp [data-testid="stMetricValue"],
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #10b981 !important;
         font-weight: 600 !important;
         font-size: 2rem !important;
     }
