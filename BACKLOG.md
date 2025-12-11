@@ -26,16 +26,16 @@
 | Epic 9: Runtime Profiling | **COMPLETE** | 6 | 22/22 | P2 |
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
-| Epic 11: Streamlit Web UI | **COMPLETE** | 3 | 17/17 | Done |
+| Epic 11: Streamlit Web UI | **COMPLETE** (+11.5-11.6 pending) | 5 | 17/29 | Done |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | **COMPLETE** (+18.8 pending) | 7 | 25/31 | Done |
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
-| Epic 20: CoreML | In Progress | 3 | 7/18 | P2 |
+| Epic 20: CoreML | In Progress | 3 | 7/19 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 4/18 | P2 (ONNX→TFLite blocked) |
 | Epic 22: TensorRT Engine Introspection | **COMPLETE** | 8 | 50/50 | Done |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
-| Epic 24: GGUF | In Progress | 2 | 6/11 | P3 |
+| Epic 24: GGUF | In Progress | 2 | 6/13 | P3 |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
@@ -108,7 +108,27 @@
 - [ ] **Task 10.5.1-10.5.5**: Versioning features (5 tasks)
 
 - **Epic 10B: Standalone Package** (23/23) - Greenfield extraction, PyPI publishing, CI/CD
-- **Epic 11: Streamlit Web UI** (17/17) - Web interface, HuggingFace Spaces deployment
+- **Epic 11: Streamlit Web UI** (17/17 + 11.5-11.6 pending) - Web interface, HuggingFace Spaces deployment
+
+**New Story 11.5 (in Epic 11):** Layer Summary In-App Table **← DEEP RESEARCH PRIORITY**
+*Gap: Per-layer breakdowns exist internally but only downloadable via CSV, no in-app table.*
+
+- [ ] **Task 11.5.1**: Add "Layer Details" tab in Streamlit analysis view
+- [ ] **Task 11.5.2**: Use LayerSummaryBuilder to generate pandas DataFrame
+- [ ] **Task 11.5.3**: Display layer table via st.dataframe (sortable, filterable)
+- [ ] **Task 11.5.4**: Show layer name, op type, param count, FLOPs, output shape
+- [ ] **Task 11.5.5**: Add download buttons for CSV/JSON export (mirror CLI --layer-csv)
+- [ ] **Task 11.5.6**: Add layer search/filter input
+
+**New Story 11.6 (in Epic 11):** Quantization Lint/Advice Display **← DEEP RESEARCH PRIORITY**
+*Gap: Quantization lint/advice computed in CLI but no UI display.*
+
+- [ ] **Task 11.6.1**: Add "Quantization" panel/tab in Streamlit
+- [ ] **Task 11.6.2**: Display readiness_score from QuantizationLinter
+- [ ] **Task 11.6.3**: List quantization warnings with severity colors
+- [ ] **Task 11.6.4**: Show QuantizationAdvisor strategy recommendations
+- [ ] **Task 11.6.5**: Display per-layer quantization sensitivity if available
+- [ ] **Task 11.6.6**: Add --lint-quant CLI flag to print lint warnings
 - **Epic 12: Eval Import** (30/30) - Eval schemas, adapters, cost calculator, YOLO demo
 - **Epic 18: Universal IR** (25/25) - Universal graph, format adapters, conversion matrix
 - **Epic 25: Privacy/Trust** (9/9) - Local-first, output controls, enterprise documentation
@@ -175,8 +195,10 @@
 - [x] **Task 20.1.6**: Test with real CoreML model (in test_format_readers.py, CI on Linux)
 - [x] **Task 20.1.7**: Write unit tests for CoreMLReader (6 tests in test_formats.py)
 
-### Story 20.2: CoreML → UniversalGraph Adapter (Native Path)
+### Story 20.2: CoreML → UniversalGraph Adapter (Native Path) **← DEEP RESEARCH PRIORITY**
 *Enable interactive graph visualization and layer-by-layer analysis for CoreML models.*
+
+**Gap Identified:** CoreML can be analyzed via conversion pipelines but `.mlmodel`/`.mlpackage` not in Streamlit file picker.
 
 **Alternative:** Epic 49.4 implements CoreML → ONNX hub conversion (simpler, may be lossy). This story is the native approach if hub conversion proves inadequate.
 
@@ -184,8 +206,9 @@
 - [ ] **Task 20.2.2**: Map CoreML layer types to universal ops
 - [ ] **Task 20.2.3**: Extract layer shapes and connections from CoreML spec
 - [ ] **Task 20.2.4**: Register adapter in format_adapters.py
-- [ ] **Task 20.2.5**: Add CoreML to Streamlit file_uploader accepted types
+- [ ] **Task 20.2.5**: Add `.mlmodel`/`.mlpackage` to Streamlit file_uploader accepted types ⚠️ **PARITY GAP**
 - [ ] **Task 20.2.6**: Test interactive graph generation with CoreML model
+- [ ] **Task 20.2.7**: Display CoreML-specific metadata in UI (compute units, iOS version)
 
 ### Story 20.3: CoreML Writer
 - [ ] **Task 20.3.1**: Implement CoreMLAdapter.write() via coremltools conversion
@@ -209,8 +232,10 @@
 - [ ] **Task 21.1.6**: Test with real TFLite model (Linux CI with tflite-runtime)
 - [ ] **Task 21.1.7**: Write unit tests for TFLiteReader
 
-### Story 21.2: TFLite → UniversalGraph Adapter (Native Path)
+### Story 21.2: TFLite → UniversalGraph Adapter (Native Path) **← DEEP RESEARCH PRIORITY**
 *Enable interactive graph visualization and layer-by-layer analysis for TFLite models.*
+
+**Gap Identified:** TFLite can be analyzed via conversion but `.tflite` not in Streamlit file picker.
 
 **Alternative:** Epic 49.4 implements TFLite → ONNX hub conversion (simpler, may be lossy). This story is the native approach if hub conversion proves inadequate.
 
@@ -218,7 +243,7 @@
 - [ ] **Task 21.2.2**: Map TFLite op codes to universal ops
 - [ ] **Task 21.2.3**: Extract tensor shapes and operator connections from FlatBuffer
 - [ ] **Task 21.2.4**: Register adapter in format_adapters.py
-- [ ] **Task 21.2.5**: Add TFLite to Streamlit file_uploader accepted types
+- [ ] **Task 21.2.5**: Add `.tflite` to Streamlit file_uploader accepted types ⚠️ **PARITY GAP**
 - [ ] **Task 21.2.6**: Test interactive graph generation with TFLite model
 
 ### Story 21.3: TFLite Writer
@@ -250,8 +275,10 @@
 - [ ] **Task 23.1.5**: Test with real OpenVINO model (.xml + .bin)
 - [x] **Task 23.1.6**: Write unit tests for OpenVINOReader (5 tests in test_formats.py)
 
-### Story 23.2: OpenVINO → UniversalGraph Adapter (Native Path)
+### Story 23.2: OpenVINO → UniversalGraph Adapter (Native Path) **← DEEP RESEARCH PRIORITY**
 *Enable interactive graph visualization and layer-by-layer analysis for OpenVINO models.*
+
+**Gap Identified:** OpenVINO can be analyzed but `.xml`/`.bin` not in Streamlit file picker.
 
 **Alternative:** Epic 49.4 implements OpenVINO → ONNX hub conversion (simpler, may be lossy). This story is the native approach if hub conversion proves inadequate.
 
@@ -259,7 +286,7 @@
 - [ ] **Task 23.2.2**: Map OpenVINO op types to universal ops
 - [ ] **Task 23.2.3**: Extract layer shapes and connections from IR
 - [ ] **Task 23.2.4**: Register adapter in format_adapters.py
-- [ ] **Task 23.2.5**: Add OpenVINO (.xml) to Streamlit file_uploader accepted types
+- [ ] **Task 23.2.5**: Add `.xml` (with `.bin`) to Streamlit file_uploader accepted types ⚠️ **PARITY GAP**
 - [ ] **Task 23.2.6**: Test interactive graph generation with OpenVINO model
 
 ### Story 23.3: OpenVINO Writer
@@ -284,12 +311,16 @@
 - [x] **Task 24.1.5**: Test with real GGUF model (TinyLlama-1.1B Q2_K, 1.1B params, 458MB)
 - [x] **Task 24.1.6**: Write unit tests for GGUFReader (8 tests in test_formats.py)
 
-### Story 24.2: GGUF Streamlit UI & Analysis Features
-- [ ] **Task 24.2.1**: Add `.gguf` to Streamlit file_uploader accepted types
-- [ ] **Task 24.2.2**: Display quantization breakdown chart (by tensor count and size)
-- [ ] **Task 24.2.3**: Display architecture details (layers, heads, context length, etc.)
-- [ ] **Task 24.2.4**: Add VRAM calculator with context length slider
+### Story 24.2: GGUF Streamlit UI & Analysis Features **← DEEP RESEARCH PRIORITY**
+**Gap Identified:** GGUF can be analyzed but `.gguf` not in Streamlit file picker. LLM-specific charts (quant-breakdown, context-slider) not implemented.
+
+- [ ] **Task 24.2.1**: Add `.gguf` to Streamlit file_uploader accepted types ⚠️ **PARITY GAP**
+- [ ] **Task 24.2.2**: Display quantization breakdown chart (bar chart of tensor counts by bit-width)
+- [ ] **Task 24.2.3**: Display architecture details (layers, hidden_size, num_heads, context_length)
+- [ ] **Task 24.2.4**: Add VRAM calculator with context length slider (recompute estimates dynamically)
 - [ ] **Task 24.2.5**: Show tensor-level quantization table
+- [ ] **Task 24.2.6**: Create "LLM Model Details" tab in Streamlit for GGUF models
+- [ ] **Task 24.2.7**: Show unsupported_ops warnings from quantization_lint
 
 ---
 
@@ -1216,3 +1247,30 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - TensorRT engine analysis requires GPU
 - Runtime benchmarking requires GPU
 - These are documented in format capabilities matrix
+
+---
+
+### Deep Research Analysis #2: Data vs Output Parity Audit (Dec 11, 2025)
+
+*Second deep research pass identified specific UI gaps where extracted data isn't surfaced:*
+
+**Parity Gaps Identified:**
+
+| Gap | Current State | Fix Location |
+|-----|---------------|--------------|
+| Per-layer breakdowns | Only CSV download, no in-app table | Story 11.5 |
+| Architecture classification | Stored but not shown | Task 11.5.4 |
+| Format-specific metadata | Extracted but not rendered | Tasks 20.2.7, 24.2.3 |
+| Quantization lint/advice | CLI only, no UI | Story 11.6 |
+| GGUF/LLM charts | Not implemented | Story 24.2 |
+| Operational profiling | No frontend viz | Epic 51.4 (GPU required) |
+| Format uploader gaps | TFLite/CoreML/OpenVINO/GGUF not in picker | Tasks 20.2.5, 21.2.5, 23.2.5, 24.2.1 |
+
+**New Stories Added:**
+- **Story 11.5**: Layer Summary In-App Table (6 tasks)
+- **Story 11.6**: Quantization Lint/Advice Display (6 tasks)
+- **Story 24.2**: GGUF UI Features (+2 tasks)
+- **Story 20.2, 21.2, 23.2**: Format uploader integration (flagged as priority)
+
+**Executive Assessment (from research):**
+> "With ~75% of roadmap completed, HaoLine is essentially ready for primetime. The core analysis engine and UI are fully developed, and user-facing parity is nearly achieved."
