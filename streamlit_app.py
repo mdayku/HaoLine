@@ -1081,7 +1081,9 @@ def _handle_tensorrt_streamlit(uploaded_file) -> None:
         if bottleneck_analysis.bottleneck_zones:
             st.markdown("#### FP32 Bottleneck Zones")
 
-            for zone in sorted(bottleneck_analysis.bottleneck_zones, key=lambda z: -z.layer_count)[:5]:
+            for zone in sorted(bottleneck_analysis.bottleneck_zones, key=lambda z: -z.layer_count)[
+                :5
+            ]:
                 severity_color = {
                     "Critical": "#ef4444",
                     "High": "#f97316",
@@ -1106,7 +1108,9 @@ def _handle_tensorrt_streamlit(uploaded_file) -> None:
 
         # Failed fusions
         if bottleneck_analysis.failed_fusions:
-            with st.expander(f"Failed Fusions ({len(bottleneck_analysis.failed_fusions)})", expanded=False):
+            with st.expander(
+                f"Failed Fusions ({len(bottleneck_analysis.failed_fusions)})", expanded=False
+            ):
                 for ff in bottleneck_analysis.failed_fusions[:10]:
                     impact_color = {"High": "#ef4444", "Medium": "#f59e0b", "Low": "#84cc16"}.get(
                         ff.speed_impact, "#a3a3a3"
@@ -1555,11 +1559,14 @@ def main():
             "Upload your model",
             type=[
                 "onnx",  # ONNX (full support)
-                "pt", "pth",  # PyTorch
+                "pt",
+                "pth",  # PyTorch
                 "safetensors",  # HuggingFace weights
-                "engine", "plan",  # TensorRT
+                "engine",
+                "plan",  # TensorRT
                 "tflite",  # TensorFlow Lite
-                "mlmodel", "mlpackage",  # CoreML (macOS)
+                "mlmodel",
+                "mlpackage",  # CoreML (macOS)
                 "xml",  # OpenVINO IR
                 "gguf",  # GGUF (LLM weights)
             ],
@@ -1591,6 +1598,7 @@ def main():
                     .cap-table tr:hover { background: rgba(16, 185, 129, 0.05); }
                     .cap-yes { color: #10b981; }
                     .cap-no { color: #666; }
+                    .cap-cli { color: #60a5fa; }
                     .cap-warn { color: #f59e0b; }
                     .tier-badge { font-size: 0.6rem; padding: 2px 5px; border-radius: 3px; margin-left: 4px; }
                     .tier-1 { background: #10b981; color: white; }
@@ -1617,38 +1625,38 @@ def main():
                     </tr>
                     <tr>
                         <td><strong>PyTorch</strong></td>
-                        <td class="cap-yes">Yes*</td>
-                        <td class="cap-yes">Yes*</td>
-                        <td class="cap-yes">Yes*</td>
-                        <td class="cap-yes">Yes*</td>
-                        <td class="cap-warn">*Requires local PyTorch</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-warn">Convert to ONNX with local PyTorch</td>
                     </tr>
                 </table>
                 <p style="font-size: 0.8rem; color: #888; margin: 0.75rem 0 0.5rem 0;"><strong>Tier 2 - Graph Analysis</strong></p>
                 <table class="cap-table">
                     <tr>
                         <td><strong>TFLite</strong></td>
-                        <td class="cap-yes">Yes</td>
-                        <td class="cap-yes">Yes</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
                         <td class="cap-no">No</td>
-                        <td class="cap-yes">Yes</td>
-                        <td class="cap-warn">Convert to ONNX for FLOPs</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-warn">Convert to ONNX for full features</td>
                     </tr>
                     <tr>
                         <td><strong>CoreML</strong></td>
-                        <td class="cap-yes">Yes</td>
-                        <td class="cap-yes">Yes</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
                         <td class="cap-no">No</td>
-                        <td class="cap-yes">Yes</td>
-                        <td class="cap-warn">macOS for full features</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-warn">macOS + coremltools; convert to ONNX for full</td>
                     </tr>
                     <tr>
                         <td><strong>OpenVINO</strong></td>
-                        <td class="cap-yes">Yes</td>
-                        <td class="cap-yes">Yes</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
                         <td class="cap-no">No</td>
-                        <td class="cap-yes">Yes</td>
-                        <td class="cap-warn">Upload .xml file</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-warn">Upload .xml (with .bin). Convert to ONNX for full.</td>
                     </tr>
                     <tr>
                         <td><strong>TensorRT</strong> <span style="background:#7c3aed;color:white;font-size:0.65rem;padding:1px 4px;border-radius:3px;">GPU</span></td>
@@ -1678,8 +1686,9 @@ def main():
                         <td class="cap-warn">Weights only</td>
                     </tr>
                 </table>
-                <p style="font-size: 0.7rem; color: #555; margin-top: 0.75rem;">
-                    <strong>Tip:</strong> For full analysis, convert to ONNX format.
+                <p style="font-size: 0.7rem; color: #bbb; margin-top: 0.75rem;">
+                    <strong>Legend:</strong> Yes = In-app (Streamlit) | CLI = Use <code>pip install haoline</code> locally | GPU = Requires NVIDIA GPU.<br>
+                    For full analysis, convert to ONNX format.
                 </p>
                 """,
                     unsafe_allow_html=True,
@@ -1690,7 +1699,9 @@ def main():
             demo_col1, demo_col2, demo_col3 = st.columns(3)
 
             with demo_col1:
-                if st.button("MNIST (26 KB)", use_container_width=True, help="Tiny model - instant"):
+                if st.button(
+                    "MNIST (26 KB)", use_container_width=True, help="Tiny model - instant"
+                ):
                     st.session_state["demo_model"] = "MNIST"
             with demo_col2:
                 if st.button("MobileNetV2 (14 MB)", use_container_width=True, help="Medium model"):
@@ -1741,8 +1752,11 @@ def main():
 
                 # Add to history and set as current (keep temp file for interactive graph)
                 import os
+
                 file_size = os.path.getsize(demo_path)
-                result = add_to_history(f"{demo_name}.onnx", report, file_size, model_path=demo_path)
+                result = add_to_history(
+                    f"{demo_name}.onnx", report, file_size, model_path=demo_path
+                )
                 st.session_state.current_result = result
 
                 st.success(f"Loaded {demo_name} - {demo_info['desc']}")
@@ -1777,11 +1791,7 @@ def main():
             st.metric("FLOPs", format_number(flops))
 
         with col3:
-            memory = (
-                report.memory_estimates.peak_activation_bytes
-                if report.memory_estimates
-                else 0
-            )
+            memory = report.memory_estimates.peak_activation_bytes if report.memory_estimates else 0
             st.metric("Memory", format_bytes(memory))
 
         with col4:
@@ -1809,14 +1819,10 @@ def main():
                 params_total = report.param_counts.total if report.param_counts else 0
                 flops_total = report.flop_counts.total if report.flop_counts else 0
                 peak_mem = (
-                    report.memory_estimates.peak_activation_bytes
-                    if report.memory_estimates
-                    else 0
+                    report.memory_estimates.peak_activation_bytes if report.memory_estimates else 0
                 )
                 model_size = (
-                    report.memory_estimates.model_size_bytes
-                    if report.memory_estimates
-                    else 0
+                    report.memory_estimates.model_size_bytes if report.memory_estimates else 0
                 )
 
                 st.markdown(f"""
@@ -1835,6 +1841,7 @@ def main():
                 sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)[:10]
 
                 import pandas as pd
+
                 df = pd.DataFrame(sorted_ops, columns=["Operator", "Count"])
                 st.bar_chart(df.set_index("Operator"))
 
@@ -1928,7 +1935,9 @@ def main():
         with tab4:
             st.markdown("### Layer Details")
             if graph_info is None:
-                st.info("Layer table is available for ONNX models. Upload an ONNX model to view per-layer metrics.")
+                st.info(
+                    "Layer table is available for ONNX models. Upload an ONNX model to view per-layer metrics."
+                )
             else:
                 try:
                     builder = LayerSummaryBuilder()
@@ -1974,14 +1983,14 @@ def main():
                         st.download_button(
                             "Download Layer CSV",
                             data=csv_bytes,
-                            file_name=f"{model_name.replace('.onnx','')}_layers.csv",
+                            file_name=f"{model_name.replace('.onnx', '')}_layers.csv",
                             mime="text/csv",
                         )
                     with col_dl2:
                         st.download_button(
                             "Download Layer JSON",
                             data=json_bytes,
-                            file_name=f"{model_name.replace('.onnx','')}_layers.json",
+                            file_name=f"{model_name.replace('.onnx', '')}_layers.json",
                             mime="application/json",
                         )
                 except Exception as e:
@@ -1990,7 +1999,9 @@ def main():
         with tab5:
             st.markdown("### Quantization Readiness")
             if graph_info is None:
-                st.info("Quantization lint is available for ONNX models. Upload an ONNX model to view.")
+                st.info(
+                    "Quantization lint is available for ONNX models. Upload an ONNX model to view."
+                )
             else:
                 try:
                     linter = QuantizationLinter()
@@ -2017,11 +2028,29 @@ def main():
                         st.write(", ".join(sorted(lint_result.accuracy_sensitive_ops)))
 
                     # Advisor (heuristic only to avoid API key requirement)
-                    advice = advise_quantization(lint_result, graph_info, api_key=None, use_llm=False)
+                    advice = advise_quantization(
+                        lint_result, graph_info, api_key=None, use_llm=False
+                    )
                     if advice.recommendations:
                         st.markdown("#### Recommendations")
                         for rec in advice.recommendations:
                             st.markdown(f"- {rec}")
+
+                    # Per-layer sensitivity (if available)
+                    if lint_result.layer_risk_scores:
+                        st.markdown("#### Layer Sensitivity")
+                        risk_rows = []
+                        for risk in lint_result.layer_risk_scores:
+                            risk_rows.append(
+                                {
+                                    "Layer": risk.layer_name,
+                                    "Op": risk.op_type,
+                                    "Risk": risk.risk_score,
+                                    "Reason": risk.reason,
+                                }
+                            )
+                        risk_df = pd.DataFrame(risk_rows)
+                        st.dataframe(risk_df, use_container_width=True, hide_index=True)
 
                 except Exception as e:
                     st.warning(f"Quantization lint not available: {e}")
@@ -2029,7 +2058,11 @@ def main():
         with tab6:
             st.markdown("### Export Report")
             # JSON export
-            report_dict = report.to_dict() if hasattr(report, "to_dict") else {"error": "Export not available"}
+            report_dict = (
+                report.to_dict()
+                if hasattr(report, "to_dict")
+                else {"error": "Export not available"}
+            )
             st.download_button(
                 "Download JSON Report",
                 data=json.dumps(report_dict, indent=2, default=str),
@@ -2185,7 +2218,9 @@ def main():
         elif file_ext in [".xml"]:
             # OpenVINO IR analysis
             st.info("**OpenVINO IR detected** - Analyzing with OpenVINO reader...")
-            st.warning("Note: Full analysis requires the .bin file in the same directory. Upload may be partial.")
+            st.warning(
+                "Note: Full analysis requires the .bin file in the same directory. Upload may be partial."
+            )
             with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tmp_path = tmp.name
@@ -2277,7 +2312,14 @@ def main():
 
                 # Tabs for different views
                 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-                    ["Overview", "Interactive Graph", "Details", "Layer Details", "Quantization", "Export"]
+                    [
+                        "Overview",
+                        "Interactive Graph",
+                        "Details",
+                        "Layer Details",
+                        "Quantization",
+                        "Export",
+                    ]
                 )
 
                 with tab1:

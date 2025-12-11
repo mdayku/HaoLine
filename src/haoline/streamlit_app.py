@@ -1540,11 +1540,14 @@ def main():
             "Upload your model",
             type=[
                 "onnx",  # ONNX (full support)
-                "pt", "pth",  # PyTorch
+                "pt",
+                "pth",  # PyTorch
                 "safetensors",  # HuggingFace weights
-                "engine", "plan",  # TensorRT
+                "engine",
+                "plan",  # TensorRT
                 "tflite",  # TensorFlow Lite
-                "mlmodel", "mlpackage",  # CoreML (macOS)
+                "mlmodel",
+                "mlpackage",  # CoreML (macOS)
                 "xml",  # OpenVINO IR
                 "gguf",  # GGUF (LLM weights)
             ],
