@@ -28,7 +28,7 @@
 - ~~Add `.xml` to Streamlit uploader (Task 23.2.5)~~ ✅
 - Updated format capabilities matrix with tier system
 
-**Recent Release:** v0.8.0 (Dec 11, 2025) — Adds full uploader coverage (TFLite/CoreML/OpenVINO/GGUF), Streamlit layer details tab, quantization panel, `--lint-quant` alias; triggers HF Spaces redeploy.
+**Recent Release:** v0.8.1 (Dec 11, 2025) — Streamlit auto-convert to ONNX (PyTorch w/ input shape prompt, TFLite via tflite2onnx, CoreML via coremltools), backlog trimmed to tasks-only, docs updated.
 
 ---
 

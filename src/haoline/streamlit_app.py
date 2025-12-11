@@ -1777,7 +1777,9 @@ def main():
                 st.stop()
 
         elif file_ext in [".tflite"]:
-            st.info("**TFLite model detected** — attempting auto-convert to ONNX for full analysis.")
+            st.info(
+                "**TFLite model detected** — attempting auto-convert to ONNX for full analysis."
+            )
             with tempfile.NamedTemporaryFile(suffix=".tflite", delete=False) as tmp:
                 tmp.write(file_bytes)
                 tflite_path = tmp.name
@@ -1797,7 +1799,9 @@ def main():
                 tmp_path = tflite_path
 
         elif file_ext in [".mlmodel", ".mlpackage"]:
-            st.info("**CoreML model detected** — attempting auto-convert to ONNX for full analysis.")
+            st.info(
+                "**CoreML model detected** — attempting auto-convert to ONNX for full analysis."
+            )
             with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
                 tmp.write(file_bytes)
                 coreml_path = tmp.name
