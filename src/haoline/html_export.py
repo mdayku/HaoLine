@@ -537,6 +537,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <button class="btn" id="heatmap-btn" onclick="toggleHeatMap()" style="margin-top:6px;">FLOPs Heat Map</button>
             </div>
 
+            <h2>On Load</h2>
+            <div class="controls" style="display:flex;flex-direction:column;gap:6px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;">
+                    <input type="checkbox" id="autoFitCheck" checked onchange="savePrefs()">
+                    Auto-fit to screen
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;">
+                    <input type="checkbox" id="autoExpandCheck" onchange="savePrefs()">
+                    Expand all nodes
+                </label>
+            </div>
+
             <h2>Op Types <span style="font-size:0.6rem;color:var(--text-tertiary)">(click to filter)</span></h2>
             <div class="legend" id="op-legend">
                 <div class="legend-item" data-category="conv" onclick="filterByCategory('conv')">
@@ -1457,10 +1469,39 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }}, 50);
         }}
 
-        // Initial render
+        // Preferences persistence
+        function loadPrefs() {{
+            try {{
+                const prefs = JSON.parse(localStorage.getItem('haoline_graph_prefs') || '{{}}');
+                document.getElementById('autoFitCheck').checked = prefs.autoFit !== false; // default true
+                document.getElementById('autoExpandCheck').checked = prefs.autoExpand === true; // default false
+                return prefs;
+            }} catch (e) {{
+                return {{ autoFit: true, autoExpand: false }};
+            }}
+        }}
+
+        function savePrefs() {{
+            const prefs = {{
+                autoFit: document.getElementById('autoFitCheck').checked,
+                autoExpand: document.getElementById('autoExpandCheck').checked
+            }};
+            localStorage.setItem('haoline_graph_prefs', JSON.stringify(prefs));
+        }}
+
+        // Initial render with preferences
+        const prefs = loadPrefs();
         render();
-        // Auto-fit after a short delay to ensure everything is laid out
-        setTimeout(fitToScreen, isEmbedded ? 200 : 100);
+
+        // Apply preferences after render
+        setTimeout(() => {{
+            if (prefs.autoExpand) {{
+                expandAll();
+            }}
+            if (prefs.autoFit) {{
+                setTimeout(fitToScreen, 100);
+            }}
+        }}, isEmbedded ? 300 : 150);
     </script>
 </body>
 </html>
