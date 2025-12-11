@@ -47,7 +47,7 @@
 | Epic 9: Runtime Profiling | **COMPLETE** | 6 | 22/22 | P2 |
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
-| Epic 11: Streamlit Web UI | **COMPLETE** (+11.5-11.6 pending) | 5 | 17/29 | **P1** ← parity gaps |
+| Epic 11: Streamlit Web UI | **COMPLETE** (+11.5-11.6 in progress) | 5 | 27/29 | **P1** ← parity gaps |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | **COMPLETE** (+18.8 pending) | 7 | 25/31 | **P1** ← honest docs |
@@ -134,20 +134,20 @@
 **New Story 11.5 (in Epic 11):** Layer Summary In-App Table **← DEEP RESEARCH PRIORITY**
 *Gap: Per-layer breakdowns exist internally but only downloadable via CSV, no in-app table.*
 
-- [ ] **Task 11.5.1**: Add "Layer Details" tab in Streamlit analysis view
-- [ ] **Task 11.5.2**: Use LayerSummaryBuilder to generate pandas DataFrame
-- [ ] **Task 11.5.3**: Display layer table via st.dataframe (sortable, filterable)
-- [ ] **Task 11.5.4**: Show layer name, op type, param count, FLOPs, output shape
-- [ ] **Task 11.5.5**: Add download buttons for CSV/JSON export (mirror CLI --layer-csv)
-- [ ] **Task 11.5.6**: Add layer search/filter input
+- [x] **Task 11.5.1**: Add "Layer Details" tab in Streamlit analysis view
+- [x] **Task 11.5.2**: Use LayerSummaryBuilder to generate pandas DataFrame
+- [x] **Task 11.5.3**: Display layer table via st.dataframe (sortable, filterable)
+- [x] **Task 11.5.4**: Show layer name, op type, param count, FLOPs, output shape
+- [x] **Task 11.5.5**: Add download buttons for CSV/JSON export (mirror CLI --layer-csv)
+- [x] **Task 11.5.6**: Add layer search/filter input
 
 **New Story 11.6 (in Epic 11):** Quantization Lint/Advice Display **← DEEP RESEARCH PRIORITY**
 *Gap: Quantization lint/advice computed in CLI but no UI display.*
 
-- [ ] **Task 11.6.1**: Add "Quantization" panel/tab in Streamlit
-- [ ] **Task 11.6.2**: Display readiness_score from QuantizationLinter
-- [ ] **Task 11.6.3**: List quantization warnings with severity colors
-- [ ] **Task 11.6.4**: Show QuantizationAdvisor strategy recommendations
+- [x] **Task 11.6.1**: Add "Quantization" panel/tab in Streamlit
+- [x] **Task 11.6.2**: Display readiness_score from QuantizationLinter
+- [x] **Task 11.6.3**: List quantization warnings with severity colors
+- [x] **Task 11.6.4**: Show QuantizationAdvisor strategy recommendations
 - [ ] **Task 11.6.5**: Display per-layer quantization sensitivity if available
 - [ ] **Task 11.6.6**: Add --lint-quant CLI flag to print lint warnings
 - **Epic 12: Eval Import** (30/30) - Eval schemas, adapters, cost calculator, YOLO demo

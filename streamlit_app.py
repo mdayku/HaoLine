@@ -22,6 +22,8 @@ from typing import Any
 import streamlit as st
 from pydantic import BaseModel, ConfigDict, computed_field
 
+import pandas as pd
+
 # Page config must be first Streamlit command
 st.set_page_config(
     page_title="HaoLine - Model Inspector",
@@ -92,7 +94,11 @@ from haoline.hardware import (
 )
 from haoline.hierarchical_graph import HierarchicalGraphBuilder
 from haoline.html_export import generate_html as generate_graph_html
+from haoline.layer_summary import LayerSummaryBuilder
 from haoline.patterns import PatternAnalyzer
+from haoline.quantization_advisor import advise_quantization
+from haoline.quantization_linter import QuantizationLinter
+from haoline.analyzer import ONNXGraphLoader
 
 # Demo models for quick start
 DEMO_MODELS = {
@@ -1845,22 +1851,29 @@ def main():
                 )
 
                 try:
-                    from haoline.analyzer import ONNXGraphLoader
-
-                    graph_loader = ONNXGraphLoader()
-                    _, graph_info = graph_loader.load(result.model_path)
+                    if graph_info is None:
+                        if Path(result.model_path).suffix.lower() != ".onnx":
+                            raise ValueError("Interactive graph available only for ONNX models.")
+                        graph_loader = ONNXGraphLoader()
+                        _, graph_info_local = graph_loader.load(result.model_path)
+                    else:
+                        graph_info_local = graph_info
 
                     # Analyze patterns
                     pattern_analyzer = PatternAnalyzer()
-                    blocks = pattern_analyzer.group_into_blocks(graph_info)
+                    blocks = pattern_analyzer.group_into_blocks(graph_info_local)
 
                     # Edge analysis
                     edge_analyzer = EdgeAnalyzer()
-                    edge_result = edge_analyzer.analyze(graph_info)
+                    edge_result = edge_analyzer.analyze(graph_info_local)
 
                     # Build hierarchical graph
                     builder = HierarchicalGraphBuilder()
-                    hier_graph = builder.build(graph_info, blocks, model_name.replace(".onnx", ""))
+                    hier_graph = builder.build(
+                        graph_info_local,
+                        blocks,
+                        model_name.replace(".onnx", ""),
+                    )
 
                     # Generate the full D3.js HTML
                     graph_html = generate_graph_html(
@@ -1913,6 +1926,107 @@ def main():
                 st.dataframe(op_data, use_container_width=True)
 
         with tab4:
+            st.markdown("### Layer Details")
+            if graph_info is None:
+                st.info("Layer table is available for ONNX models. Upload an ONNX model to view per-layer metrics.")
+            else:
+                try:
+                    builder = LayerSummaryBuilder()
+                    layer_summary = builder.build(
+                        graph_info,
+                        param_counts=report.param_counts,
+                        flop_counts=report.flop_counts,
+                        memory_estimates=report.memory_estimates,
+                    )
+                    data = []
+                    for layer in layer_summary.layers:
+                        data.append(
+                            {
+                                "Name": layer.name,
+                                "Op": layer.op_type,
+                                "Params": layer.params,
+                                "FLOPs": layer.flops,
+                                "Memory (bytes)": layer.memory_bytes,
+                                "% Params": round(layer.pct_params, 2),
+                                "% FLOPs": round(layer.pct_flops, 2),
+                                "Inputs": layer.input_shapes,
+                                "Outputs": layer.output_shapes,
+                            }
+                        )
+                    df = pd.DataFrame(data)
+
+                    # Simple search/filter
+                    filter_text = st.text_input("Filter by name or op type", "")
+                    if filter_text:
+                        mask = df["Name"].str.contains(filter_text, case=False, na=False) | df[
+                            "Op"
+                        ].str.contains(filter_text, case=False, na=False)
+                        df_filtered = df[mask]
+                    else:
+                        df_filtered = df
+
+                    st.dataframe(df_filtered, use_container_width=True, hide_index=True)
+
+                    csv_bytes = df.to_csv(index=False).encode("utf-8")
+                    json_bytes = df.to_json(orient="records", indent=2).encode("utf-8")
+                    col_dl1, col_dl2 = st.columns(2)
+                    with col_dl1:
+                        st.download_button(
+                            "Download Layer CSV",
+                            data=csv_bytes,
+                            file_name=f"{model_name.replace('.onnx','')}_layers.csv",
+                            mime="text/csv",
+                        )
+                    with col_dl2:
+                        st.download_button(
+                            "Download Layer JSON",
+                            data=json_bytes,
+                            file_name=f"{model_name.replace('.onnx','')}_layers.json",
+                            mime="application/json",
+                        )
+                except Exception as e:
+                    st.warning(f"Could not generate layer table: {e}")
+
+        with tab5:
+            st.markdown("### Quantization Readiness")
+            if graph_info is None:
+                st.info("Quantization lint is available for ONNX models. Upload an ONNX model to view.")
+            else:
+                try:
+                    linter = QuantizationLinter()
+                    lint_result = linter.lint(graph_info)
+
+                    # Score card
+                    score = lint_result.readiness_score
+                    st.metric("Readiness Score", f"{score:.0f}")
+
+                    # Warnings
+                    if lint_result.warnings:
+                        st.markdown("#### Warnings")
+                        for w in lint_result.warnings:
+                            st.markdown(f"- {w}")
+
+                    # Unsupported ops
+                    if lint_result.unsupported_ops:
+                        st.markdown("#### Unsupported Ops")
+                        st.write(", ".join(sorted(lint_result.unsupported_ops)))
+
+                    # Accuracy-sensitive ops
+                    if lint_result.accuracy_sensitive_ops:
+                        st.markdown("#### Accuracy-Sensitive Ops")
+                        st.write(", ".join(sorted(lint_result.accuracy_sensitive_ops)))
+
+                    # Advisor (heuristic only to avoid API key requirement)
+                    advice = advise_quantization(lint_result, graph_info, api_key=None, use_llm=False)
+                    if advice.recommendations:
+                        st.markdown("#### Recommendations")
+                        for rec in advice.recommendations:
+                            st.markdown(f"- {rec}")
+
+                except Exception as e:
+                    st.warning(f"Quantization lint not available: {e}")
+
+        with tab6:
             st.markdown("### Export Report")
             # JSON export
             report_dict = report.to_dict() if hasattr(report, "to_dict") else {"error": "Export not available"}
@@ -2117,8 +2231,13 @@ def main():
                         batch_size=batch_size,  # From sidebar (41.4.1)
                     )
 
-                # Save to session history
-                add_to_history(uploaded_file.name, report, len(uploaded_file.getvalue()))
+                # Save to session history (keep temp path for graph/layer views)
+                add_to_history(
+                    uploaded_file.name,
+                    report,
+                    len(uploaded_file.getvalue()),
+                    model_path=tmp_path,
+                )
 
                 # Display results
                 st.markdown("---")
@@ -2146,9 +2265,19 @@ def main():
                 with col4:
                     st.metric("Operators", str(report.graph_summary.num_nodes))
 
+                # Prepare graph_info (ONNX only) for layer/quant views
+                graph_info = None
+                if result.model_path and Path(result.model_path).exists():
+                    if Path(result.model_path).suffix.lower() == ".onnx":
+                        try:
+                            graph_loader = ONNXGraphLoader()
+                            graph_obj, graph_info = graph_loader.load(result.model_path)
+                        except Exception as e:
+                            st.warning(f"Could not load graph for detailed views: {e}")
+
                 # Tabs for different views
-                tab1, tab2, tab3, tab4 = st.tabs(
-                    ["Overview", "Interactive Graph", "Details", "Export"]
+                tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+                    ["Overview", "Interactive Graph", "Details", "Layer Details", "Quantization", "Export"]
                 )
 
                 with tab1:
