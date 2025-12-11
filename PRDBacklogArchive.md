@@ -658,6 +658,7 @@ Complete migration from Python dataclasses to Pydantic BaseModel across the enti
 
 | Date | Section | Change | Reason |
 |------|---------|--------|--------|
+| Dec 11, 2025 | Release | v0.8.1: Streamlit auto-convert to ONNX (PyTorch input-shape prompt, TFLite via tflite2onnx, CoreML via coremltools), backlog trimmed to tasks-only, docs updated | Deployment parity + clarity |
 | Dec 2025 | Initial | Created unified PRD from starter pack + visualization extension | Consolidation |
 | Dec 2025 | Structure | Split backlog into BACKLOG.md, brainlift into BRAINLIFT.md | Context window optimization |
 | Dec 2, 2025 | 4.3 | Scaffolding complete: `tools/python/util/autodoc/` with analyzer, patterns, risks, report modules | Following ORT patterns |

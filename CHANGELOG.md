@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Preserve original suffix when not converted to avoid mis-reading non-ONNX uploads.
 
+# 0.8.2 - 2025-12-11
+
+### Fixed
+- Streamlit: load graph_info from current tmp_path (fixes UnboundLocalError on HF Spaces after conversions).
+- Doc updates aligned with auto-convert behavior (PRD/PRDBacklogArchive).
+
 # 0.8.0 - 2025-12-11
 
 ### Added

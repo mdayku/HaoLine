@@ -1881,6 +1881,8 @@ Not all model formats are created equal. HaoLine supports multiple formats with 
 | **Tier 3: Metadata** | GGUF | Architecture info, quant types, VRAM | Computational graph |
 | **Tier 4: Weights** | SafeTensors | Parameter counts, memory size | Everything else |
 
+**Streamlit/HF auto-convert:** Non-ONNX uploads are auto-converted to ONNX when possible for full analysis. PyTorch requires an input-shape prompt; TFLite uses `tflite2onnx`; CoreML uses `coremltools`. If dependencies are missing, the app falls back to native readers with reduced features. GGUF/SafeTensors stay metadata/weights-only; OpenVINO is analyzed directly (no auto-convert).
+
 ### 19.2 Capability Matrix
 
 | Feature | ONNX | PyTorch | TFLite | CoreML | OpenVINO | GGUF | SafeTensors |

@@ -2209,7 +2209,9 @@ def main():
             st.stop()
 
         elif file_ext in [".tflite"]:
-            st.info("**TFLite model detected** — attempting auto-convert to ONNX for full analysis.")
+            st.info(
+                "**TFLite model detected** — attempting auto-convert to ONNX for full analysis."
+            )
             with tempfile.NamedTemporaryFile(suffix=".tflite", delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tflite_path = tmp.name
@@ -2229,7 +2231,9 @@ def main():
                 tmp_path = tflite_path
 
         elif file_ext in [".mlmodel", ".mlpackage"]:
-            st.info("**CoreML model detected** — attempting auto-convert to ONNX for full analysis.")
+            st.info(
+                "**CoreML model detected** — attempting auto-convert to ONNX for full analysis."
+            )
             with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 coreml_path = tmp.name
@@ -2349,11 +2353,11 @@ def main():
 
                 # Prepare graph_info (ONNX only) for layer/quant views
                 graph_info = None
-                if result.model_path and Path(result.model_path).exists():
-                    if Path(result.model_path).suffix.lower() == ".onnx":
+                if tmp_path and Path(tmp_path).exists():
+                    if Path(tmp_path).suffix.lower() == ".onnx":
                         try:
                             graph_loader = ONNXGraphLoader()
-                            graph_obj, graph_info = graph_loader.load(result.model_path)
+                            _, graph_info = graph_loader.load(tmp_path)
                         except Exception as e:
                             st.warning(f"Could not load graph for detailed views: {e}")
 
