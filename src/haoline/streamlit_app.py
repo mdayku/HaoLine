@@ -2310,11 +2310,13 @@ def main():
 
                 # Prepare graph_info (ONNX only) for layer/quant views
                 graph_info = None
-                if result.model_path and Path(result.model_path).exists():
-                    if Path(result.model_path).suffix.lower() == ".onnx":
+                if tmp_path and Path(tmp_path).exists():
+                    if Path(tmp_path).suffix.lower() == ".onnx":
                         try:
+                            from haoline.analyzer import ONNXGraphLoader
+
                             graph_loader = ONNXGraphLoader()
-                            graph_obj, graph_info = graph_loader.load(result.model_path)
+                            _, graph_info = graph_loader.load(tmp_path)
                         except Exception as e:
                             st.warning(f"Could not load graph for detailed views: {e}")
 
