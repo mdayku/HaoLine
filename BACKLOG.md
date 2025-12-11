@@ -28,6 +28,8 @@
 - ~~Add `.xml` to Streamlit uploader (Task 23.2.5)~~ ✅
 - Updated format capabilities matrix with tier system
 
+**Recent Release:** v0.8.0 (Dec 11, 2025) — Adds full uploader coverage (TFLite/CoreML/OpenVINO/GGUF), Streamlit layer details tab, quantization panel, `--lint-quant` alias; triggers HF Spaces redeploy.
+
 ---
 
 ## Progress Summary
@@ -47,7 +49,7 @@
 | Epic 9: Runtime Profiling | **COMPLETE** | 6 | 22/22 | P2 |
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
-| Epic 11: Streamlit Web UI | **COMPLETE** (+11.5-11.6 in progress) | 5 | 27/29 | **P1** ← parity gaps |
+| Epic 11: Streamlit Web UI | **COMPLETE** (29/29) | 5 | 29/29 | Done |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | **COMPLETE** (+18.8 pending) | 7 | 25/31 | **P1** ← honest docs |
@@ -148,8 +150,8 @@
 - [x] **Task 11.6.2**: Display readiness_score from QuantizationLinter
 - [x] **Task 11.6.3**: List quantization warnings with severity colors
 - [x] **Task 11.6.4**: Show QuantizationAdvisor strategy recommendations
-- [ ] **Task 11.6.5**: Display per-layer quantization sensitivity if available
-- [ ] **Task 11.6.6**: Add --lint-quant CLI flag to print lint warnings
+- [x] **Task 11.6.5**: Display per-layer quantization sensitivity if available
+- [x] **Task 11.6.6**: Add --lint-quant CLI flag to print lint warnings
 - **Epic 12: Eval Import** (30/30) - Eval schemas, adapters, cost calculator, YOLO demo
 - **Epic 18: Universal IR** (25/25) - Universal graph, format adapters, conversion matrix
 - **Epic 25: Privacy/Trust** (9/9) - Local-first, output controls, enterprise documentation

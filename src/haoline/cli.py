@@ -526,6 +526,11 @@ Examples:
         "Detects problematic ops, dynamic shapes, and provides recommendations.",
     )
     quant_group.add_argument(
+        "--lint-quant",
+        action="store_true",
+        help="Alias for --lint-quantization.",
+    )
+    quant_group.add_argument(
         "--quant-report",
         type=pathlib.Path,
         default=None,
@@ -3253,7 +3258,7 @@ def run_inspect():
 
     # Quantization linting if requested
     quant_lint_result = None
-    if args.lint_quantization:
+    if args.lint_quantization or args.lint_quant:
         progress.step("Analyzing quantization readiness")
         from .quantization_linter import QuantizationLinter
 

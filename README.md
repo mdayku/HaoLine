@@ -98,7 +98,7 @@ haoline-web
 
 This opens an interactive dashboard at `http://localhost:8501` with:
 
-- Drag-and-drop model upload (ONNX, PyTorch)
+- Drag-and-drop model upload (ONNX, PyTorch, TFLite, CoreML, OpenVINO, TensorRT, GGUF, SafeTensors)
 - Hardware selection with 50+ GPU profiles (searchable)
 - **NEW:** Batch size and GPU count controls
 - **NEW:** System Requirements (Steam-style min/rec/optimal)
@@ -111,6 +111,8 @@ This opens an interactive dashboard at `http://localhost:8501` with:
 - **NEW:** Run Benchmark button (actual ONNX Runtime measurements)
 - **NEW:** Privacy controls (redact layer names, summary-only mode)
 - **NEW:** Quantization Analysis (readiness score, QAT linting, recommendations)
+- **NEW:** Layer Details tab (search/filter, CSV/JSON download)
+- **NEW:** Quantization tab (readiness score, warnings, recommendations, layer sensitivity)
 - AI-powered summaries (bring your own API key)
 - Export to PDF, HTML, JSON, Markdown, **Universal IR**, **DOT graph**
 
@@ -358,7 +360,8 @@ report.to_html("report.html")
 | **AI Summaries** | GPT-powered executive summaries of your architecture |
 | **Multiple Formats** | Export to HTML, Markdown, PDF, JSON, or CSV |
 | **Universal IR** | Format-agnostic intermediate representation for cross-format analysis |
-| **Quantization Analysis** | QAT readiness scoring, problem layer detection, deployment recommendations |
+| **Quantization Analysis** | QAT readiness scoring, problem layer detection, deployment recommendations; Streamlit Quant tab with readiness score, warnings, recommendations, layer sensitivity |
+| **Layer Details** | In-app per-layer table (search/filter, CSV/JSON download) |
 
 ---
 

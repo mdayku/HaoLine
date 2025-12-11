@@ -733,6 +733,7 @@ Complete migration from Python dataclasses to Pydantic BaseModel across the enti
 | Dec 5, 2025 | **Story 41.5** | 6/8 tasks complete: LLM prompt enhanced | AI summaries improved |
 | Dec 6, 2025 | **Epic 41** | **COMPLETE** (43/44 tasks) | Full CLI-Streamlit parity |
 | Dec 6, 2025 | **v0.3.0** | Major release with CLI-Streamlit parity | Full-featured web UI |
+| Dec 11, 2025 | **v0.8.0** | Streamlit Layer/Quant tabs, uploader covers TFLite/CoreML/OpenVINO/GGUF, clarified format tiers, `--lint-quant` alias; HF Spaces redeploy | UI parity + format UX |
 
 ---
 

@@ -6,8 +6,8 @@
 |-------|-------|
 | Project | HaoLine - Universal Model Inspector |
 | Author | Marcus |
-| Version | 2.0 |
-| Last Updated | December 6, 2025 |
+| Version | 2.1 |
+| Last Updated | December 11, 2025 |
 | Status | In Development |
 
 **Related Documents:**

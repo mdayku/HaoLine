@@ -17,8 +17,9 @@ See BACKLOG.md Epic 42 for full conversion matrix.
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 
 import numpy as np
 import onnx
