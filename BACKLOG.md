@@ -9,6 +9,26 @@
 
 ---
 
+## Current Priority Focus (Dec 2025)
+
+**Goal:** Close UI parity gaps identified by deep research audit.
+
+| Priority | Focus Area | Key Work |
+|----------|------------|----------|
+| **P1** | UI Parity Gaps | Stories 11.5 (layer table), 11.6 (quant UI), format uploaders |
+| **P1** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
+| **P1** | Honest Docs | Story 18.8 (Universal IR limitations documented) |
+| **P2** | LLM Support | Epic 24 (GGUF UI: context slider, quant charts) |
+| **P2** | CLI UX | Epic 50 (dependency prompting, --check-deps) |
+
+**Quick Wins (< 1 hour each):**
+- Add `.gguf` to Streamlit uploader (Task 24.2.1)
+- Add `.tflite` to Streamlit uploader (Task 21.2.5)
+- Add `.mlmodel` to Streamlit uploader (Task 20.2.5)
+- Add `.xml` to Streamlit uploader (Task 23.2.5)
+
+---
+
 ## Progress Summary
 
 | Epic | Status | Stories | Tasks Complete | Priority |
@@ -26,16 +46,16 @@
 | Epic 9: Runtime Profiling | **COMPLETE** | 6 | 22/22 | P2 |
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
-| Epic 11: Streamlit Web UI | **COMPLETE** (+11.5-11.6 pending) | 5 | 17/29 | Done |
+| Epic 11: Streamlit Web UI | **COMPLETE** (+11.5-11.6 pending) | 5 | 17/29 | **P1** ← parity gaps |
 | Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| Epic 18: Universal IR | **COMPLETE** (+18.8 pending) | 7 | 25/31 | Done |
+| Epic 18: Universal IR | **COMPLETE** (+18.8 pending) | 7 | 25/31 | **P1** ← honest docs |
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 7/19 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 4/18 | P2 (ONNX→TFLite blocked) |
 | Epic 22: TensorRT Engine Introspection | **COMPLETE** | 8 | 50/50 | Done |
 | Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
-| Epic 24: GGUF | In Progress | 2 | 6/13 | P3 |
+| Epic 24: GGUF | In Progress | 2 | 6/13 | **P2** ← LLM parity |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
@@ -54,10 +74,10 @@
 | Epic 38: Docker Distribution | In Progress | 1 | 1/5 | P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
-| Epic 41: Standardized Reporting | **COMPLETE** (+41.7 pending) | 6 | 44/50 | Done |
+| Epic 41: Standardized Reporting | **COMPLETE** (+41.7 pending) | 6 | 44/50 | **P1** ← parity |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 (ONNX→TFLite blocked) |
-| Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/30 | **P2** |
-| Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/18 | P3 |
+| Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/30 | **P1** ← format UX |
+| Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/18 | **P2** ← dep prompts |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
 | Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
