@@ -5,6 +5,14 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 0.8.10 - 2025-12-11
+
+### Fixed
+- **Full UI restoration from v0.8.0:** Restored complete Streamlit app with all features
+- **Demo/upload parity:** Demo models now use same 6-tab interface as uploaded models
+- **Fixed graph_info loading:** Demo path now properly loads graph for Layer Details/Quantization
+- **All ~1000 missing lines restored:** System Requirements, Deployment Cost Calculator, full Quantization analysis, Privacy Controls, and more
+
 # 0.8.9 - 2025-12-11
 
 ### Fixed
