@@ -1587,18 +1587,15 @@ def main():
                 st.markdown(
                     """
                 <style>
-                    .cap-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-                    .cap-table th { text-align: left; padding: 0.5rem; border-bottom: 1px solid #333; color: #10b981; }
-                    .cap-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #222; }
+                    .cap-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; table-layout: fixed; }
+                    .cap-table th { text-align: left; padding: 0.4rem; border-bottom: 1px solid #333; color: #10b981; }
+                    .cap-table td { padding: 0.3rem 0.4rem; border-bottom: 1px solid #222; white-space: nowrap; }
+                    .cap-table td:last-child { white-space: normal; font-size: 0.75rem; }
                     .cap-table tr:hover { background: rgba(16, 185, 129, 0.05); }
                     .cap-yes { color: #10b981; }
                     .cap-no { color: #666; }
                     .cap-cli { color: #60a5fa; }
                     .cap-warn { color: #f59e0b; }
-                    .tier-badge { font-size: 0.6rem; padding: 2px 5px; border-radius: 3px; margin-left: 4px; }
-                    .tier-1 { background: #10b981; color: white; }
-                    .tier-2 { background: #3b82f6; color: white; }
-                    .tier-3 { background: #8b5cf6; color: white; }
                 </style>
                 <p style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;"><strong>Tier 1 - Full Analysis</strong></p>
                 <table class="cap-table">
@@ -1616,7 +1613,7 @@ def main():
                         <td class="cap-yes">Yes</td>
                         <td class="cap-yes">Yes</td>
                         <td class="cap-yes">Yes</td>
-                        <td class="cap-yes">Full support (recommended)</td>
+                        <td class="cap-yes">Full support</td>
                     </tr>
                     <tr>
                         <td><strong>PyTorch</strong></td>
@@ -1624,7 +1621,7 @@ def main():
                         <td class="cap-cli">CLI</td>
                         <td class="cap-cli">CLI</td>
                         <td class="cap-cli">CLI</td>
-                        <td class="cap-warn">Convert to ONNX with local PyTorch</td>
+                        <td class="cap-warn">CLI + PyTorch</td>
                     </tr>
                 </table>
                 <p style="font-size: 0.8rem; color: #888; margin: 0.75rem 0 0.5rem 0;"><strong>Tier 2 - Graph Analysis</strong></p>
@@ -1635,7 +1632,7 @@ def main():
                         <td class="cap-cli">CLI</td>
                         <td class="cap-no">No</td>
                         <td class="cap-cli">CLI</td>
-                        <td class="cap-warn">Convert to ONNX for full features</td>
+                        <td class="cap-warn">CLI only</td>
                     </tr>
                     <tr>
                         <td><strong>CoreML</strong></td>
@@ -1643,7 +1640,7 @@ def main():
                         <td class="cap-cli">CLI</td>
                         <td class="cap-no">No</td>
                         <td class="cap-cli">CLI</td>
-                        <td class="cap-warn">macOS + coremltools; convert to ONNX for full</td>
+                        <td class="cap-warn">macOS CLI</td>
                     </tr>
                     <tr>
                         <td><strong>OpenVINO</strong></td>
@@ -1651,7 +1648,7 @@ def main():
                         <td class="cap-cli">CLI</td>
                         <td class="cap-no">No</td>
                         <td class="cap-cli">CLI</td>
-                        <td class="cap-warn">Upload .xml (with .bin). Convert to ONNX for full.</td>
+                        <td class="cap-warn">Needs .bin file</td>
                     </tr>
                     <tr>
                         <td><strong>TensorRT</strong> <span style="background:#7c3aed;color:white;font-size:0.65rem;padding:1px 4px;border-radius:3px;">GPU</span></td>
