@@ -1,5 +1,5 @@
 """
-HaoLine Streamlit App - HuggingFace Spaces Entry Point
+HaoLine Streamlit App - HuggingFace Spaces Entry Point.
 
 This file is the entry point for HuggingFace Spaces deployment.
 The actual app code lives in src/haoline/streamlit_app.py.

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "haoline"
-version = "0.8.6"
+version = "0.8.7"
 description = "HaoLine (皓线) - Universal Model Inspector. See what's really inside your models."
 readme = "README.md"
 license = "MIT"
@@ -200,6 +200,7 @@ ignore = [
 "src/haoline/cli.py" = ["F401", "F841"]
 # Streamlit requires page config before imports
 "src/haoline/streamlit_app.py" = ["E402"]
+"streamlit_app.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.10"

@@ -5,12 +5,13 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-# 0.8.6 - 2025-12-11
+# 0.8.7 - 2025-12-11
 
 ### Changed
 - Root `streamlit_app.py` now imports from package (`from haoline.streamlit_app import main`)
 - Single source of truth: all UI code in `src/haoline/streamlit_app.py`
 - Eliminates sync issues between root and src versions
+- Added E402 ignore for root streamlit_app.py in pyproject.toml
 
 # 0.8.5 - 2025-12-11
 
