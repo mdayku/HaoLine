@@ -19,7 +19,7 @@ Reference: https://github.com/huggingface/safetensors
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -60,7 +60,7 @@ class SafeTensorInfo(BaseModel):
     @property
     def size_bytes(self) -> int:
         """Size in bytes."""
-        return self.n_elements * DTYPE_SIZES.get(self.dtype, 4)
+        return int(self.n_elements * DTYPE_SIZES.get(self.dtype, 4))
 
 
 class SafeTensorsInfo(BaseModel):
@@ -104,7 +104,7 @@ class SafeTensorsInfo(BaseModel):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return self.model_dump(mode="json")
+        return cast(dict[str, Any], self.model_dump(mode="json"))
 
 
 class SafeTensorsReader:

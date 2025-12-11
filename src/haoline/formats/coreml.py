@@ -15,7 +15,7 @@ Reference: https://coremltools.readme.io/
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -69,7 +69,7 @@ class CoreMLInfo(BaseModel):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return self.model_dump(mode="json")
+        return cast(dict[str, Any], self.model_dump(mode="json"))
 
 
 class CoreMLReader:

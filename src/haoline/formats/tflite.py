@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import struct
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -135,7 +135,7 @@ class TFLiteTensorInfo(BaseModel):
     @property
     def bytes_per_element(self) -> int:
         """Bytes per element."""
-        return DTYPE_BYTES.get(self.dtype.lower(), 4)
+        return int(DTYPE_BYTES.get(self.dtype.lower(), 4))
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -153,7 +153,7 @@ class TFLiteTensorInfo(BaseModel):
         bpe = self.bytes_per_element
         if bpe == 0:
             return 0  # Variable size types
-        return self.n_elements * bpe
+        return int(self.n_elements * bpe)
 
 
 class TFLiteOperatorInfo(BaseModel):
@@ -229,7 +229,7 @@ class TFLiteInfo(BaseModel):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return self.model_dump(mode="json")
+        return cast(dict[str, Any], self.model_dump(mode="json"))
 
 
 class TFLiteReader:

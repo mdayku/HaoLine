@@ -24,7 +24,7 @@ import json
 import logging
 import os
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -658,7 +658,7 @@ class QuantizationAdvisor:
             logger.warning(f"LLM advice generation failed: {e}, using fallback")
             advice = _generate_fallback_advice(lint_result, graph_info)
             # Use model_copy since QuantizationAdvice is frozen
-            return advice.model_copy(update={"error_message": str(e)})
+            return cast(QuantizationAdvice, advice.model_copy(update={"error_message": str(e)}))
 
     def _generate_llm_advice(
         self,

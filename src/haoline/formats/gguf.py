@@ -18,7 +18,7 @@ from __future__ import annotations
 import struct
 from enum import IntEnum
 from pathlib import Path
-from typing import Any, BinaryIO
+from typing import Any, BinaryIO, cast
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -284,7 +284,7 @@ class GGUFInfo(BaseModel):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return self.model_dump(mode="json")
+        return cast(dict[str, Any], self.model_dump(mode="json"))
 
 
 class GGUFReader:

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 
 import numpy as np
 import onnx
@@ -31,7 +31,7 @@ from onnx import TensorProto, helper
 
 
 @pytest.fixture
-def simple_conv_onnx() -> Path:
+def simple_conv_onnx() -> Generator[Path, None, None]:
     """Create a simple Conv model ONNX file for conversion testing."""
     X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [1, 3, 224, 224])
     W = helper.make_tensor(
@@ -63,7 +63,7 @@ def simple_conv_onnx() -> Path:
 
 
 @pytest.fixture
-def mobilenet_onnx() -> Path | None:
+def mobilenet_onnx() -> Generator[Path | None, None, None]:
     """Download a small MobileNet ONNX for realistic testing.
 
     Returns None if download fails (test should skip).
@@ -798,8 +798,8 @@ class TestPyTorchToTensorRT:
         network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
         parser = trt.OnnxParser(network, logger)
 
-        with open(onnx_path, "rb") as f:
-            success = parser.parse(f.read())
+        with open(onnx_path, "rb") as fh:
+            success = parser.parse(fh.read())
 
         assert success, "Failed to parse ONNX"
 
@@ -876,8 +876,8 @@ class TestPyTorchToTensorRT:
         network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
         parser = trt.OnnxParser(network, logger)
 
-        with open(onnx_path, "rb") as f:
-            parser.parse(f.read())
+        with open(onnx_path, "rb") as fh:
+            parser.parse(fh.read())
 
         config = builder.create_builder_config()
         profile = builder.create_optimization_profile()
@@ -937,7 +937,7 @@ class TestTFLiteToOnnx:
     """Tests for TFLite to ONNX conversion."""
 
     @pytest.fixture
-    def simple_tflite_model(self) -> Path | None:
+    def simple_tflite_model(self) -> Generator[Path | None, None, None]:
         """Create a simple TFLite model for testing."""
         import tensorflow as tf
 

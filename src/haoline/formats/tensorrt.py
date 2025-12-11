@@ -20,7 +20,7 @@ Reference: https://docs.nvidia.com/deeplearning/tensorrt/
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -177,7 +177,7 @@ class TRTEngineInfo(BaseModel):
         """Ratio of fused layers (0.0-1.0)."""
         if not self.layers:
             return 0.0
-        return self.fused_layer_count / len(self.layers)
+        return float(self.fused_layer_count) / float(len(self.layers))
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -203,7 +203,7 @@ class TRTEngineInfo(BaseModel):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return self.model_dump(mode="json")
+        return cast(dict[str, Any], self.model_dump(mode="json"))
 
 
 # ============================================================================
