@@ -2202,6 +2202,114 @@ def main():
                         with hw_col3:
                             st.metric("Theoretical Latency", f"{hw.theoretical_latency_ms:.2f} ms")
 
+                        # Bottleneck analysis
+                        if hasattr(hw, "bottleneck") and hw.bottleneck:
+                            st.markdown("#### Performance Bottleneck")
+                            bottleneck_colors = {
+                                "compute": "#10b981",
+                                "memory_bandwidth": "#f59e0b",
+                                "vram": "#ef4444",
+                            }
+                            color = bottleneck_colors.get(hw.bottleneck, "#6b7280")
+                            st.markdown(
+                                f'<span style="color: {color}; font-weight: bold; font-size: 1.1rem;">'
+                                f"{hw.bottleneck.replace('_', ' ').title()}</span>",
+                                unsafe_allow_html=True,
+                            )
+                            if hw.bottleneck == "compute":
+                                st.caption(
+                                    "Model is compute-bound. Consider quantization (FP16/INT8) for speedup."
+                                )
+                            elif hw.bottleneck == "memory_bandwidth":
+                                st.caption(
+                                    "Model is memory-bound. Consider reducing activations or batch size."
+                                )
+                            elif hw.bottleneck == "vram":
+                                st.caption(
+                                    "Model exceeds VRAM. Consider a larger GPU or model compression."
+                                )
+
+                    # Parameter distribution by op type
+                    if report.param_counts and report.param_counts.by_op_type:
+                        st.markdown("### Parameter Distribution by Op Type")
+                        import pandas as pd
+
+                        param_by_op = report.param_counts.by_op_type
+                        total_params = sum(param_by_op.values())
+                        param_data = pd.DataFrame(
+                            [
+                                {
+                                    "Op Type": op,
+                                    "Parameters": count,
+                                    "Percentage": 100.0 * count / total_params
+                                    if total_params > 0
+                                    else 0,
+                                }
+                                for op, count in sorted(
+                                    param_by_op.items(), key=lambda x: x[1], reverse=True
+                                )[:10]
+                            ]
+                        )
+                        st.bar_chart(param_data.set_index("Op Type")["Parameters"])
+
+                    # FLOPs distribution by op type
+                    if report.flop_counts and report.flop_counts.by_op_type:
+                        st.markdown("### FLOPs Distribution by Op Type")
+                        import pandas as pd
+
+                        flops_by_op = report.flop_counts.by_op_type
+                        total_flops = sum(flops_by_op.values())
+                        flops_data = pd.DataFrame(
+                            [
+                                {
+                                    "Op Type": op,
+                                    "FLOPs": count,
+                                    "Percentage": 100.0 * count / total_flops
+                                    if total_flops > 0
+                                    else 0,
+                                }
+                                for op, count in sorted(
+                                    flops_by_op.items(), key=lambda x: x[1], reverse=True
+                                )[:10]
+                            ]
+                        )
+                        st.bar_chart(flops_data.set_index("Op Type")["FLOPs"])
+
+                    # Precision breakdown
+                    if (
+                        report.param_counts
+                        and hasattr(report.param_counts, "precision_breakdown")
+                        and report.param_counts.precision_breakdown
+                    ):
+                        st.markdown("### Precision Breakdown")
+                        precision_data = report.param_counts.precision_breakdown
+                        total = sum(precision_data.values())
+
+                        import pandas as pd
+
+                        prec_df = pd.DataFrame(
+                            [
+                                {
+                                    "Data Type": dtype,
+                                    "Parameters": count,
+                                    "Percentage": f"{100.0 * count / total:.1f}%"
+                                    if total > 0
+                                    else "0%",
+                                }
+                                for dtype, count in sorted(
+                                    precision_data.items(), key=lambda x: -x[1]
+                                )
+                            ]
+                        )
+                        st.dataframe(prec_df, width="stretch", hide_index=True)
+
+                        if report.param_counts.is_quantized:
+                            st.success("Model is quantized")
+                            if report.param_counts.quantized_ops:
+                                st.caption(
+                                    f"Quantized ops: {', '.join(report.param_counts.quantized_ops[:5])}"
+                                )
+
                 with tab2:
                     if not has_graph:
                         st.info(
@@ -2302,10 +2410,27 @@ def main():
                         try:
                             from haoline.layer_summary import LayerSummaryBuilder
 
-                            builder = LayerSummaryBuilder(graph_info)
-                            layer_df = builder.build_dataframe()
+                            builder = LayerSummaryBuilder()
+                            layer_summary = builder.build(graph_info)
 
-                            if layer_df is not None and not layer_df.empty:
+                            if layer_summary.layers:
+                                # Build dataframe from layers
+                                import pandas as pd
+
+                                layer_data = []
+                                for layer in layer_summary.layers:
+                                    layer_data.append(
+                                        {
+                                            "Name": layer.name,
+                                            "Op Type": layer.op_type,
+                                            "Params": layer.param_count,
+                                            "FLOPs": layer.flop_count,
+                                            "Input Shape": str(layer.input_shapes),
+                                            "Output Shape": str(layer.output_shapes),
+                                        }
+                                    )
+                                layer_df = pd.DataFrame(layer_data)
+
                                 # Search/filter
                                 search_term = st.text_input(
                                     "Filter layers",
@@ -2323,7 +2448,7 @@ def main():
                                 # Download buttons
                                 col_csv, col_json = st.columns(2)
                                 with col_csv:
-                                    csv_bytes = layer_df.to_csv(index=False).encode()
+                                    csv_bytes = layer_summary.to_csv().encode()
                                     st.download_button(
                                         "Download Layer CSV",
                                         data=csv_bytes,
@@ -2331,7 +2456,7 @@ def main():
                                         mime="text/csv",
                                     )
                                 with col_json:
-                                    json_bytes = layer_df.to_json(orient="records").encode()
+                                    json_bytes = layer_summary.to_json().encode()
                                     st.download_button(
                                         "Download Layer JSON",
                                         data=json_bytes,
@@ -2377,7 +2502,9 @@ def main():
                             if lint_result.warnings:
                                 st.markdown("#### Warnings")
                                 for w in lint_result.warnings[:10]:
-                                    st.warning(f"**{w.layer_name}** ({w.op_type}): {w.message}")
+                                    st.warning(
+                                        f"**{w.node_name or 'Unknown'}** ({w.op_type}): {w.message}"
+                                    )
 
                             # Advisor (heuristic only to avoid API key requirement)
                             advice = advise_quantization(

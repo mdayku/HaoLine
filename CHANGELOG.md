@@ -5,6 +5,17 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 0.8.9 - 2025-12-11
+
+### Fixed
+- **Layer Details tab:** Fixed `LayerSummaryBuilder` API - use `build(graph_info)` not constructor
+- **Quantization tab:** Fixed `QuantWarning` attribute - use `node_name` not `layer_name`
+- **Overview tab restored:** Re-added missing charts and analysis:
+  - Parameter Distribution by Op Type (bar chart)
+  - FLOPs Distribution by Op Type (bar chart)
+  - Precision Breakdown table
+  - Bottleneck Analysis (compute/memory/VRAM bound indicators)
+
 # 0.8.8 - 2025-12-11
 
 ### Fixed
