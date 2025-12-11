@@ -1,6 +1,5 @@
 # Copyright (c) 2025 HaoLine Contributors
 # SPDX-License-Identifier: MIT
-# Build: 2025-12-06-v2 (force cache invalidation)
 
 """
 HaoLine Streamlit Web UI.
@@ -14,7 +13,7 @@ Run locally:
 Deploy to HuggingFace Spaces or Streamlit Cloud for public access.
 """
 
-import os
+import json
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +21,8 @@ from typing import Any
 
 import streamlit as st
 from pydantic import BaseModel, ConfigDict, computed_field
+
+import pandas as pd
 
 # Page config must be first Streamlit command
 st.set_page_config(
@@ -41,6 +42,7 @@ class AnalysisResult(BaseModel):
     timestamp: datetime
     report: Any  # InspectionReport
     file_size: int
+    model_path: str | None = None  # Path to temp file for interactive graph
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -59,17 +61,18 @@ def init_session_state():
         st.session_state.compare_models = {"model_a": None, "model_b": None}
     if "current_mode" not in st.session_state:
         st.session_state.current_mode = "analyze"  # "analyze" or "compare"
-    if "demo_model" not in st.session_state:
-        st.session_state.demo_model = None  # Tuple of (bytes, name) when demo requested
+    if "current_result" not in st.session_state:
+        st.session_state.current_result = None  # Currently displayed analysis
 
 
-def add_to_history(name: str, report: Any, file_size: int) -> AnalysisResult:
+def add_to_history(name: str, report: Any, file_size: int, model_path: str | None = None):
     """Add an analysis result to session history."""
     result = AnalysisResult(
         name=name,
         timestamp=datetime.now(),
         report=report,
         file_size=file_size,
+        model_path=model_path,
     )
     # Keep max 10 results, newest first
     st.session_state.analysis_history.insert(0, result)
@@ -82,56 +85,6 @@ def add_to_history(name: str, report: Any, file_size: int) -> AnalysisResult:
 import streamlit.components.v1 as components
 
 from haoline import ModelInspector, __version__
-
-# Demo models from ONNX Model Zoo (small, real models)
-DEMO_MODELS = {
-    "mnist": {
-        "name": "MNIST CNN",
-        "file": "mnist-12.onnx",
-        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/mnist/model/mnist-12.onnx",
-        "description": "Tiny CNN for handwritten digits (26 KB)",
-        "size": "26 KB",
-    },
-    "squeezenet": {
-        "name": "SqueezeNet 1.0",
-        "file": "squeezenet1.0-12.onnx",
-        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/squeezenet/model/squeezenet1.0-12.onnx",
-        "description": "Compact CNN for ImageNet (5 MB)",
-        "size": "5 MB",
-    },
-    "efficientnet": {
-        "name": "EfficientNet-Lite4",
-        "file": "efficientnet-lite4-11.onnx",
-        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx",
-        "description": "Efficient CNN architecture (49 MB)",
-        "size": "49 MB",
-    },
-}
-
-
-def download_demo_model(model_key: str) -> tuple[bytes, str]:
-    """Download a demo model from ONNX Model Zoo.
-
-    Args:
-        model_key: Key from DEMO_MODELS dict
-
-    Returns:
-        Tuple of (model_bytes, model_name)
-    """
-    import urllib.request
-
-    model_info = DEMO_MODELS[model_key]
-    url = model_info["url"]
-    filename = model_info["file"]
-
-    # Download with timeout
-    with urllib.request.urlopen(url, timeout=30) as response:
-        model_bytes = response.read()
-
-    return model_bytes, filename
-
-
-from haoline.analyzer import ONNXGraphLoader
 from haoline.edge_analysis import EdgeAnalyzer
 from haoline.hardware import (
     HARDWARE_PROFILES,
@@ -141,14 +94,37 @@ from haoline.hardware import (
 )
 from haoline.hierarchical_graph import HierarchicalGraphBuilder
 from haoline.html_export import generate_html as generate_graph_html
+from haoline.layer_summary import LayerSummaryBuilder
 from haoline.patterns import PatternAnalyzer
+from haoline.analyzer import ONNXGraphLoader
+from haoline.quantization_advisor import advise_quantization
+from haoline.quantization_linter import QuantizationLinter
+
+# Demo models for quick start
+DEMO_MODELS = {
+    "MNIST": {
+        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/mnist/model/mnist-12.onnx",
+        "size": "26 KB",
+        "desc": "Handwritten digits",
+    },
+    "MobileNetV2": {
+        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/mobilenet/model/mobilenetv2-12.onnx",
+        "size": "14 MB",
+        "desc": "Mobile-optimized CNN",
+    },
+    "EfficientNet": {
+        "url": "https://github.com/onnx/models/raw/main/validated/vision/classification/efficientnet-lite4/model/efficientnet-lite4-11.onnx",
+        "size": "50 MB",
+        "desc": "State-of-the-art efficiency",
+    },
+}
 
 # Custom CSS - Sleek dark theme with mint/emerald accents
 st.markdown(
     """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
+    
     /* Root variables for consistency */
     :root {
         --bg-primary: #0d0d0d;
@@ -164,23 +140,23 @@ st.markdown(
         --border-subtle: rgba(255, 255, 255, 0.08);
         --border-accent: rgba(16, 185, 129, 0.3);
     }
-
+    
     /* Global app background */
     .stApp {
         background: var(--bg-primary);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-
+    
     /* Sidebar styling */
     [data-testid="stSidebar"] {
         background: var(--bg-secondary) !important;
         border-right: 1px solid var(--border-subtle);
     }
-
+    
     [data-testid="stSidebar"] > div {
         background: transparent !important;
     }
-
+    
     /* Header styling */
     .main-header {
         font-family: 'Inter', sans-serif;
@@ -193,7 +169,7 @@ st.markdown(
         margin-bottom: 0;
         letter-spacing: -0.03em;
     }
-
+    
     .sub-header {
         text-align: center;
         color: var(--text-secondary);
@@ -203,14 +179,14 @@ st.markdown(
         margin-bottom: 2.5rem;
         letter-spacing: 0.02em;
     }
-
+    
     /* Metric styling */
     [data-testid="stMetricValue"] {
         color: var(--accent-primary) !important;
         font-weight: 600 !important;
         font-size: 2rem !important;
     }
-
+    
     [data-testid="stMetricLabel"] {
         color: var(--text-secondary) !important;
         font-weight: 500 !important;
@@ -218,53 +194,34 @@ st.markdown(
         letter-spacing: 0.05em;
         font-size: 0.75rem !important;
     }
-
+    
     /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-
+    
     /* Text colors */
     .stMarkdown, .stText, p, span, label, li {
         color: var(--text-primary) !important;
     }
-
+    
     h1, h2, h3, h4, h5, h6 {
         color: var(--text-primary) !important;
         font-weight: 600 !important;
     }
-
-    /* Sidebar - remove top padding */
-    [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"]:first-child {
-        padding-top: 0 !important;
-    }
-
-    [data-testid="stSidebar"] > div:first-child {
-        padding-top: 1rem !important;
-    }
-
+    
     /* Sidebar section headers */
-    [data-testid="stSidebar"] h4,
+    [data-testid="stSidebar"] h4, 
     [data-testid="stSidebar"] .stMarkdown h3 {
         color: var(--accent-primary) !important;
         font-size: 0.8rem !important;
         text-transform: uppercase;
         letter-spacing: 0.1em;
-        margin-top: 1rem !important;
-        margin-bottom: 0.5rem !important;
+        margin-top: 1.5rem !important;
+        margin-bottom: 0.75rem !important;
         font-weight: 600 !important;
     }
-
-    /* First header in sidebar - no top margin */
-    [data-testid="stSidebar"] .stMarkdown:first-of-type h3 {
-        margin-top: 0 !important;
-    }
-
-    /* Tighten sidebar dividers */
-    [data-testid="stSidebar"] hr {
-        margin: 0.75rem 0 !important;
-    }
-
+    
     /* Input fields */
     .stTextInput input, .stSelectbox > div > div {
         background: var(--bg-tertiary) !important;
@@ -273,27 +230,27 @@ st.markdown(
         color: var(--text-primary) !important;
         transition: all 0.2s ease;
     }
-
+    
     .stTextInput input:focus {
         border-color: var(--accent-primary) !important;
         box-shadow: 0 0 0 2px var(--accent-glow) !important;
     }
-
+    
     /* Checkboxes */
     .stCheckbox label span {
         color: var(--text-primary) !important;
     }
-
+    
     [data-testid="stCheckbox"] > label > div:first-child {
         background: var(--bg-tertiary) !important;
         border-color: var(--border-subtle) !important;
     }
-
+    
     [data-testid="stCheckbox"][aria-checked="true"] > label > div:first-child {
         background: var(--accent-primary) !important;
         border-color: var(--accent-primary) !important;
     }
-
+    
     /* Tabs - modern pill style */
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
@@ -301,7 +258,7 @@ st.markdown(
         padding: 4px;
         border-radius: 12px;
     }
-
+    
     .stTabs [data-baseweb="tab"] {
         background: transparent !important;
         border-radius: 8px !important;
@@ -310,22 +267,22 @@ st.markdown(
         padding: 8px 16px !important;
         border: none !important;
     }
-
+    
     .stTabs [aria-selected="true"] {
         background: var(--accent-primary) !important;
         color: var(--bg-primary) !important;
     }
-
+    
     .stTabs [data-baseweb="tab"]:hover:not([aria-selected="true"]) {
         background: rgba(255, 255, 255, 0.05) !important;
         color: var(--text-primary) !important;
     }
-
+    
     /* File uploader - clean dark style */
     [data-testid="stFileUploader"] {
         background: transparent !important;
     }
-
+    
     [data-testid="stFileUploader"] section {
         background: var(--bg-secondary) !important;
         border: 2px dashed var(--border-accent) !important;
@@ -333,17 +290,17 @@ st.markdown(
         padding: 2.5rem 2rem !important;
         transition: all 0.3s ease;
     }
-
+    
     [data-testid="stFileUploader"] section:hover {
         border-color: var(--accent-primary) !important;
         background: rgba(16, 185, 129, 0.05) !important;
     }
-
+    
     [data-testid="stFileUploader"] section div,
     [data-testid="stFileUploader"] section span {
         color: var(--text-secondary) !important;
     }
-
+    
     [data-testid="stFileUploader"] button {
         background: var(--accent-primary) !important;
         color: var(--bg-primary) !important;
@@ -353,62 +310,62 @@ st.markdown(
         font-weight: 600 !important;
         transition: all 0.2s ease;
     }
-
+    
     [data-testid="stFileUploader"] button:hover {
         background: var(--accent-secondary) !important;
         transform: translateY(-1px);
         box-shadow: 0 4px 12px var(--accent-glow);
     }
-
+    
     /* Alerts - amber for warnings, mint for info */
     .stAlert {
         border-radius: 12px !important;
         border: none !important;
     }
-
+    
     [data-testid="stNotificationContentWarning"] {
         background: rgba(251, 191, 36, 0.1) !important;
         border-left: 4px solid #fbbf24 !important;
     }
-
+    
     [data-testid="stNotificationContentWarning"] p {
         color: #fcd34d !important;
     }
-
+    
     [data-testid="stNotificationContentInfo"] {
         background: rgba(16, 185, 129, 0.1) !important;
         border-left: 4px solid var(--accent-primary) !important;
     }
-
+    
     [data-testid="stNotificationContentInfo"] p {
         color: var(--accent-secondary) !important;
     }
-
+    
     [data-testid="stNotificationContentError"] {
         background: rgba(239, 68, 68, 0.1) !important;
         border-left: 4px solid #ef4444 !important;
     }
-
+    
     [data-testid="stNotificationContentError"] p {
         color: #fca5a5 !important;
     }
-
+    
     /* Expanders */
     .streamlit-expanderHeader {
         background: var(--bg-tertiary) !important;
         border-radius: 8px !important;
         border: 1px solid var(--border-subtle) !important;
     }
-
+    
     .streamlit-expanderHeader:hover {
         border-color: var(--accent-primary) !important;
     }
-
+    
     /* Caption/muted text */
     .stCaption, small {
         color: var(--text-muted) !important;
     }
-
+    
     /* Download buttons */
     .stDownloadButton button {
         background: var(--bg-tertiary) !important;
@@ -418,18 +375,18 @@ st.markdown(
         font-weight: 500 !important;
         transition: all 0.2s ease;
     }
-
+    
     .stDownloadButton button:hover {
         background: var(--accent-primary) !important;
         color: var(--bg-primary) !important;
         border-color: var(--accent-primary) !important;
     }
-
+    
     /* Dividers */
     hr {
         border-color: var(--border-subtle) !important;
     }
-
+    
     /* Code blocks */
     code {
         background: var(--bg-tertiary) !important;
@@ -437,38 +394,38 @@ st.markdown(
         padding: 2px 6px !important;
         border-radius: 4px !important;
     }
-
+    
     /* Links */
     a {
         color: var(--accent-primary) !important;
     }
-
+    
     a:hover {
         color: var(--accent-secondary) !important;
     }
-
+    
     /* Uploaded file chip */
     [data-testid="stFileUploaderFile"] {
         background: var(--bg-tertiary) !important;
         border: 1px solid var(--border-subtle) !important;
         border-radius: 8px !important;
     }
-
+    
     [data-testid="stFileUploaderFile"] button {
         background: transparent !important;
         color: var(--text-secondary) !important;
     }
-
+    
     [data-testid="stFileUploaderFile"] button:hover {
         color: #ef4444 !important;
         background: rgba(239, 68, 68, 0.1) !important;
     }
-
+    
     /* Spinner */
     .stSpinner > div {
         border-top-color: var(--accent-primary) !important;
     }
-
+    
     /* Privacy notice */
     .privacy-notice {
         background: rgba(16, 185, 129, 0.08);
@@ -478,22 +435,22 @@ st.markdown(
         font-size: 0.85rem;
         color: var(--text-secondary);
     }
-
+    
     /* Scrollbar */
     ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
     }
-
+    
     ::-webkit-scrollbar-track {
         background: var(--bg-secondary);
     }
-
+    
     ::-webkit-scrollbar-thumb {
         background: var(--bg-tertiary);
         border-radius: 4px;
     }
-
+    
     ::-webkit-scrollbar-thumb:hover {
         background: var(--text-muted);
     }
@@ -529,284 +486,301 @@ def format_bytes(b: float) -> str:
 
 
 def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
-    """Render CLI-style model comparison report."""
-    import pandas as pd
+    """Render side-by-side model comparison."""
+    st.markdown("## Model Comparison")
 
-    # Extract all metrics
+    # Header with model names
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(
+            f"""
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                    padding: 1rem 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.1em;">
+                Model A
+            </div>
+            <div style="font-size: 1.25rem; font-weight: 600; color: white; margin-top: 0.25rem;">
+                {model_a.name}
+            </div>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    with col2:
+        st.markdown(
+            f"""
+        <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); 
+                    padding: 1rem 1.5rem; border-radius: 12px; text-align: center;">
+            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.1em;">
+                Model B
+            </div>
+            <div style="font-size: 1.25rem; font-weight: 600; color: white; margin-top: 0.25rem;">
+                {model_b.name}
+            </div>
+        </div>
+        """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("---")
+
+    # Metrics comparison
+    st.markdown("### Key Metrics")
+
+    # Get metrics
     params_a = model_a.report.param_counts.total if model_a.report.param_counts else 0
     params_b = model_b.report.param_counts.total if model_b.report.param_counts else 0
     flops_a = model_a.report.flop_counts.total if model_a.report.flop_counts else 0
     flops_b = model_b.report.flop_counts.total if model_b.report.flop_counts else 0
-    size_a = (
-        model_a.report.memory_estimates.model_size_bytes if model_a.report.memory_estimates else 0
+    mem_a = (
+        model_a.report.memory_estimates.peak_activation_bytes
+        if model_a.report.memory_estimates
+        else 0
     )
-    size_b = (
-        model_b.report.memory_estimates.model_size_bytes if model_b.report.memory_estimates else 0
+    mem_b = (
+        model_b.report.memory_estimates.peak_activation_bytes
+        if model_b.report.memory_estimates
+        else 0
     )
     ops_a = model_a.report.graph_summary.num_nodes
     ops_b = model_b.report.graph_summary.num_nodes
 
-    # Precision detection
-    bytes_per_param_a = (size_a / params_a) if params_a > 0 else 0
-    bytes_per_param_b = (size_b / params_b) if params_b > 0 else 0
+    # Calculate deltas
+    def delta_str(a, b, is_bytes=False):
+        if a == 0 and b == 0:
+            return ""
+        diff = b - a
+        pct = (diff / a * 100) if a != 0 else 0
+        sign = "+" if diff > 0 else ""
+        if is_bytes:
+            return f"{sign}{format_bytes(abs(diff))} ({sign}{pct:.1f}%)"
+        return f"{sign}{format_number(abs(diff))} ({sign}{pct:.1f}%)"
 
-    def get_precision(bpp: float) -> str:
-        if bpp < 1.5:
-            return "INT8"
-        elif bpp < 2.5:
-            return "FP16"
-        elif bpp < 4.5:
-            return "FP32"
-        return "FP64"
+    # Comparison table
+    col1, col2, col3, col4 = st.columns(4)
 
-    precision_a = get_precision(bytes_per_param_a)
-    precision_b = get_precision(bytes_per_param_b)
-
-    # Size ratio (B relative to A)
-    size_ratio = size_b / size_a if size_a > 0 else 1.0
-
-    # Title
-    st.markdown(
-        f"""
-    <h2 style="margin-bottom: 0.25rem;">Quantization Impact Report</h2>
-    <p style="color: #a3a3a3; font-size: 0.9rem;">
-        Baseline: <strong>{model_a.name}</strong> ({precision_a})
-    </p>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    # Trade-off Analysis box
-    st.markdown("### Trade-off Analysis")
-
-    # Determine best characteristics
-    smaller = model_b.name if size_b < size_a else model_a.name
-    fewer_params = model_b.name if params_b < params_a else model_a.name
-    fewer_flops = model_b.name if flops_b < flops_a else model_a.name
-
-    col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric(
-            "Smallest",
-            smaller,
-            f"{(1 - min(size_a, size_b) / max(size_a, size_b)) * 100:.1f}% smaller",
-        )
+        st.markdown("**Parameters**")
+        st.markdown(f"🟢 A: **{format_number(params_a)}**")
+        st.markdown(f"🟣 B: **{format_number(params_b)}**")
+        if params_a != params_b:
+            diff_pct = ((params_b - params_a) / params_a * 100) if params_a else 0
+            color = "#ef4444" if diff_pct > 0 else "#10b981"
+            st.markdown(
+                f"<span style='color: {color};'>Δ {diff_pct:+.1f}%</span>", unsafe_allow_html=True
+            )
+
     with col2:
-        st.metric("Fewest Params", fewer_params)
+        st.markdown("**FLOPs**")
+        st.markdown(f"🟢 A: **{format_number(flops_a)}**")
+        st.markdown(f"🟣 B: **{format_number(flops_b)}**")
+        if flops_a != flops_b:
+            diff_pct = ((flops_b - flops_a) / flops_a * 100) if flops_a else 0
+            color = "#ef4444" if diff_pct > 0 else "#10b981"
+            st.markdown(
+                f"<span style='color: {color};'>Δ {diff_pct:+.1f}%</span>", unsafe_allow_html=True
+            )
+
     with col3:
-        st.metric("Fewest FLOPs", fewer_flops)
-
-    # Recommendations
-    st.markdown("#### Recommendations")
-    recommendations = []
-
-    if precision_a != precision_b:
-        if size_ratio < 0.6:
-            recommendations.append(
-                f"**{model_b.name}** offers **{(1 - size_ratio) * 100:.0f}% smaller** model size "
-                f"({precision_a} → {precision_b})"
-            )
-        if size_ratio > 1.4:
-            recommendations.append(
-                f"**{model_a.name}** is **{(1 - 1 / size_ratio) * 100:.0f}% smaller** than {model_b.name}"
-            )
-
-    if abs(size_ratio - 0.5) < 0.1 and precision_b == "FP16":
-        recommendations.append(
-            "FP16 achieves expected ~50% size reduction with minimal accuracy impact"
-        )
-    elif abs(size_ratio - 0.25) < 0.1 and precision_b == "INT8":
-        recommendations.append(
-            "INT8 achieves expected ~75% size reduction - verify accuracy on your dataset"
-        )
-
-    if params_a == params_b and flops_a == flops_b:
-        recommendations.append("Same architecture - only precision/quantization differs")
-
-    if not recommendations:
-        recommendations.append("Models have similar characteristics")
-
-    for rec in recommendations:
-        st.markdown(f"- {rec}")
-
-    st.markdown("---")
-
-    # Variant Comparison Table (CLI-style)
-    st.markdown("### Variant Comparison")
-
-    table_data = [
-        {
-            "Model": model_a.name,
-            "Precision": precision_a,
-            "Size": format_bytes(size_a),
-            "Params": format_number(params_a),
-            "FLOPs": format_number(flops_a),
-            "Size vs Baseline": "baseline",
-            "Ops": ops_a,
-        },
-        {
-            "Model": model_b.name,
-            "Precision": precision_b,
-            "Size": format_bytes(size_b),
-            "Params": format_number(params_b),
-            "FLOPs": format_number(flops_b),
-            "Size vs Baseline": f"{size_ratio:.2f}x ({(size_ratio - 1) * 100:+.1f}%)",
-            "Ops": ops_b,
-        },
-    ]
-
-    df = pd.DataFrame(table_data)
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Model": st.column_config.TextColumn("Model", width="medium"),
-            "Precision": st.column_config.TextColumn("Precision", width="small"),
-            "Size": st.column_config.TextColumn("Size", width="small"),
-            "Params": st.column_config.TextColumn("Params", width="small"),
-            "FLOPs": st.column_config.TextColumn("FLOPs", width="small"),
-            "Size vs Baseline": st.column_config.TextColumn("Δ Size", width="medium"),
-            "Ops": st.column_config.NumberColumn("Ops", width="small"),
-        },
-    )
-
-    st.markdown("---")
-
-    # Memory Savings visualization
-    st.markdown("### Memory Comparison")
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        # Size comparison bar
-        size_data = pd.DataFrame(
-            {"Model": [model_a.name, model_b.name], "Size (MB)": [size_a / 1e6, size_b / 1e6]}
-        )
-        st.bar_chart(size_data.set_index("Model"), height=200)
-        st.caption("Model Size (weights)")
-
-    with col2:
-        # Savings indicator
-        if size_a > size_b:
-            savings_pct = (1 - size_b / size_a) * 100
-            savings_bytes = size_a - size_b
+        st.markdown("**Peak Memory**")
+        st.markdown(f"🟢 A: **{format_bytes(mem_a)}**")
+        st.markdown(f"🟣 B: **{format_bytes(mem_b)}**")
+        if mem_a != mem_b:
+            diff_pct = ((mem_b - mem_a) / mem_a * 100) if mem_a else 0
+            color = "#ef4444" if diff_pct > 0 else "#10b981"
             st.markdown(
-                f"""
-            <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
-                        border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 1.5rem; text-align: center;">
-                <div style="font-size: 2rem; font-weight: 700; color: #10b981;">{savings_pct:.1f}%</div>
-                <div style="color: #a3a3a3; font-size: 0.9rem;">Size Reduction</div>
-                <div style="color: #6b7280; font-size: 0.8rem; margin-top: 0.5rem;">
-                    Saves {format_bytes(savings_bytes)}
-                </div>
-            </div>
-            """,
-                unsafe_allow_html=True,
+                f"<span style='color: {color};'>Δ {diff_pct:+.1f}%</span>", unsafe_allow_html=True
             )
-        elif size_b > size_a:
-            increase_pct = (size_b / size_a - 1) * 100
+
+    with col4:
+        st.markdown("**Operators**")
+        st.markdown(f"🟢 A: **{ops_a}**")
+        st.markdown(f"🟣 B: **{ops_b}**")
+        if ops_a != ops_b:
+            diff_pct = ((ops_b - ops_a) / ops_a * 100) if ops_a else 0
+            color = "#ef4444" if diff_pct > 0 else "#10b981"
             st.markdown(
-                f"""
-            <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.1) 100%);
-                        border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1.5rem; text-align: center;">
-                <div style="font-size: 2rem; font-weight: 700; color: #ef4444;">+{increase_pct:.1f}%</div>
-                <div style="color: #a3a3a3; font-size: 0.9rem;">Size Increase</div>
-            </div>
-            """,
-                unsafe_allow_html=True,
+                f"<span style='color: {color};'>Δ {diff_pct:+.1f}%</span>", unsafe_allow_html=True
             )
-        else:
-            st.info("Models have identical size")
 
     st.markdown("---")
 
-    # Operator Distribution
-    st.markdown("### Operator Distribution")
+    # Operator distribution comparison
+    st.markdown("### Operator Distribution Comparison")
 
+    import pandas as pd
+
+    # Merge operator counts
     ops_a_dict = model_a.report.graph_summary.op_type_counts or {}
     ops_b_dict = model_b.report.graph_summary.op_type_counts or {}
-    all_ops = sorted(set(ops_a_dict.keys()) | set(ops_b_dict.keys()))
+    all_ops = set(ops_a_dict.keys()) | set(ops_b_dict.keys())
 
-    if all_ops:
-        op_data = []
-        for op in all_ops:
-            count_a = ops_a_dict.get(op, 0)
-            count_b = ops_b_dict.get(op, 0)
-            if count_a > 0 or count_b > 0:
-                op_data.append({"Operator": op, model_a.name: count_a, model_b.name: count_b})
-
-        op_df = pd.DataFrame(op_data)
-        st.bar_chart(op_df.set_index("Operator"), height=300)
-
-        with st.expander("View operator details"):
-            # Add difference column
-            for row in op_data:
-                row["Difference"] = row[model_b.name] - row[model_a.name]
-            detail_df = pd.DataFrame(op_data)
-            st.dataframe(detail_df, use_container_width=True, hide_index=True)
-
-    # Architecture compatibility check
-    if params_a != params_b or flops_a != flops_b:
-        st.markdown("---")
-        st.warning(
-            "**Architecture Difference Detected**: Models have different parameter counts or FLOPs. "
-            "This may indicate structural changes beyond precision conversion."
+    comparison_data = []
+    for op in sorted(all_ops):
+        count_a = ops_a_dict.get(op, 0)
+        count_b = ops_b_dict.get(op, 0)
+        comparison_data.append(
+            {
+                "Operator": op,
+                f"Model A ({model_a.name})": count_a,
+                f"Model B ({model_b.name})": count_b,
+                "Difference": count_b - count_a,
+            }
         )
 
-    # Universal IR Structural Comparison (if available)
-    ir_a = getattr(model_a.report, "universal_graph", None)
-    ir_b = getattr(model_b.report, "universal_graph", None)
+    df = pd.DataFrame(comparison_data)
 
-    if ir_a and ir_b:
+    # Bar chart
+    chart_df = df.set_index("Operator")[[f"Model A ({model_a.name})", f"Model B ({model_b.name})"]]
+    st.bar_chart(chart_df)
+
+    # Table
+    with st.expander("View detailed comparison table"):
+        st.dataframe(df, width="stretch")
+
+    # Summary
+    st.markdown("### Summary")
+
+    # Auto-generate comparison summary
+    summary_points = []
+
+    if params_b < params_a:
+        reduction = (1 - params_b / params_a) * 100 if params_a else 0
+        summary_points.append(f"Model B has **{reduction:.1f}% fewer parameters** than Model A")
+    elif params_b > params_a:
+        increase = (params_b / params_a - 1) * 100 if params_a else 0
+        summary_points.append(f"Model B has **{increase:.1f}% more parameters** than Model A")
+
+    if flops_b < flops_a:
+        reduction = (1 - flops_b / flops_a) * 100 if flops_a else 0
+        summary_points.append(
+            f"Model B requires **{reduction:.1f}% fewer FLOPs** (faster inference)"
+        )
+    elif flops_b > flops_a:
+        increase = (flops_b / flops_a - 1) * 100 if flops_a else 0
+        summary_points.append(f"Model B requires **{increase:.1f}% more FLOPs** (slower inference)")
+
+    if mem_b < mem_a:
+        reduction = (1 - mem_b / mem_a) * 100 if mem_a else 0
+        summary_points.append(f"Model B uses **{reduction:.1f}% less memory**")
+    elif mem_b > mem_a:
+        increase = (mem_b / mem_a - 1) * 100 if mem_a else 0
+        summary_points.append(f"Model B uses **{increase:.1f}% more memory**")
+
+    if summary_points:
+        for point in summary_points:
+            st.markdown(f"- {point}")
+    else:
+        st.info("Models have similar characteristics.")
+
+    # Quantization Recommendations (Task 33.4.11)
+    # Detect if comparing FP32 vs INT8/quantized models
+    is_a_quantized = model_a.report.param_counts and model_a.report.param_counts.is_quantized
+    is_b_quantized = model_b.report.param_counts and model_b.report.param_counts.is_quantized
+
+    # Show quantization analysis if one is FP32 and one is INT8
+    if is_a_quantized != is_b_quantized:
         st.markdown("---")
-        st.markdown("### Structural Analysis (Universal IR)")
+        st.markdown("### Quantization Analysis")
 
-        # Check structural equality
-        is_equal = ir_a.is_structurally_equal(ir_b)
-
-        if is_equal:
-            st.success(
-                "**Architectures are structurally identical** — same ops in same order. "
-                "Differences are limited to precision/weights."
-            )
+        if is_b_quantized and not is_a_quantized:
+            fp32_model, int8_model = model_a, model_b
+            fp32_label, int8_label = "A (FP32)", "B (INT8)"
         else:
-            st.warning(
-                "**Structural differences detected** — graphs differ in ops or connectivity."
+            fp32_model, int8_model = model_b, model_a
+            fp32_label, int8_label = "B (FP32)", "A (INT8)"
+
+        st.info(f"Comparing {fp32_label} against {int8_label} quantized version")
+
+        # Calculate savings
+        params_fp32 = fp32_model.report.param_counts.total if fp32_model.report.param_counts else 0
+        params_int8 = int8_model.report.param_counts.total if int8_model.report.param_counts else 0
+
+        mem_fp32 = (
+            fp32_model.report.memory_estimates.model_size_bytes
+            if fp32_model.report.memory_estimates
+            else 0
+        )
+        mem_int8 = (
+            int8_model.report.memory_estimates.model_size_bytes
+            if int8_model.report.memory_estimates
+            else 0
+        )
+
+        # Size reduction metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if mem_fp32 > 0:
+                size_reduction = (1 - mem_int8 / mem_fp32) * 100
+                st.metric(
+                    "Size Reduction",
+                    f"{size_reduction:.1f}%",
+                    delta=f"-{format_bytes(mem_fp32 - mem_int8)}",
+                )
+        with col2:
+            st.metric(
+                "FP32 Size",
+                format_bytes(mem_fp32),
+            )
+        with col3:
+            st.metric(
+                "INT8 Size",
+                format_bytes(mem_int8),
             )
 
-            # Show detailed diff
-            with st.expander("View IR Diff", expanded=True):
-                diff_result = ir_a.diff(ir_b)
+        # Run quantization analysis on FP32 model to show what to watch
+        try:
+            # Check if we can load the FP32 model for analysis
+            if hasattr(fp32_model, "path") and fp32_model.path:
+                with st.expander("Quantization Recommendations", expanded=True):
+                    try:
+                        graph_loader = ONNXGraphLoader()
+                        _, graph_info = graph_loader.load(fp32_model.path)
+                        linter = QuantizationLinter()
+                        lint_result = linter.lint(graph_info)
 
-                diff_cols = st.columns(2)
+                        try:
+                            advice = advise_quantization(lint_result, graph_info, use_llm=False)
+                        except Exception as e:
+                            advice = None
+                            st.warning(f"Quantization advice unavailable: {e}")
 
-                with diff_cols[0]:
-                    st.markdown("**Summary:**")
-                    st.text(f"  Node count: {ir_a.num_nodes} → {ir_b.num_nodes}")
-                    st.text(f"  Parameters: {ir_a.total_parameters:,} → {ir_b.total_parameters:,}")
+                        st.markdown(
+                            f"**FP32 Model Readiness Score:** {lint_result.readiness_score}/100"
+                        )
+                        if advice and advice.strategy:
+                            st.markdown(f"> {advice.strategy}")
 
-                with diff_cols[1]:
-                    st.markdown("**Changes:**")
-                    if diff_result.get("node_count_diff", 0) != 0:
-                        st.text(f"  Δ Nodes: {diff_result['node_count_diff']:+d}")
-                    if diff_result.get("param_count_diff", 0) != 0:
-                        st.text(f"  Δ Params: {diff_result['param_count_diff']:+,}")
+                        if advice and advice.op_substitutions:
+                            st.markdown("**Recommended optimizations before quantization:**")
+                            for sub in advice.op_substitutions:
+                                st.markdown(
+                                    f"- Replace `{sub.original_op}` with `{sub.replacement_op}`"
+                                )
 
-                # Op type differences
-                op_diff = diff_result.get("op_type_diff", {})
-                if op_diff:
-                    st.markdown("**Op Type Changes:**")
-                    added = op_diff.get("added", [])
-                    removed = op_diff.get("removed", [])
-                    if added:
-                        st.text(f"  Added: {', '.join(added)}")
-                    if removed:
-                        st.text(f"  Removed: {', '.join(removed)}")
+                        if lint_result.warnings:
+                            st.warning(
+                                f"FP32 model has {len(lint_result.warnings)} quantization-related warnings. "
+                                "Review these if accuracy degradation is observed."
+                            )
 
-    # Footer
-    st.markdown("---")
-    st.caption("*Generated by HaoLine Compare Mode*")
+                    except Exception as e:
+                        st.caption(f"Could not analyze FP32 model: {e}")
+        except Exception:
+            pass  # Quantization advisor not available or failed
+
+    # Also show if both models might benefit from quantization (neither is quantized)
+    elif not is_a_quantized and not is_b_quantized:
+        with st.expander("Quantization Potential"):
+            st.markdown("Neither model is quantized. Consider INT8 quantization for:")
+            st.markdown("- **2-4x smaller model size**")
+            st.markdown("- **2-4x faster inference** (with INT8-optimized hardware)")
+            st.markdown("- **Lower memory bandwidth** requirements")
+            st.markdown("")
+            st.markdown(
+                "Use the **Analyze** mode with **Quantization Analysis** enabled to assess readiness."
+            )
 
 
 def render_compare_mode():
@@ -819,7 +793,7 @@ def render_compare_mode():
         # Clear selection buttons
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
-            if st.button("Clear Comparison", type="secondary", use_container_width=True):
+            if st.button("Clear Comparison", type="secondary", width="stretch"):
                 st.session_state.compare_models = {"model_a": None, "model_b": None}
                 st.rerun()
 
@@ -828,38 +802,14 @@ def render_compare_mode():
 
     # Model selection interface
     st.markdown("## Compare Two Models")
-    st.markdown("Upload two models at once, or select from session history.")
+    st.markdown("Select models from your session history, or upload new models to compare.")
 
-    # Quick dual upload
-    with st.expander("📤 Quick Upload (both models at once)", expanded=not (model_a or model_b)):
-        dual_files = st.file_uploader(
-            "Select two ONNX models",
-            type=["onnx"],
-            accept_multiple_files=True,
-            key="dual_upload",
-            help="Select exactly 2 models to compare",
-        )
-        if dual_files:
-            if len(dual_files) == 2:
-                with st.spinner("Analyzing both models..."):
-                    result_a = analyze_model_file(dual_files[0])
-                    result_b = analyze_model_file(dual_files[1])
-                    if result_a and result_b:
-                        st.session_state.compare_models["model_a"] = result_a
-                        st.session_state.compare_models["model_b"] = result_b
-                        st.rerun()
-            elif len(dual_files) == 1:
-                st.warning("Please select 2 models to compare")
-            else:
-                st.warning(f"Please select exactly 2 models (you selected {len(dual_files)})")
-
-    st.markdown("**Or select individually:**")
     col1, col2 = st.columns(2)
 
     with col1:
         st.markdown(
             """
-        <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+        <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%); 
                     border: 2px dashed rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 2rem; text-align: center;">
             <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🟢</div>
             <div style="font-size: 1rem; font-weight: 600; color: #10b981;">Model A</div>
@@ -900,7 +850,7 @@ def render_compare_mode():
     with col2:
         st.markdown(
             """
-        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%);
+        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%); 
                     border: 2px dashed rgba(99, 102, 241, 0.3); border-radius: 16px; padding: 2rem; text-align: center;">
             <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🟣</div>
             <div style="font-size: 1rem; font-weight: 600; color: #6366f1;">Model B</div>
@@ -945,6 +895,251 @@ def render_compare_mode():
         )
 
 
+def _check_feature_availability() -> dict[str, dict[str, Any]]:
+    """Check which features are available in the current environment."""
+    features: dict[str, dict[str, Any]] = {}
+
+    # Core ONNX analysis (always available)
+    features["ONNX Analysis"] = {"available": True}
+    features["Interactive Graph"] = {"available": True}
+    features["Quantization Linting"] = {"available": True}
+
+    # TensorRT (requires GPU + tensorrt package)
+    try:
+        from haoline.formats.tensorrt import is_available
+
+        trt_available = is_available()
+    except ImportError:
+        trt_available = False
+    features["TensorRT Analysis"] = {
+        "available": trt_available,
+        "requires_gpu": True,
+    }
+
+    # Runtime Profiling (requires GPU + onnxruntime-gpu)
+    try:
+        import onnxruntime
+
+        has_gpu_ep = "CUDAExecutionProvider" in onnxruntime.get_available_providers()
+    except ImportError:
+        has_gpu_ep = False
+    features["GPU Inference"] = {
+        "available": has_gpu_ep,
+        "requires_gpu": True,
+    }
+
+    # LLM Summary (requires openai)
+    try:
+        import openai  # noqa: F401
+
+        llm_available = True
+    except ImportError:
+        llm_available = False
+    features["AI Summary"] = {
+        "available": llm_available,
+        "requires_dep": "openai",
+    }
+
+    # PDF Export (requires playwright)
+    try:
+        import playwright  # noqa: F401
+
+        pdf_available = True
+    except ImportError:
+        pdf_available = False
+    features["PDF Export"] = {
+        "available": pdf_available,
+        "requires_dep": "playwright",
+    }
+
+    # PyTorch conversion (requires torch)
+    try:
+        import torch  # noqa: F401
+
+        torch_available = True
+    except ImportError:
+        torch_available = False
+    features["PyTorch Conversion"] = {
+        "available": torch_available,
+        "requires_dep": "torch",
+    }
+
+    return features
+
+
+def _handle_tensorrt_streamlit(uploaded_file) -> None:
+    """Handle TensorRT engine file analysis in Streamlit."""
+    import tempfile
+
+    # Check TensorRT availability
+    try:
+        from haoline.formats.tensorrt import (
+            TRTEngineReader,
+            analyze_quant_bottlenecks,
+            format_bytes,
+            is_available,
+        )
+    except ImportError:
+        st.error("""
+        **TensorRT support not installed.**
+        
+        Install with: `pip install haoline[tensorrt]`
+        
+        Note: Requires NVIDIA GPU and CUDA 12.x
+        """)
+        return
+
+    if not is_available():
+        st.warning("""
+        **TensorRT requires NVIDIA GPU** — This feature is not available on HuggingFace Spaces free tier.
+        
+        **Options:**
+        1. Use the CLI locally with a GPU:
+           ```bash
+           pip install haoline[tensorrt]
+           haoline model.engine --quant-bottlenecks
+           ```
+        
+        2. Use our AWS-hosted version (coming soon) for full GPU features.
+        """)
+        return
+
+    # Save to temp file
+    with tempfile.NamedTemporaryFile(suffix=".engine", delete=False) as tmp:
+        tmp.write(uploaded_file.getvalue())
+        tmp_path = tmp.name
+
+    try:
+        with st.spinner("Analyzing TensorRT engine..."):
+            reader = TRTEngineReader(tmp_path)
+            info = reader.read()
+            bottleneck_analysis = analyze_quant_bottlenecks(info)
+
+        # Display results
+        st.markdown("## TensorRT Engine Analysis")
+
+        # Overview metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Layers", info.layer_count)
+        with col2:
+            fused_pct = int(info.fusion_ratio * 100)
+            st.metric("Fused", f"{info.fused_layer_count} ({fused_pct}%)")
+        with col3:
+            st.metric("Device Memory", format_bytes(info.device_memory_bytes))
+        with col4:
+            quant_pct = int(bottleneck_analysis.quantization_ratio * 100)
+            st.metric("INT8 Layers", f"{bottleneck_analysis.int8_layer_count} ({quant_pct}%)")
+
+        # Engine info
+        st.markdown("### Engine Overview")
+        st.markdown(f"""
+        | Property | Value |
+        |----------|-------|
+        | **TensorRT Version** | {info.trt_version} |
+        | **Device** | {info.device_name} |
+        | **Compute Capability** | SM {info.compute_capability[0]}.{info.compute_capability[1]} |
+        | **Max Batch Size** | {info.builder_config.max_batch_size} |
+        """)
+
+        # Quantization Bottleneck Analysis (Task 22.8.7)
+        st.markdown("### Quantization Bottleneck Analysis")
+
+        # Precision breakdown with color-coded bar
+        total = bottleneck_analysis.total_layer_count
+        if total > 0:
+            int8_pct = bottleneck_analysis.int8_layer_count / total
+            fp16_pct = bottleneck_analysis.fp16_layer_count / total
+            fp32_pct = bottleneck_analysis.fp32_layer_count / total
+
+            # Visual bar
+            st.markdown(
+                f"""
+                <div style="display: flex; height: 30px; border-radius: 5px; overflow: hidden; margin-bottom: 1rem;">
+                    <div style="width: {int8_pct * 100}%; background: #10b981;" title="INT8: {bottleneck_analysis.int8_layer_count}"></div>
+                    <div style="width: {fp16_pct * 100}%; background: #f59e0b;" title="FP16: {bottleneck_analysis.fp16_layer_count}"></div>
+                    <div style="width: {fp32_pct * 100}%; background: #ef4444;" title="FP32: {bottleneck_analysis.fp32_layer_count}"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #a3a3a3;">
+                    <span style="color: #10b981;">■ INT8: {bottleneck_analysis.int8_layer_count}</span>
+                    <span style="color: #f59e0b;">■ FP16: {bottleneck_analysis.fp16_layer_count}</span>
+                    <span style="color: #ef4444;">■ FP32: {bottleneck_analysis.fp32_layer_count}</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        # Speedup potential
+        if bottleneck_analysis.estimated_speedup_potential > 1.05:
+            st.warning(
+                f"**Estimated speedup potential:** {bottleneck_analysis.estimated_speedup_potential:.1f}x "
+                f"— {int(bottleneck_analysis.fp32_fallback_ratio * 100)}% of layers are FP32 fallback"
+            )
+
+        # Bottleneck zones heatmap
+        if bottleneck_analysis.bottleneck_zones:
+            st.markdown("#### FP32 Bottleneck Zones")
+
+            for zone in sorted(bottleneck_analysis.bottleneck_zones, key=lambda z: -z.layer_count)[
+                :5
+            ]:
+                severity_color = {
+                    "Critical": "#ef4444",
+                    "High": "#f97316",
+                    "Medium": "#f59e0b",
+                    "Low": "#84cc16",
+                }.get(zone.severity, "#a3a3a3")
+
+                types_str = ", ".join(set(zone.layer_types[:3]))
+                st.markdown(
+                    f"""
+                    <div style="background: #1a1a1a; border-left: 4px solid {severity_color}; padding: 0.5rem 1rem; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0;">
+                        <strong style="color: {severity_color};">[{zone.severity}]</strong>
+                        <span style="color: #f5f5f5;">{zone.layer_count} consecutive FP32 layers</span>
+                        <br><span style="color: #737373; font-size: 0.85rem;">Types: {types_str}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            if len(bottleneck_analysis.bottleneck_zones) > 5:
+                st.caption(f"... and {len(bottleneck_analysis.bottleneck_zones) - 5} more zones")
+
+        # Failed fusions
+        if bottleneck_analysis.failed_fusions:
+            with st.expander(
+                f"Failed Fusions ({len(bottleneck_analysis.failed_fusions)})", expanded=False
+            ):
+                for ff in bottleneck_analysis.failed_fusions[:10]:
+                    impact_color = {"High": "#ef4444", "Medium": "#f59e0b", "Low": "#84cc16"}.get(
+                        ff.speed_impact, "#a3a3a3"
+                    )
+                    st.markdown(
+                        f"<span style='color: {impact_color};'>■</span> **{ff.pattern_type}**: {', '.join(ff.layer_names[:3])}",
+                        unsafe_allow_html=True,
+                    )
+
+        # Recommendations
+        if bottleneck_analysis.recommendations:
+            st.markdown("#### Recommendations")
+            for rec in bottleneck_analysis.recommendations:
+                st.markdown(f"- {rec}")
+
+        # Layer type distribution
+        with st.expander("Layer Type Distribution", expanded=False):
+            import pandas as pd
+
+            layer_types = info.layer_type_counts
+            df = pd.DataFrame(
+                sorted(layer_types.items(), key=lambda x: -x[1]),
+                columns=["Type", "Count"],
+            )
+            st.bar_chart(df.set_index("Type"))
+
+    except Exception as e:
+        st.error(f"Failed to analyze TensorRT engine: {e}")
+
+
 def analyze_model_file(uploaded_file) -> AnalysisResult | None:
     """Analyze an uploaded model file and return the result."""
     from haoline import ModelInspector
@@ -973,212 +1168,6 @@ def analyze_model_file(uploaded_file) -> AnalysisResult | None:
     except Exception as e:
         st.error(f"Error analyzing model: {e}")
         return None
-
-
-def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str) -> None:
-    """Handle TensorRT engine file analysis in Streamlit."""
-    import os
-
-    # Check if running on HuggingFace Spaces (free tier = no GPU)
-    is_hf_spaces = os.environ.get("SPACE_ID") is not None
-    is_hf_free_tier = is_hf_spaces and os.environ.get("SPACE_HARDWARE", "cpu") == "cpu"
-
-    if is_hf_free_tier:
-        st.error(
-            """
-            **TensorRT requires NVIDIA GPU**
-
-            This HuggingFace Space is running on CPU (free tier).
-            TensorRT engine analysis requires an NVIDIA GPU.
-
-            **Options:**
-            1. **Run locally**: `pip install haoline[tensorrt]` (requires NVIDIA GPU + CUDA 12.x)
-            2. **Use CLI**: `haoline model.engine` on a GPU machine
-            3. **Upgrade Space**: Use a GPU-enabled HuggingFace Space tier
-
-            *ONNX models work fine on CPU - try uploading an ONNX file instead!*
-            """
-        )
-        return
-
-    try:
-        from haoline.formats.tensorrt import TRTEngineReader, format_bytes, is_available
-    except ImportError:
-        st.error(
-            """
-            **TensorRT support not installed.**
-
-            Install with: `pip install haoline[tensorrt]`
-
-            Note: Requires NVIDIA GPU and CUDA 12.x
-            """
-        )
-        return
-
-    if not is_available():
-        st.error(
-            """
-            **TensorRT not available.**
-
-            Install with: `pip install tensorrt`
-
-            Note: Requires NVIDIA GPU and CUDA 12.x
-            """
-        )
-        return
-
-    # Save to temp file for TensorRT to read
-    with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
-        tmp.write(file_bytes)
-        tmp_path = tmp.name
-
-    try:
-        with st.spinner("Loading TensorRT engine..."):
-            reader = TRTEngineReader(tmp_path)
-            info = reader.read()
-    except RuntimeError as e:
-        st.error(f"Failed to load TensorRT engine: {e}")
-        Path(tmp_path).unlink(missing_ok=True)
-        return
-    finally:
-        Path(tmp_path).unlink(missing_ok=True)
-
-    # Display TensorRT Analysis
-    st.markdown("## TensorRT Engine Analysis")
-    st.caption(f"**{file_name}**")
-
-    # Overview metrics
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Layers", info.layer_count)
-    with col2:
-        fused_pct = int(info.fusion_ratio * 100)
-        st.metric("Fused", f"{info.fused_layer_count}/{info.layer_count}", f"{fused_pct}%")
-    with col3:
-        st.metric("Memory", format_bytes(info.device_memory_bytes))
-    with col4:
-        st.metric("TRT Version", info.trt_version.split(".")[0] + ".x")
-
-    # Device info
-    st.markdown("### Device")
-    st.info(
-        f"**{info.device_name}** — Compute Capability SM {info.compute_capability[0]}.{info.compute_capability[1]}"
-    )
-
-    # Builder configuration
-    cfg = info.builder_config
-    st.markdown("### Builder Configuration")
-    cfg_col1, cfg_col2, cfg_col3 = st.columns(3)
-    with cfg_col1:
-        st.metric("Max Batch Size", cfg.max_batch_size)
-    with cfg_col2:
-        st.metric("Workspace", format_bytes(cfg.device_memory_size))
-    with cfg_col3:
-        dla_text = f"Core {cfg.dla_core}" if cfg.dla_core >= 0 else "GPU Only"
-        st.metric("DLA", dla_text)
-
-    # Additional config details in expander
-    with st.expander("⚙️ More Config Details", expanded=False):
-        config_items = {
-            "Optimization Profiles": cfg.num_optimization_profiles,
-            "Engine Capability": cfg.engine_capability,
-            "Hardware Compatibility": cfg.hardware_compatibility_level,
-            "Implicit Batch Mode": "Yes (legacy)" if cfg.has_implicit_batch else "No",
-        }
-        for key, val in config_items.items():
-            st.text(f"{key}: {val}")
-
-    # Bindings
-    st.markdown("### Input/Output Bindings")
-    binding_data = []
-    for b in info.bindings:
-        binding_data.append(
-            {
-                "Name": b.name,
-                "Type": "Input" if b.is_input else "Output",
-                "Shape": str(b.shape),
-                "Dtype": b.dtype,
-            }
-        )
-    st.dataframe(binding_data, use_container_width=True, hide_index=True)
-
-    # Layer type distribution
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown("### Layer Types")
-        layer_data = [
-            {"Type": ltype, "Count": count}
-            for ltype, count in sorted(info.layer_type_counts.items(), key=lambda x: -x[1])
-        ]
-        st.dataframe(layer_data, use_container_width=True, hide_index=True)
-
-    with col2:
-        st.markdown("### Optimization Summary")
-        if info.fused_layer_count > 0:
-            st.success(
-                f"""
-                **{info.fused_layer_count} fused layers** combining **~{info.original_ops_fused} original ops**
-
-                TensorRT optimized this model by fusing operations like Conv+BatchNorm+ReLU
-                into single kernels for faster inference.
-
-                **Fusion ratio:** {int(info.fusion_ratio * 100)}% of layers are fused
-                """
-            )
-
-            # Show some example fusions
-            fused_examples = [layer for layer in info.layers if layer.is_fused][:3]
-            if fused_examples:
-                st.markdown("**Example fusions:**")
-                for layer in fused_examples:
-                    if layer.fused_ops:
-                        st.caption(f"• {' + '.join(layer.fused_ops[:4])}")
-        else:
-            st.info("No layer fusions detected in this engine.")
-
-    # All layers expandable
-    with st.expander("📋 All Layers", expanded=False):
-        all_layers = [
-            {
-                "#": i + 1,
-                "Name": layer.name[:60],
-                "Type": layer.type,
-                "Precision": layer.precision,
-                "Fused": "✓" if layer.is_fused else "",
-                "Tactic": layer.tactic[:30] if layer.tactic else "",
-            }
-            for i, layer in enumerate(info.layers)
-        ]
-        st.dataframe(all_layers, use_container_width=True, hide_index=True)
-
-    # JSON export
-    st.markdown("### Export")
-    export_data = {
-        "format": "tensorrt",
-        "file": file_name,
-        "trt_version": info.trt_version,
-        "device": info.device_name,
-        "compute_capability": list(info.compute_capability),
-        "device_memory_bytes": info.device_memory_bytes,
-        "layer_count": info.layer_count,
-        "fused_layer_count": info.fused_layer_count,
-        "fusion_ratio": info.fusion_ratio,
-        "original_ops_fused": info.original_ops_fused,
-        "layer_type_counts": info.layer_type_counts,
-        "bindings": [
-            {"name": b.name, "shape": list(b.shape), "dtype": b.dtype, "is_input": b.is_input}
-            for b in info.bindings
-        ],
-    }
-    import json
-
-    st.download_button(
-        "📥 Download JSON Report",
-        data=json.dumps(export_data, indent=2),
-        file_name=f"{Path(file_name).stem}_tensorrt.json",
-        mime="application/json",
-    )
 
 
 def get_hardware_options() -> dict[str, dict]:
@@ -1283,17 +1272,29 @@ def main():
                 time_str = result.timestamp.strftime("%H:%M")
                 col1, col2 = st.columns([3, 1])
                 with col1:
-                    st.markdown(
-                        f"""
-                    <div style="font-size: 0.85rem; color: #f5f5f5; margin-bottom: 0.1rem;">
-                        {result.name[:20]}{"..." if len(result.name) > 20 else ""}
-                    </div>
-                    <div style="font-size: 0.7rem; color: #737373;">
-                        {result.summary} · {time_str}
-                    </div>
-                    """,
-                        unsafe_allow_html=True,
-                    )
+                    # Make the whole item clickable in analyze mode
+                    if st.session_state.current_mode == "analyze":
+                        if st.button(
+                            f"{result.name[:18]}{'...' if len(result.name) > 18 else ''}",
+                            key=f"hist_view_{i}",
+                            help=f"View {result.name}",
+                            width="stretch",
+                        ):
+                            st.session_state.current_result = result
+                            st.rerun()
+                        st.caption(f"{result.summary} · {time_str}")
+                    else:
+                        st.markdown(
+                            f"""
+                        <div style="font-size: 0.85rem; color: #f5f5f5; margin-bottom: 0.1rem;">
+                            {result.name[:20]}{"..." if len(result.name) > 20 else ""}
+                        </div>
+                        <div style="font-size: 0.7rem; color: #737373;">
+                            {result.summary} · {time_str}
+                        </div>
+                        """,
+                            unsafe_allow_html=True,
+                        )
                 with col2:
                     if st.session_state.current_mode == "compare":
                         if st.button("A", key=f"hist_a_{i}", help="Set as Model A"):
@@ -1354,7 +1355,7 @@ def main():
             filtered_hardware = all_hardware
 
         # Category filter
-        available_categories = sorted({h["category"] for h in filtered_hardware})
+        available_categories = sorted(set(h["category"] for h in filtered_hardware))
         if len(available_categories) > 1:
             selected_category = st.selectbox(
                 "Category",
@@ -1374,13 +1375,45 @@ def main():
                 "Select GPU",
                 options=list(hw_options.keys()),
                 format_func=lambda x: hw_options[x],
-                index=(
-                    list(hw_options.keys()).index(default_key) if default_key in hw_options else 0
-                ),
+                index=list(hw_options.keys()).index(default_key)
+                if default_key in hw_options
+                else 0,
             )
         else:
             st.warning("No GPUs match your search. Try a different query.")
             selected_hardware = "auto"
+
+        # Batch size and GPU count (Story 41.4.1, 41.4.5)
+        hw_detail_col1, hw_detail_col2 = st.columns(2)
+        with hw_detail_col1:
+            batch_size = st.number_input(
+                "Batch Size",
+                min_value=1,
+                max_value=128,
+                value=1,
+                help="Inference batch size for hardware estimates",
+            )
+        with hw_detail_col2:
+            gpu_count = st.number_input(
+                "GPU Count",
+                min_value=1,
+                max_value=8,
+                value=1,
+                help="Number of GPUs for multi-GPU estimates",
+            )
+
+        # Deployment Target (Story 41.4.6)
+        deployment_target = st.selectbox(
+            "Deployment Target",
+            options=["cloud", "local", "edge"],
+            index=0,
+            help="Target environment affects cost and latency estimates",
+            format_func=lambda x: {
+                "cloud": "☁️ Cloud",
+                "local": "🖥️ Local/On-Prem",
+                "edge": "📱 Edge Device",
+            }[x],
+        )
 
         # Show selected hardware specs
         if selected_hardware != "auto":
@@ -1389,7 +1422,7 @@ def main():
                 if profile:
                     st.markdown(
                         f"""
-                    <div style="background: #1f1f1f;
+                    <div style="background: #1f1f1f; 
                                 border: 1px solid rgba(16, 185, 129, 0.2);
                                 padding: 0.75rem 1rem; border-radius: 10px; margin-top: 0.5rem;">
                         <div style="font-size: 0.85rem; color: #10b981; font-weight: 600;">
@@ -1410,87 +1443,93 @@ def main():
         include_graph = st.checkbox(
             "Interactive Graph", value=True, help="Include zoomable D3.js network visualization"
         )
-        st.checkbox("Charts", value=True, help="Include matplotlib visualizations")
+        include_charts = st.checkbox("Charts", value=True, help="Include matplotlib visualizations")
+        include_quant_analysis = st.checkbox(
+            "Quantization Analysis",
+            value=False,
+            help="Analyze model readiness for INT8 quantization",
+        )
+
+        # Privacy Controls (Story 41.3.12, 41.4.8)
+        st.markdown("### Privacy Controls")
+        redact_names = st.checkbox(
+            "Redact Layer Names",
+            value=False,
+            help="Anonymize layer names (layer_0, layer_1, ...) for IP protection",
+        )
+        summary_only = st.checkbox(
+            "Summary Only",
+            value=False,
+            help="Show only aggregate statistics, hide per-layer details",
+        )
+
+        # Feature Availability Matrix (Task 50.2.7)
+        with st.expander("Feature Availability", expanded=False):
+            # Check what's available in this environment
+            features = _check_feature_availability()
+
+            st.markdown(
+                """
+                <style>
+                    .feat-avail { font-size: 0.85rem; }
+                    .feat-yes { color: #10b981; }
+                    .feat-no { color: #ef4444; }
+                    .feat-badge { 
+                        font-size: 0.7rem; 
+                        padding: 2px 6px; 
+                        border-radius: 4px; 
+                        margin-left: 4px;
+                    }
+                    .badge-gpu { background: #7c3aed; color: white; }
+                    .badge-dep { background: #f59e0b; color: black; }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            for feat_name, feat_info in features.items():
+                status = "✓" if feat_info["available"] else "✗"
+                status_class = "feat-yes" if feat_info["available"] else "feat-no"
+                badge = ""
+                if feat_info.get("requires_gpu"):
+                    badge = '<span class="feat-badge badge-gpu">GPU</span>'
+                elif feat_info.get("requires_dep"):
+                    badge = f'<span class="feat-badge badge-dep">{feat_info["requires_dep"]}</span>'
+
+                st.markdown(
+                    f'<div class="feat-avail"><span class="{status_class}">{status}</span> {feat_name}{badge}</div>',
+                    unsafe_allow_html=True,
+                )
+
+            if not features.get("TensorRT Analysis", {}).get("available"):
+                st.caption("GPU features require `pip install haoline[tensorrt]` and NVIDIA GPU")
 
         # LLM Summary
         st.markdown("### AI Summary")
+        import os
 
-        # Check for API key in environment variable first
         env_api_key = os.environ.get("OPENAI_API_KEY", "")
-
         enable_llm = st.checkbox(
             "Generate AI Summary",
             value=st.session_state.get("enable_llm", False),
             help="Requires OpenAI API key",
             key="enable_llm_checkbox",
         )
-        # Store in session state for persistence across reruns
         st.session_state["enable_llm"] = enable_llm
 
         if enable_llm:
             if env_api_key:
-                # Environment variable takes precedence
+                st.success("Using API key from environment")
                 st.session_state["openai_api_key_value"] = env_api_key
-                st.success("API key loaded from environment")
             else:
-                # Manual entry
-                api_key_input = st.text_input(
+                api_key = st.text_input(
                     "OpenAI API Key",
                     type="password",
-                    help="Starts with 'sk-'",
+                    help="Used once per analysis, never stored",
                     key="openai_api_key_input",
                 )
-
-                # Update session state when key is entered
-                if api_key_input:
-                    st.session_state["openai_api_key_value"] = api_key_input
-
-            # Show current status
-            current_key = st.session_state.get("openai_api_key_value", "")
-            if current_key:
-                # Validate key format
-                if current_key.startswith("sk-"):
-                    st.success(f"API Key Set ({current_key[:7]}...{current_key[-4:]})")
-                else:
-                    st.error("Invalid key format (should start with 'sk-')")
-            else:
-                st.warning("No API key - enter above to enable AI summaries")
-
-            st.caption("Key is used once per analysis, never stored permanently.")
-
-        # Format Capabilities
-        st.markdown("---")
-        with st.expander("📁 Format Capabilities", expanded=False):
-            st.markdown(
-                """
-**Tier 1 - Full Support:**
-| Format | Graph | Params | FLOPs | Interactive Map |
-|--------|-------|--------|-------|-----------------|
-| **ONNX** | Yes | Yes | Yes | Yes |
-| **PyTorch** (.pt) | Yes* | Yes* | Yes* | Yes* |
-
-**Tier 2 - Graph Analysis:**
-| Format | Graph | Params | FLOPs | Interactive Map |
-|--------|-------|--------|-------|-----------------|
-| **TFLite** | Yes | Yes | No | Yes |
-| **CoreML** | Yes | Yes | No | Yes |
-| **OpenVINO** (.xml) | Yes | Yes | No | Yes |
-| **TensorRT** | GPU | GPU | N/A | No |
-
-**Tier 3/4 - Metadata/Weights Only:**
-| Format | Graph | Params | FLOPs | Notes |
-|--------|-------|--------|-------|-------|
-| **GGUF** | No | Yes | No | LLM architecture metadata |
-| **SafeTensors** | No | Yes | No | Weights only, no graph |
-
-*PyTorch requires local install for conversion to ONNX.
-
-**Legend:** Yes = Available | No = Not available | GPU = Requires NVIDIA GPU
-
-**Notes:** Streamlit shows graph-based views only when a graph is available for the format. For weight- or metadata-only formats, use the CLI to convert to ONNX for full analysis (`haoline --convert-to onnx model.ext`).
-                """,
-                unsafe_allow_html=True,
-            )
+                st.session_state["openai_api_key_value"] = api_key
+            st.caption("For maximum security, run `haoline` locally instead.")
 
         # Privacy notice
         st.markdown("---")
@@ -1501,29 +1540,6 @@ def main():
             "and run <code>streamlit run streamlit_app.py</code> locally."
             "</div>",
             unsafe_allow_html=True,
-        )
-
-        # GPU features disclaimer for HuggingFace Spaces
-        is_hf_spaces = os.environ.get("SPACE_ID") is not None
-        is_hf_free_tier = is_hf_spaces and os.environ.get("SPACE_HARDWARE", "cpu") == "cpu"
-
-        if is_hf_free_tier:
-            st.markdown("---")
-            st.info(
-                "**GPU Features Unavailable**\n\n"
-                "This Space runs on CPU (free tier). Features requiring GPU:\n"
-                "- TensorRT engine analysis\n"
-                "- Runtime inference benchmarking\n"
-                "- Actual batch/resolution sweeps\n\n"
-                "*Run locally with GPU for full features.*"
-            )
-
-        # CLI-only features disclaimer
-        st.markdown("---")
-        st.caption(
-            "**CLI-Only Features:** Eval import (`haoline-import-eval`), "
-            "runtime profiling (`haoline --profile`), $/day cost estimates. "
-            "Install locally: `pip install haoline`"
         )
 
         st.markdown(f"---\n*HaoLine v{__version__}*")
@@ -1557,74 +1573,517 @@ def main():
         )
 
         if uploaded_file is None:
-            # Link to format capabilities (in sidebar expander)
+            # Show format capability matrix
             st.markdown(
                 """
             <div style="text-align: center; padding: 0.5rem 2rem; margin-top: -0.5rem;">
-                <p style="font-size: 0.8rem; color: #737373;">
-                    Need a model? Browse the
-                    <a href="https://huggingface.co/models?library=onnx" target="_blank"
-                       style="color: #10b981; text-decoration: none;">HuggingFace ONNX Hub</a>
+                <p style="font-size: 0.8rem; color: #737373; margin-bottom: 1rem;">
+                    Need a model? Browse the 
+                    <a href="https://huggingface.co/models?library=onnx" target="_blank" style="color: #10b981; text-decoration: none;">HuggingFace ONNX Hub</a>
                 </p>
             </div>
             """,
                 unsafe_allow_html=True,
             )
 
-            # Demo model options
-            st.markdown(
-                """<div style="text-align: center; margin: 1rem 0 0.5rem 0;">
-                    <span style="font-size: 0.9rem; color: #a3a3a3; font-weight: 500;">
-                        No model handy? Try a demo:
-                    </span>
-                </div>""",
-                unsafe_allow_html=True,
+            # Capability matrix as an expander
+            with st.expander("Format Capabilities", expanded=False):
+                st.markdown(
+                    """
+                <style>
+                    .cap-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+                    .cap-table th { text-align: left; padding: 0.5rem; border-bottom: 1px solid #333; color: #10b981; }
+                    .cap-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #222; }
+                    .cap-table tr:hover { background: rgba(16, 185, 129, 0.05); }
+                    .cap-yes { color: #10b981; }
+                    .cap-no { color: #666; }
+                    .cap-cli { color: #60a5fa; }
+                    .cap-warn { color: #f59e0b; }
+                    .tier-badge { font-size: 0.6rem; padding: 2px 5px; border-radius: 3px; margin-left: 4px; }
+                    .tier-1 { background: #10b981; color: white; }
+                    .tier-2 { background: #3b82f6; color: white; }
+                    .tier-3 { background: #8b5cf6; color: white; }
+                </style>
+                <p style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;"><strong>Tier 1 - Full Analysis</strong></p>
+                <table class="cap-table">
+                    <tr>
+                        <th>Format</th>
+                        <th>Graph</th>
+                        <th>Params</th>
+                        <th>FLOPs</th>
+                        <th>Map</th>
+                        <th>Notes</th>
+                    </tr>
+                    <tr>
+                        <td><strong>ONNX</strong></td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Full support (recommended)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>PyTorch</strong></td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-warn">Convert to ONNX with local PyTorch</td>
+                    </tr>
+                </table>
+                <p style="font-size: 0.8rem; color: #888; margin: 0.75rem 0 0.5rem 0;"><strong>Tier 2 - Graph Analysis</strong></p>
+                <table class="cap-table">
+                    <tr>
+                        <td><strong>TFLite</strong></td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-warn">Convert to ONNX for full features</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CoreML</strong></td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-warn">macOS + coremltools; convert to ONNX for full</td>
+                    </tr>
+                    <tr>
+                        <td><strong>OpenVINO</strong></td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-cli">CLI</td>
+                        <td class="cap-warn">Upload .xml (with .bin). Convert to ONNX for full.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TensorRT</strong> <span style="background:#7c3aed;color:white;font-size:0.65rem;padding:1px 4px;border-radius:3px;">GPU</span></td>
+                        <td class="cap-warn">GPU</td>
+                        <td class="cap-no">N/A</td>
+                        <td class="cap-no">N/A</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-warn">Requires NVIDIA GPU</td>
+                    </tr>
+                </table>
+                <p style="font-size: 0.8rem; color: #888; margin: 0.75rem 0 0.5rem 0;"><strong>Tier 3/4 - Metadata Only</strong></p>
+                <table class="cap-table">
+                    <tr>
+                        <td><strong>GGUF</strong></td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-warn">LLM metadata + quant info</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SafeTensors</strong></td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-warn">Weights only</td>
+                    </tr>
+                </table>
+                <p style="font-size: 0.7rem; color: #bbb; margin-top: 0.75rem;">
+                    <strong>Legend:</strong> Yes = In-app (Streamlit) | CLI = Use <code>pip install haoline</code> locally | GPU = Requires NVIDIA GPU.<br>
+                    For full analysis, convert to ONNX format.
+                </p>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 0.25rem;">
+                    Graph-based views only render when the format provides a graph. Metadata/weights-only formats (GGUF, SafeTensors) should be converted to ONNX for full visualization.
+                </p>
+                """,
+                    unsafe_allow_html=True,
+                )
+
+            # Demo models - quick start buttons
+            st.markdown("#### Try a Demo Model")
+            demo_col1, demo_col2, demo_col3 = st.columns(3)
+
+            with demo_col1:
+                if st.button("MNIST (26 KB)", width="stretch", help="Tiny model - instant"):
+                    st.session_state["demo_model"] = "MNIST"
+            with demo_col2:
+                if st.button("MobileNetV2 (14 MB)", width="stretch", help="Medium model"):
+                    st.session_state["demo_model"] = "MobileNetV2"
+            with demo_col3:
+                if st.button("EfficientNet (50 MB)", width="stretch", help="Larger model"):
+                    st.session_state["demo_model"] = "EfficientNet"
+
+    # Handle demo model download
+    if "demo_model" in st.session_state and st.session_state["demo_model"]:
+        demo_name = st.session_state["demo_model"]
+        demo_info = DEMO_MODELS[demo_name]
+        st.session_state["demo_model"] = None  # Clear to prevent re-download
+
+        with st.spinner(f"Downloading {demo_name} ({demo_info['size']})..."):
+            import urllib.request
+
+            try:
+                # Download to temp file
+                with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as tmp:
+                    urllib.request.urlretrieve(demo_info["url"], tmp.name)
+                    demo_path = tmp.name
+
+                # Run analysis
+                inspector = ModelInspector()
+                report = inspector.inspect(demo_path)
+
+                # Apply hardware estimates
+                if selected_hardware == "auto":
+                    profile = detect_local_hardware()
+                else:
+                    profile = get_profile(selected_hardware)
+
+                if (
+                    profile
+                    and report.param_counts
+                    and report.flop_counts
+                    and report.memory_estimates
+                ):
+                    estimator = HardwareEstimator()
+                    report.hardware_profile = profile
+                    report.hardware_estimates = estimator.estimate(
+                        model_params=report.param_counts.total,
+                        model_flops=report.flop_counts.total,
+                        peak_activation_bytes=report.memory_estimates.peak_activation_bytes,
+                        hardware=profile,
+                    )
+
+                # Add to history and set as current (keep temp file for interactive graph)
+                import os
+
+                file_size = os.path.getsize(demo_path)
+                result = add_to_history(
+                    f"{demo_name}.onnx", report, file_size, model_path=demo_path
+                )
+                st.session_state.current_result = result
+
+                st.success(f"Loaded {demo_name} - {demo_info['desc']}")
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"Failed to download {demo_name}: {e}")
+
+    # Display current result from history/demo
+    if st.session_state.current_result is not None and uploaded_file is None:
+        result = st.session_state.current_result
+        report = result.report
+        model_name = result.name
+
+        # Clear button
+        if st.button("← Back to upload", type="secondary"):
+            st.session_state.current_result = None
+            st.rerun()
+
+        st.markdown("---")
+        st.markdown(f"## Analysis Results: {model_name}")
+
+        # Metrics cards
+        col1, col2, col3, col4 = st.columns(4)
+
+        has_graph = (
+            report.graph_summary is not None and getattr(report.graph_summary, "num_nodes", 0) > 0
+        )
+
+        with col1:
+            params = report.param_counts.total if report.param_counts else 0
+            st.metric("Parameters", format_number(params))
+
+        with col2:
+            flops = report.flop_counts.total if report.flop_counts else 0
+            st.metric("FLOPs", format_number(flops))
+
+        with col3:
+            memory = report.memory_estimates.peak_activation_bytes if report.memory_estimates else 0
+            st.metric("Memory", format_bytes(memory))
+
+        with col4:
+            operator_count = str(report.graph_summary.num_nodes) if has_graph else "N/A"
+            st.metric("Operators", operator_count)
+
+        # Tabs for different views
+        tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Interactive Graph", "Details", "Export"])
+
+        with tab1:
+            st.markdown("### Model Information")
+
+            info_col1, info_col2 = st.columns(2)
+
+            with info_col1:
+                st.markdown(f"""
+                | Property | Value |
+                |----------|-------|
+                | **Model** | `{model_name}` |
+                | **IR Version** | {report.metadata.ir_version} |
+                | **Producer** | {report.metadata.producer_name or "Unknown"} |
+                | **Opset** | {list(report.metadata.opsets.values())[0] if report.metadata.opsets else "Unknown"} |
+                """)
+
+            with info_col2:
+                params_total = report.param_counts.total if report.param_counts else 0
+                flops_total = report.flop_counts.total if report.flop_counts else 0
+                peak_mem = (
+                    report.memory_estimates.peak_activation_bytes if report.memory_estimates else 0
+                )
+                model_size = (
+                    report.memory_estimates.model_size_bytes if report.memory_estimates else 0
+                )
+
+                st.markdown(f"""
+                | Metric | Value |
+                |--------|-------|
+                | **Total Parameters** | {params_total:,} |
+                | **Total FLOPs** | {flops_total:,} |
+                | **Peak Memory** | {format_bytes(peak_mem)} |
+                | **Model Size** | {format_bytes(model_size)} |
+                """)
+
+            # Op distribution chart
+            if has_graph and report.graph_summary and report.graph_summary.op_type_counts:
+                st.markdown("### Operator Distribution")
+                op_counts = report.graph_summary.op_type_counts
+                sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+
+                import pandas as pd
+
+                df = pd.DataFrame(sorted_ops, columns=["Operator", "Count"])
+                st.bar_chart(df.set_index("Operator"))
+
+        with tab2:
+            # Interactive Graph (needs model file)
+            if result.model_path and Path(result.model_path).exists():
+                st.markdown(
+                    """
+                    <p style="font-size: 0.85rem; color: #737373; margin-bottom: 1rem;">
+                    Scroll to zoom | Drag to pan | Click nodes to expand/collapse
+                    </p>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                try:
+                    if graph_info is None:
+                        if Path(result.model_path).suffix.lower() != ".onnx":
+                            raise ValueError("Interactive graph available only for ONNX models.")
+                        graph_loader = ONNXGraphLoader()
+                        _, graph_info_local = graph_loader.load(result.model_path)
+                    else:
+                        graph_info_local = graph_info
+
+                    # Analyze patterns
+                    pattern_analyzer = PatternAnalyzer()
+                    blocks = pattern_analyzer.group_into_blocks(graph_info_local)
+
+                    # Edge analysis
+                    edge_analyzer = EdgeAnalyzer()
+                    edge_result = edge_analyzer.analyze(graph_info_local)
+
+                    # Build hierarchical graph
+                    builder = HierarchicalGraphBuilder()
+                    hier_graph = builder.build(
+                        graph_info_local,
+                        blocks,
+                        model_name.replace(".onnx", ""),
+                    )
+
+                    # Generate the full D3.js HTML
+                    graph_html = generate_graph_html(
+                        hier_graph,
+                        edge_result,
+                        title=model_name,
+                        model_size_bytes=result.file_size,
+                    )
+
+                    # Embed with generous height
+                    components.html(graph_html, height=800, scrolling=False)
+
+                except Exception as e:
+                    st.warning(f"Could not generate interactive graph: {e}")
+                    # Fallback to block list
+                    if report.detected_blocks:
+                        st.markdown("#### Detected Architecture Blocks")
+                        for i, block in enumerate(report.detected_blocks[:15]):
+                            with st.expander(f"{block.block_type}: {block.name}", expanded=(i < 3)):
+                                st.write(f"**Type:** {block.block_type}")
+                                st.write(f"**Nodes:** {len(block.nodes)}")
+            else:
+                st.info("Interactive graph not available - model file not cached.")
+                # Show blocks as fallback
+                if report.detected_blocks:
+                    st.markdown("#### Detected Architecture Blocks")
+                    for i, block in enumerate(report.detected_blocks[:15]):
+                        with st.expander(f"{block.block_type}: {block.name}", expanded=(i < 3)):
+                            st.write(f"**Type:** {block.block_type}")
+                            st.write(f"**Nodes:** {len(block.nodes)}")
+
+        with tab3:
+            st.markdown("### Architecture Blocks")
+            if report.detected_blocks:
+                for i, block in enumerate(report.detected_blocks[:15]):
+                    with st.expander(f"{block.block_type}: {block.name}", expanded=(i < 3)):
+                        st.write(f"**Type:** {block.block_type}")
+                        st.write(f"**Nodes:** {len(block.nodes)}")
+                        if hasattr(block, "params") and block.params:
+                            st.write(f"**Parameters:** {format_number(block.params)}")
+            else:
+                st.info("No architecture blocks detected.")
+
+            # Op type breakdown
+            if has_graph and report.graph_summary and report.graph_summary.op_type_counts:
+                st.markdown("### Operator Types")
+                op_counts = report.graph_summary.op_type_counts
+                sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)
+                op_data = [{"Operator": op, "Count": count} for op, count in sorted_ops[:20]]
+                st.dataframe(op_data, width="stretch")
+
+        with tab4:
+            st.markdown("### Layer Details")
+            if graph_info is None:
+                st.info(
+                    "Layer table is available for ONNX models. Upload an ONNX model to view per-layer metrics."
+                )
+            else:
+                try:
+                    builder = LayerSummaryBuilder()
+                    layer_summary = builder.build(
+                        graph_info,
+                        param_counts=report.param_counts,
+                        flop_counts=report.flop_counts,
+                        memory_estimates=report.memory_estimates,
+                    )
+                    data = []
+                    for layer in layer_summary.layers:
+                        data.append(
+                            {
+                                "Name": layer.name,
+                                "Op": layer.op_type,
+                                "Params": layer.params,
+                                "FLOPs": layer.flops,
+                                "Memory (bytes)": layer.memory_bytes,
+                                "% Params": round(layer.pct_params, 2),
+                                "% FLOPs": round(layer.pct_flops, 2),
+                                "Inputs": layer.input_shapes,
+                                "Outputs": layer.output_shapes,
+                            }
+                        )
+                    df = pd.DataFrame(data)
+
+                    # Simple search/filter
+                    filter_text = st.text_input("Filter by name or op type", "")
+                    if filter_text:
+                        mask = df["Name"].str.contains(filter_text, case=False, na=False) | df[
+                            "Op"
+                        ].str.contains(filter_text, case=False, na=False)
+                        df_filtered = df[mask]
+                    else:
+                        df_filtered = df
+
+                    st.dataframe(df_filtered, width="stretch", hide_index=True)
+
+                    csv_bytes = df.to_csv(index=False).encode("utf-8")
+                    json_bytes = df.to_json(orient="records", indent=2).encode("utf-8")
+                    col_dl1, col_dl2 = st.columns(2)
+                    with col_dl1:
+                        st.download_button(
+                            "Download Layer CSV",
+                            data=csv_bytes,
+                            file_name=f"{model_name.replace('.onnx', '')}_layers.csv",
+                            mime="text/csv",
+                        )
+                    with col_dl2:
+                        st.download_button(
+                            "Download Layer JSON",
+                            data=json_bytes,
+                            file_name=f"{model_name.replace('.onnx', '')}_layers.json",
+                            mime="application/json",
+                        )
+                except Exception as e:
+                    st.warning(f"Could not generate layer table: {e}")
+
+        with tab5:
+            st.markdown("### Quantization Readiness")
+            if graph_info is None:
+                st.info(
+                    "Quantization lint is available for ONNX models. Upload an ONNX model to view."
+                )
+            else:
+                try:
+                    linter = QuantizationLinter()
+                    lint_result = linter.lint(graph_info)
+
+                    # Score card
+                    score = lint_result.readiness_score
+                    st.metric("Readiness Score", f"{score:.0f}")
+
+                    # Warnings
+                    if lint_result.warnings:
+                        st.markdown("#### Warnings")
+                        for w in lint_result.warnings:
+                            st.markdown(f"- {w}")
+
+                    # Unsupported ops
+                    if lint_result.unsupported_ops:
+                        st.markdown("#### Unsupported Ops")
+                        st.write(", ".join(sorted(lint_result.unsupported_ops)))
+
+                    # Accuracy-sensitive ops
+                    if lint_result.accuracy_sensitive_ops:
+                        st.markdown("#### Accuracy-Sensitive Ops")
+                        st.write(", ".join(sorted(lint_result.accuracy_sensitive_ops)))
+
+                    # Advisor (heuristic only to avoid API key requirement)
+                    try:
+                        advice = advise_quantization(
+                            lint_result, graph_info, api_key=None, use_llm=False
+                        )
+                    except Exception as e:
+                        advice = None
+                        st.warning(f"Quantization advice unavailable: {e}")
+
+                    if advice and advice.recommendations:
+                        st.markdown("#### Recommendations")
+                        for rec in advice.recommendations:
+                            st.markdown(f"- {rec}")
+
+                    # Per-layer sensitivity (if available)
+                    if lint_result.layer_risk_scores:
+                        st.markdown("#### Layer Sensitivity")
+                        risk_rows = []
+                        for risk in lint_result.layer_risk_scores:
+                            risk_rows.append(
+                                {
+                                    "Layer": risk.layer_name,
+                                    "Op": risk.op_type,
+                                    "Risk": risk.risk_score,
+                                    "Reason": risk.reason,
+                                }
+                            )
+                        risk_df = pd.DataFrame(risk_rows)
+                        st.dataframe(risk_df, width="stretch", hide_index=True)
+
+                except Exception as e:
+                    st.warning(f"Quantization lint not available: {e}")
+
+        with tab6:
+            st.markdown("### Export Report")
+            # JSON export
+            report_dict = (
+                report.to_dict()
+                if hasattr(report, "to_dict")
+                else {"error": "Export not available"}
+            )
+            st.download_button(
+                "Download JSON Report",
+                data=json.dumps(report_dict, indent=2, default=str),
+                file_name=f"{model_name.replace('.onnx', '')}_report.json",
+                mime="application/json",
             )
 
-            # Demo model buttons in a row
-            demo_cols = st.columns(len(DEMO_MODELS))
-            for i, (key, info) in enumerate(DEMO_MODELS.items()):
-                with demo_cols[i]:
-                    if st.button(
-                        f"{info['name']}\n({info['size']})",
-                        key=f"demo_{key}",
-                        use_container_width=True,
-                        help=info["description"],
-                    ):
-                        with st.spinner(f"Downloading {info['name']}..."):
-                            try:
-                                demo_bytes, demo_name = download_demo_model(key)
-                                st.session_state.demo_model = (demo_bytes, demo_name)
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Failed to download: {e}")
-
-    # Handle demo model if requested
-    demo_model_bytes = None
-    demo_model_name = None
-    if st.session_state.demo_model is not None:
-        demo_model_bytes, demo_model_name = st.session_state.demo_model
-        st.session_state.demo_model = None  # Clear after use
-
-    # Analysis - either uploaded file or demo model
-    if uploaded_file is not None or demo_model_bytes is not None:
-        if demo_model_bytes is not None:
-            # Use demo model
-            file_ext = ".onnx"
-            file_name = demo_model_name
-            file_bytes = demo_model_bytes
-        else:
-            # Use uploaded file
-            file_ext = Path(uploaded_file.name).suffix.lower()
-            file_name = uploaded_file.name
-            file_bytes = uploaded_file.getvalue()
-
+    # Analysis (file upload)
+    elif uploaded_file is not None:
+        file_ext = Path(uploaded_file.name).suffix.lower()
         tmp_path = None
-
-        # Check for TensorRT engines - handle specially
-        if file_ext in [".engine", ".plan"]:
-            _handle_tensorrt_streamlit(file_bytes, file_name, file_ext)
-            st.stop()
 
         # Check if format needs conversion
         if file_ext in [".pt", ".pth"]:
@@ -1666,7 +2125,7 @@ def main():
 
                 # Save uploaded file
                 with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as pt_tmp:
-                    pt_tmp.write(file_bytes)
+                    pt_tmp.write(uploaded_file.getvalue())
                     pt_path = pt_tmp.name
 
                 # Attempt conversion
@@ -1675,113 +2134,88 @@ def main():
                         # Try TorchScript first
                         try:
                             model = torch.jit.load(pt_path, map_location="cpu")
-                            is_ultralytics = False
                         except Exception:
                             loaded = torch.load(pt_path, map_location="cpu", weights_only=False)
-                            is_ultralytics = False
-
                             if isinstance(loaded, dict):
-                                # Check for Ultralytics YOLO format
-                                if "model" in loaded and hasattr(loaded.get("model"), "forward"):
-                                    is_ultralytics = True
-                                else:
-                                    st.error(
-                                        """
-                                    **State dict detected** — This file contains only weights, not the model architecture.
-
-                                    To analyze, you need the full model. Export to ONNX from your training code:
-                                    ```python
-                                    torch.onnx.export(model, dummy_input, "model.onnx")
-                                    ```
-                                    """
-                                    )
-                                    st.stop()
-
-                            if not is_ultralytics:
-                                model = loaded
-
-                        # Handle Ultralytics models with their native export
-                        if is_ultralytics:
-                            try:
-                                from ultralytics import YOLO
-
-                                st.info("🔄 Ultralytics YOLO detected — using native export...")
-                                yolo_model = YOLO(pt_path)
-                                onnx_tmp = tempfile.NamedTemporaryFile(suffix=".onnx", delete=False)
-                                yolo_model.export(
-                                    format="onnx",
-                                    imgsz=input_shape[2] if len(input_shape) >= 3 else 640,
-                                    simplify=True,
-                                )
-                                # Ultralytics saves next to .pt, move to our temp
-                                import shutil
-
-                                default_onnx = Path(pt_path).with_suffix(".onnx")
-                                if default_onnx.exists():
-                                    shutil.move(str(default_onnx), onnx_tmp.name)
-                                tmp_path = onnx_tmp.name
-                                st.success("✅ YOLO conversion successful!")
-                            except ImportError:
-                                st.error(
-                                    "**Ultralytics required** — Install with: `pip install ultralytics`"
-                                )
+                                st.error("""
+                                **State dict detected** — This file contains only weights, not the model architecture.
+                                
+                                To analyze, you need the full model. Export to ONNX from your training code:
+                                ```python
+                                torch.onnx.export(model, dummy_input, "model.onnx")
+                                ```
+                                """)
                                 st.stop()
-                        else:
-                            model.eval()
-                            dummy_input = torch.randn(*input_shape)
+                            model = loaded
 
-                            # Convert to ONNX
-                            onnx_tmp = tempfile.NamedTemporaryFile(suffix=".onnx", delete=False)
-                            torch.onnx.export(
-                                model,
-                                dummy_input,
-                                onnx_tmp.name,
-                                opset_version=17,
-                                input_names=["input"],
-                                output_names=["output"],
-                                dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
-                            )
-                            tmp_path = onnx_tmp.name
-                            st.success("✅ Conversion successful!")
+                        model.eval()
+                        dummy_input = torch.randn(*input_shape)
+
+                        # Convert to ONNX
+                        onnx_tmp = tempfile.NamedTemporaryFile(suffix=".onnx", delete=False)
+                        torch.onnx.export(
+                            model,
+                            dummy_input,
+                            onnx_tmp.name,
+                            opset_version=17,
+                            input_names=["input"],
+                            output_names=["output"],
+                            dynamic_axes={"input": {0: "batch"}, "output": {0: "batch"}},
+                        )
+                        tmp_path = onnx_tmp.name
+                        st.success("✅ Conversion successful!")
 
                     except Exception as e:
-                        st.error(
-                            f"""
+                        st.error(f"""
                         **Conversion failed:** {str(e)[:200]}
-
+                        
                         Try exporting to ONNX directly from your training code, or use the CLI:
                         ```bash
                         haoline --from-pytorch model.pt --input-shape {input_shape_str} --html
                         ```
-                        """
-                        )
+                        """)
                         st.stop()
             else:
-                st.warning(
-                    f"""
+                st.warning(f"""
                 **PyTorch model detected**, but PyTorch is not installed in this environment.
-
+                
                 **Options:**
                 1. Use the CLI locally (supports conversion):
                    ```bash
                    pip install haoline torch
-                   haoline --from-pytorch {file_name} --input-shape 1,3,224,224 --html
+                   haoline --from-pytorch {uploaded_file.name} --input-shape 1,3,224,224 --html
                    ```
-
+                
                 2. Convert to ONNX first in your code:
                    ```python
                    torch.onnx.export(model, dummy_input, "model.onnx")
                    ```
-                """
-                )
+                """)
                 st.stop()
+
+        elif file_ext == ".safetensors":
+            st.warning("""
+            **SafeTensors format detected** — This format contains only weights, not architecture.
+            
+            To analyze, export to ONNX from your training code. If using HuggingFace:
+            ```python
+            from optimum.exporters.onnx import main_export
+            main_export("model-name", output="model.onnx")
+            ```
+            """)
+            st.stop()
+
+        elif file_ext in [".engine", ".plan"]:
+            # TensorRT engine analysis
+            _handle_tensorrt_streamlit(uploaded_file)
+            st.stop()
 
         elif file_ext in [".tflite"]:
             st.info(
                 "**TFLite model detected** — attempting auto-convert to ONNX for full analysis."
             )
             with tempfile.NamedTemporaryFile(suffix=".tflite", delete=False) as tmp:
-                tmp.write(file_bytes)
+                tmp.write(uploaded_file.getvalue())
                 tflite_path = tmp.name
 
             try:
@@ -1803,7 +2237,7 @@ def main():
                 "**CoreML model detected** — attempting auto-convert to ONNX for full analysis."
             )
             with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
-                tmp.write(file_bytes)
+                tmp.write(uploaded_file.getvalue())
                 coreml_path = tmp.name
 
             try:
@@ -1830,34 +2264,21 @@ def main():
                 "Include the matching .bin for best results."
             )
             with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
-                tmp.write(file_bytes)
+                tmp.write(uploaded_file.getvalue())
                 tmp_path = tmp.name
 
         elif file_ext in [".gguf"]:
-            st.info("**GGUF model detected** — analyzing LLM metadata.")
+            # GGUF (LLM) analysis
+            st.info("**GGUF model detected** - Analyzing LLM architecture metadata...")
             with tempfile.NamedTemporaryFile(suffix=".gguf", delete=False) as tmp:
-                tmp.write(file_bytes)
+                tmp.write(uploaded_file.getvalue())
                 tmp_path = tmp.name
-
-        elif file_ext == ".safetensors":
-            st.warning(
-                """
-            **SafeTensors format detected** — This format contains only weights, not architecture.
-
-            To analyze, export to ONNX from your training code. If using HuggingFace:
-            ```python
-            from optimum.exporters.onnx import main_export
-            main_export("model-name", output="model.onnx")
-            ```
-            """
-            )
-            st.stop()
 
         # Save ONNX to temp file (if not already set by conversion)
         if tmp_path is None:
             suffix = ".onnx" if file_ext == ".onnx" else file_ext or ".onnx"
             with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-                tmp.write(file_bytes)
+                tmp.write(uploaded_file.getvalue())
                 tmp_path = tmp.name
 
         try:
@@ -1885,10 +2306,16 @@ def main():
                         model_flops=report.flop_counts.total,
                         peak_activation_bytes=report.memory_estimates.peak_activation_bytes,
                         hardware=profile,
+                        batch_size=batch_size,  # From sidebar (41.4.1)
                     )
 
-                # Save to session history
-                add_to_history(file_name, report, len(file_bytes))
+                # Save to session history (keep temp path for graph/layer views)
+                add_to_history(
+                    uploaded_file.name,
+                    report,
+                    len(uploaded_file.getvalue()),
+                    model_path=tmp_path,
+                )
 
                 # Display results
                 st.markdown("---")
@@ -1926,9 +2353,26 @@ def main():
                     )
                     st.metric("Operators", operator_count)
 
+                # Prepare graph_info (ONNX only) for layer/quant views
+                graph_info = None
+                if tmp_path and Path(tmp_path).exists():
+                    if Path(tmp_path).suffix.lower() == ".onnx":
+                        try:
+                            graph_loader = ONNXGraphLoader()
+                            _, graph_info = graph_loader.load(tmp_path)
+                        except Exception as e:
+                            st.warning(f"Could not load graph for detailed views: {e}")
+
                 # Tabs for different views
-                tab1, tab2, tab3, tab4 = st.tabs(
-                    ["Overview", "Interactive Graph", "Details", "Export"]
+                tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+                    [
+                        "Overview",
+                        "Interactive Graph",
+                        "Details",
+                        "Layer Details",
+                        "Quantization",
+                        "Export",
+                    ]
                 )
 
                 with tab1:
@@ -1937,16 +2381,14 @@ def main():
                     info_col1, info_col2 = st.columns(2)
 
                     with info_col1:
-                        st.markdown(
-                            f"""
+                        st.markdown(f"""
                         | Property | Value |
                         |----------|-------|
-                        | **Model** | `{file_name}` |
+                        | **Model** | `{uploaded_file.name}` |
                         | **IR Version** | {report.metadata.ir_version} |
                         | **Producer** | {report.metadata.producer_name or "Unknown"} |
                         | **Opset** | {list(report.metadata.opsets.values())[0] if report.metadata.opsets else "Unknown"} |
-                        """
-                        )
+                        """)
 
                     with info_col2:
                         params_total = report.param_counts.total if report.param_counts else 0
@@ -1962,16 +2404,831 @@ def main():
                             else 0
                         )
 
-                        st.markdown(
-                            f"""
+                        st.markdown(f"""
                         | Metric | Value |
                         |--------|-------|
                         | **Total Parameters** | {params_total:,} |
                         | **Total FLOPs** | {flops_total:,} |
                         | **Peak Memory** | {format_bytes(peak_mem)} |
                         | **Model Size** | {format_bytes(model_size)} |
-                        """
+                        """)
+
+                    # Operator distribution
+                    if has_graph and report.graph_summary.op_type_counts:
+                        st.markdown("### Operator Distribution")
+
+                        import pandas as pd
+
+                        op_data = pd.DataFrame(
+                            [
+                                {"Operator": op, "Count": count}
+                                for op, count in sorted(
+                                    report.graph_summary.op_type_counts.items(),
+                                    key=lambda x: x[1],
+                                    reverse=True,
+                                )
+                            ]
                         )
+                        st.bar_chart(op_data.set_index("Operator"))
+
+                    # Parameter distribution by op type (Story 41.2.5)
+                    if report.param_counts and report.param_counts.by_op_type:
+                        st.markdown("### Parameter Distribution by Op Type")
+
+                        import pandas as pd
+
+                        param_by_op = report.param_counts.by_op_type
+                        total_params = sum(param_by_op.values())
+                        param_data = pd.DataFrame(
+                            [
+                                {
+                                    "Op Type": op,
+                                    "Parameters": count,
+                                    "Percentage": 100.0 * count / total_params
+                                    if total_params > 0
+                                    else 0,
+                                }
+                                for op, count in sorted(
+                                    param_by_op.items(), key=lambda x: x[1], reverse=True
+                                )[:10]
+                            ]
+                        )
+                        st.bar_chart(param_data.set_index("Op Type")["Parameters"])
+
+                    # FLOPs distribution by op type (Story 41.2.5)
+                    if report.flop_counts and report.flop_counts.by_op_type:
+                        st.markdown("### FLOPs Distribution by Op Type")
+
+                        import pandas as pd
+
+                        flops_by_op = report.flop_counts.by_op_type
+                        total_flops = sum(flops_by_op.values())
+                        flops_data = pd.DataFrame(
+                            [
+                                {
+                                    "Op Type": op,
+                                    "FLOPs": count,
+                                    "Percentage": 100.0 * count / total_flops
+                                    if total_flops > 0
+                                    else 0,
+                                }
+                                for op, count in sorted(
+                                    flops_by_op.items(), key=lambda x: x[1], reverse=True
+                                )[:10]
+                            ]
+                        )
+                        st.bar_chart(flops_data.set_index("Op Type")["FLOPs"])
+
+                    # Hardware estimates
+                    if report.hardware_estimates:
+                        st.markdown("### Hardware Estimates")
+                        hw = report.hardware_estimates
+
+                        hw_col1, hw_col2, hw_col3 = st.columns(3)
+
+                        with hw_col1:
+                            st.metric("VRAM Required", format_bytes(hw.vram_required_bytes))
+
+                        with hw_col2:
+                            fits = "Yes" if hw.fits_in_vram else "No"
+                            st.metric("Fits in VRAM", fits)
+
+                        with hw_col3:
+                            st.metric("Theoretical Latency", f"{hw.theoretical_latency_ms:.2f} ms")
+
+                        # Bottleneck analysis
+                        if hasattr(hw, "bottleneck") and hw.bottleneck:
+                            st.markdown("#### Performance Bottleneck")
+                            bottleneck_colors = {
+                                "compute": "#10b981",  # Green - compute bound
+                                "memory_bandwidth": "#f59e0b",  # Amber - memory bound
+                                "vram": "#ef4444",  # Red - VRAM limited
+                            }
+                            color = bottleneck_colors.get(hw.bottleneck, "#6b7280")
+                            st.markdown(
+                                f'<span style="color: {color}; font-weight: bold; font-size: 1.1rem;">'
+                                f"{hw.bottleneck.replace('_', ' ').title()}</span>",
+                                unsafe_allow_html=True,
+                            )
+                            if hw.bottleneck == "compute":
+                                st.caption(
+                                    "Model is compute-bound. Consider quantization (FP16/INT8) for speedup."
+                                )
+                            elif hw.bottleneck == "memory_bandwidth":
+                                st.caption(
+                                    "Model is memory-bound. Consider reducing activations or batch size."
+                                )
+                            elif hw.bottleneck == "vram":
+                                st.caption(
+                                    "Model exceeds VRAM. Consider a larger GPU or model compression."
+                                )
+
+                    # KV Cache section (for transformers)
+                    if (
+                        report.memory_estimates
+                        and hasattr(report.memory_estimates, "kv_cache_bytes_per_token")
+                        and report.memory_estimates.kv_cache_bytes_per_token > 0
+                    ):
+                        st.markdown("### KV Cache (Transformer Inference)")
+                        kv = report.memory_estimates
+                        config = getattr(kv, "kv_cache_config", {}) or {}
+
+                        kv_col1, kv_col2 = st.columns(2)
+                        with kv_col1:
+                            st.metric("Per Token", format_bytes(kv.kv_cache_bytes_per_token))
+                            if config.get("num_layers"):
+                                st.caption(f"Layers: {config['num_layers']}")
+                        with kv_col2:
+                            if kv.kv_cache_bytes_full_context > 0:
+                                seq_len = config.get("seq_len", "?")
+                                st.metric(
+                                    f"Full Context (seq={seq_len})",
+                                    format_bytes(kv.kv_cache_bytes_full_context),
+                                )
+                                if config.get("hidden_dim"):
+                                    st.caption(f"Hidden dim: {config['hidden_dim']}")
+
+                    # Precision breakdown
+                    if (
+                        report.param_counts
+                        and hasattr(report.param_counts, "precision_breakdown")
+                        and report.param_counts.precision_breakdown
+                    ):
+                        st.markdown("### Precision Breakdown")
+                        precision_data = report.param_counts.precision_breakdown
+                        total = sum(precision_data.values())
+
+                        import pandas as pd
+
+                        prec_df = pd.DataFrame(
+                            [
+                                {
+                                    "Data Type": dtype,
+                                    "Parameters": count,
+                                    "Percentage": f"{100.0 * count / total:.1f}%"
+                                    if total > 0
+                                    else "0%",
+                                }
+                                for dtype, count in sorted(
+                                    precision_data.items(), key=lambda x: -x[1]
+                                )
+                            ]
+                        )
+                        st.dataframe(prec_df, width="stretch", hide_index=True)
+
+                        # Quantization indicator
+                        if report.param_counts.is_quantized:
+                            st.success("Model is quantized")
+                            if report.param_counts.quantized_ops:
+                                st.caption(
+                                    f"Quantized ops: {', '.join(report.param_counts.quantized_ops[:5])}"
+                                )
+
+                    # Quantization Readiness Analysis (Epic 33)
+                    if include_quant_analysis:
+                        with st.expander("INT8 Quantization Readiness", expanded=True):
+                            try:
+                                # Get model name for reports
+                                model_name = uploaded_file.name.replace(".onnx", "")
+
+                                # Load graph and run linting
+                                graph_loader = ONNXGraphLoader()
+                                _, graph_info = graph_loader.load(tmp_path)
+                                linter = QuantizationLinter()
+                                quant_result = linter.lint(graph_info)
+
+                                # Readiness Score with letter grade
+                                score = quant_result.readiness_score
+                                if score >= 90:
+                                    grade, color = "A", "#22c55e"
+                                elif score >= 75:
+                                    grade, color = "B", "#84cc16"
+                                elif score >= 60:
+                                    grade, color = "C", "#eab308"
+                                elif score >= 40:
+                                    grade, color = "D", "#f97316"
+                                else:
+                                    grade, color = "F", "#ef4444"
+
+                                # Score display
+                                score_col1, score_col2, score_col3 = st.columns([1, 2, 1])
+                                with score_col2:
+                                    st.markdown(
+                                        f"""
+                                        <div style="text-align: center; padding: 1rem; 
+                                             background: linear-gradient(135deg, {color}22, {color}11);
+                                             border: 2px solid {color}; border-radius: 12px;">
+                                            <div style="font-size: 3rem; font-weight: bold; color: {color};">
+                                                {grade}
+                                            </div>
+                                            <div style="font-size: 1.5rem; color: #e5e5e5;">
+                                                {score}/100
+                                            </div>
+                                            <div style="font-size: 0.9rem; color: #a3a3a3;">
+                                                Quantization Readiness
+                                            </div>
+                                        </div>
+                                        """,
+                                        unsafe_allow_html=True,
+                                    )
+
+                                st.markdown("")
+
+                                # Op breakdown
+                                op_col1, op_col2 = st.columns(2)
+                                with op_col1:
+                                    st.metric(
+                                        "Quant-Friendly Ops",
+                                        f"{quant_result.quant_friendly_pct:.1f}%",
+                                        help="Percentage of ops that work well with INT8",
+                                    )
+                                with op_col2:
+                                    st.metric(
+                                        "Issues Found",
+                                        len(quant_result.warnings),
+                                        delta=f"{quant_result.critical_count} critical"
+                                        if quant_result.critical_count > 0
+                                        else None,
+                                        delta_color="inverse",
+                                    )
+
+                                # Warnings by severity
+                                if quant_result.warnings:
+                                    st.markdown("#### Issues")
+                                    severity_icons = {
+                                        Severity.CRITICAL: "!!",
+                                        Severity.HIGH: "!",
+                                        Severity.MEDIUM: "~",
+                                        Severity.LOW: ".",
+                                        Severity.INFO: "i",
+                                    }
+                                    severity_colors = {
+                                        Severity.CRITICAL: "#ef4444",
+                                        Severity.HIGH: "#f97316",
+                                        Severity.MEDIUM: "#eab308",
+                                        Severity.LOW: "#84cc16",
+                                        Severity.INFO: "#3b82f6",
+                                    }
+
+                                    for w in sorted(
+                                        quant_result.warnings,
+                                        key=lambda x: list(Severity).index(x.severity),
+                                    ):
+                                        icon = severity_icons.get(w.severity, "?")
+                                        color = severity_colors.get(w.severity, "#737373")
+                                        st.markdown(
+                                            f"""
+                                            <div style="padding: 0.5rem; margin: 0.25rem 0; 
+                                                 border-left: 3px solid {color}; background: {color}11;">
+                                                <span style="color: {color}; font-weight: bold;">[{icon}]</span>
+                                                <span style="color: #e5e5e5;">{w.message}</span>
+                                                {f'<br><span style="color: #a3a3a3; font-size: 0.85rem; margin-left: 2rem;">→ {w.recommendation}</span>' if w.recommendation else ""}
+                                            </div>
+                                            """,
+                                            unsafe_allow_html=True,
+                                        )
+
+                                # Problem layers table
+                                if quant_result.problem_layers:
+                                    st.markdown("#### Problem Layers")
+                                    prob_df = pd.DataFrame(quant_result.problem_layers[:10])
+                                    st.dataframe(prob_df, width="stretch", hide_index=True)
+
+                                # QAT-specific results
+                                if quant_result.is_qat_model:
+                                    st.markdown("#### QAT Model Validation")
+                                    qat_col1, qat_col2 = st.columns(2)
+                                    with qat_col1:
+                                        st.metric(
+                                            "Missing Fake-Quant",
+                                            len(quant_result.missing_fake_quant_nodes),
+                                        )
+                                    with qat_col2:
+                                        st.metric(
+                                            "Scale Mismatches",
+                                            len(quant_result.scale_mismatches),
+                                        )
+
+                                # Download report button
+                                recommendations = linter.get_recommendations(quant_result)
+                                report_lines = [
+                                    f"# Quantization Readiness Report: {model_name}",
+                                    "",
+                                    f"**Score:** {score}/100 ({grade})",
+                                    f"**Quant-Friendly Ops:** {quant_result.quant_friendly_pct:.1f}%",
+                                    "",
+                                    "## Recommendations",
+                                    "",
+                                ]
+                                for rec in recommendations:
+                                    report_lines.append(f"- {rec}")
+                                report_lines.append("")
+                                report_lines.append("## Warnings")
+                                report_lines.append("")
+                                for w in quant_result.warnings:
+                                    report_lines.append(f"- **[{w.severity.value}]** {w.message}")
+                                    if w.recommendation:
+                                        report_lines.append(f"  - {w.recommendation}")
+
+                                st.download_button(
+                                    "Download Quant Report",
+                                    data="\n".join(report_lines),
+                                    file_name=f"{model_name}_quant_report.md",
+                                    mime="text/markdown",
+                                )
+
+                                # LLM-powered advice (Task 33.4.12)
+                                st.markdown("---")
+                                st.markdown("#### Quantization Recommendations")
+
+                                # Check for API key
+                                use_llm_for_quant = st.session_state.get(
+                                    "enable_llm", False
+                                ) and st.session_state.get("openai_api_key_value", "")
+
+                                try:
+                                    from haoline.quantization_advisor import (
+                                        advise_quantization,
+                                        generate_qat_readiness_report,
+                                    )
+
+                                    try:
+                                        advice = advise_quantization(
+                                            quant_result,
+                                            graph_info,
+                                            api_key=st.session_state.get("openai_api_key_value", "")
+                                            if use_llm_for_quant
+                                            else None,
+                                            use_llm=use_llm_for_quant,
+                                        )
+                                    except Exception as e:
+                                        advice = None
+                                        st.warning(f"Quantization advice unavailable: {e}")
+
+                                    # Architecture badge
+                                    arch_colors = {
+                                        "cnn": "#22c55e",
+                                        "transformer": "#8b5cf6",
+                                        "rnn": "#f97316",
+                                        "hybrid": "#06b6d4",
+                                        "unknown": "#737373",
+                                    }
+                                    arch_color = arch_colors.get(
+                                        advice.architecture_type.value, "#737373"
+                                    )
+                                    st.markdown(
+                                        f"""
+                                        <div style="display: inline-block; padding: 0.25rem 0.75rem; 
+                                             background: {arch_color}22; border: 1px solid {arch_color};
+                                             border-radius: 999px; margin-bottom: 0.5rem;">
+                                            <span style="color: {arch_color}; font-weight: 600;">
+                                                {advice.architecture_type.value.upper()}
+                                            </span>
+                                        </div>
+                                        """,
+                                        unsafe_allow_html=True,
+                                    )
+
+                                    # Strategy
+                                    st.markdown(f"> {advice.strategy}")
+
+                                    # Expected accuracy impact
+                                    st.info(
+                                        f"Expected Accuracy Impact: {advice.expected_accuracy_impact}"
+                                    )
+
+                                    # Op Substitutions
+                                    if advice.op_substitutions:
+                                        st.markdown("**Recommended Op Substitutions:**")
+                                        for sub in advice.op_substitutions:
+                                            st.markdown(
+                                                f"- `{sub.original_op}` → `{sub.replacement_op}` "
+                                                f"({sub.accuracy_impact} accuracy impact)"
+                                            )
+
+                                    # QAT Workflow (collapsed)
+                                    with st.expander("QAT Workflow Steps"):
+                                        for i, step in enumerate(advice.qat_workflow, 1):
+                                            st.markdown(f"{i}. {step}")
+                                        st.markdown("")
+                                        st.markdown(
+                                            f"**Calibration Tips:** {advice.calibration_tips}"
+                                        )
+
+                                    # Runtime recommendations (collapsed)
+                                    with st.expander("Runtime-Specific Recommendations"):
+                                        for runtime, rec in advice.runtime_recommendations.items():
+                                            st.markdown(f"**{runtime.upper()}**")
+                                            st.markdown(rec)
+                                            st.markdown("")
+
+                                    # Download full QAT report
+                                    full_report = generate_qat_readiness_report(
+                                        quant_result, advice, model_name, format="markdown"
+                                    )
+                                    st.download_button(
+                                        "Download Full QAT Report",
+                                        data=full_report,
+                                        file_name=f"{model_name}_qat_readiness.md",
+                                        mime="text/markdown",
+                                        key="download_qat_report",
+                                    )
+
+                                except Exception as e:
+                                    st.warning(f"Could not generate recommendations: {e}")
+
+                            except Exception as e:
+                                st.warning(f"Could not run quantization analysis: {e}")
+
+                    # Memory breakdown by op type
+                    if (
+                        report.memory_estimates
+                        and hasattr(report.memory_estimates, "breakdown")
+                        and report.memory_estimates.breakdown
+                    ):
+                        bd = report.memory_estimates.breakdown
+                        if hasattr(bd, "weights_by_op_type") and bd.weights_by_op_type:
+                            st.markdown("### Memory Breakdown by Op Type")
+
+                            import pandas as pd
+
+                            total_w = sum(bd.weights_by_op_type.values())
+                            mem_df = pd.DataFrame(
+                                [
+                                    {
+                                        "Op Type": op_type,
+                                        "Size": format_bytes(size),
+                                        "Percentage": f"{100.0 * size / total_w:.1f}%"
+                                        if total_w > 0
+                                        else "0%",
+                                    }
+                                    for op_type, size in sorted(
+                                        bd.weights_by_op_type.items(), key=lambda x: -x[1]
+                                    )[:8]
+                                ]
+                            )
+                            st.dataframe(mem_df, width="stretch", hide_index=True)
+
+                    # Memory Usage Overview (Story 41.3.2)
+                    if report.memory_estimates:
+                        st.markdown("### Memory Usage Overview")
+                        mem = report.memory_estimates
+
+                        import pandas as pd
+
+                        # Build memory components
+                        memory_components = []
+
+                        # Model weights
+                        if mem.model_size_bytes > 0:
+                            memory_components.append(
+                                {
+                                    "Component": "Model Weights",
+                                    "Size (MB)": mem.model_size_bytes / (1024**2),
+                                }
+                            )
+
+                        # Peak activations
+                        if mem.peak_activation_bytes > 0:
+                            memory_components.append(
+                                {
+                                    "Component": "Peak Activations",
+                                    "Size (MB)": mem.peak_activation_bytes / (1024**2),
+                                }
+                            )
+
+                        # KV Cache (if transformer)
+                        if mem.kv_cache_bytes_full_context > 0:
+                            memory_components.append(
+                                {
+                                    "Component": "KV Cache (full)",
+                                    "Size (MB)": mem.kv_cache_bytes_full_context / (1024**2),
+                                }
+                            )
+
+                        if memory_components:
+                            mem_overview_df = pd.DataFrame(memory_components)
+                            st.bar_chart(
+                                mem_overview_df.set_index("Component")["Size (MB)"],
+                                horizontal=True,
+                            )
+
+                            # Show total
+                            total_mb = sum(c["Size (MB)"] for c in memory_components)
+                            st.caption(
+                                f"**Total Estimated Memory:** {total_mb:.1f} MB ({total_mb / 1024:.2f} GB)"
+                            )
+
+                    # System Requirements (Story 41.3.6)
+                    if report.param_counts and report.flop_counts and report.memory_estimates:
+                        st.markdown("### System Requirements")
+                        st.caption("Steam-style hardware tiers for deployment")
+
+                        try:
+                            import logging
+
+                            from haoline.operational_profiling import OperationalProfiler
+
+                            req_logger = logging.getLogger("haoline.sysreq")
+                            profiler = OperationalProfiler(logger=req_logger)
+
+                            sys_reqs = profiler.determine_system_requirements(
+                                model_params=report.param_counts.total,
+                                model_flops=report.flop_counts.total,
+                                peak_activation_bytes=report.memory_estimates.peak_activation_bytes,
+                                precision="fp16",
+                                target_fps=30.0,
+                            )
+
+                            req_col1, req_col2, req_col3 = st.columns(3)
+
+                            with req_col1:
+                                st.markdown("#### 🟢 Minimum")
+                                if sys_reqs.minimum:
+                                    st.markdown(f"**{sys_reqs.minimum.device}**")
+                                    st.caption(f"{sys_reqs.minimum_vram_gb} GB VRAM")
+                                else:
+                                    st.caption("N/A")
+
+                            with req_col2:
+                                st.markdown("#### 🟡 Recommended")
+                                if sys_reqs.recommended:
+                                    st.markdown(f"**{sys_reqs.recommended.device}**")
+                                    st.caption(f"{sys_reqs.recommended_vram_gb} GB VRAM")
+                                else:
+                                    st.caption("N/A")
+
+                            with req_col3:
+                                st.markdown("#### 🔵 Optimal")
+                                if sys_reqs.optimal:
+                                    st.markdown(f"**{sys_reqs.optimal.device}**")
+                                    st.caption(f"{sys_reqs.optimal_vram_gb} GB VRAM")
+                                else:
+                                    st.caption("N/A")
+
+                        except Exception as e:
+                            st.warning(f"Could not generate system requirements: {e}")
+
+                    # Deployment Cost Calculator (Story 41.3.7)
+                    if report.flop_counts and report.memory_estimates:
+                        with st.expander("💰 Deployment Cost Calculator", expanded=False):
+                            st.caption(
+                                "Estimate monthly cloud costs for running this model in production"
+                            )
+
+                            # Cloud Instance Selector (Story 41.3.11, 41.4.4)
+                            from haoline.eval.deployment import HARDWARE_TIERS
+
+                            tier_options = {
+                                k: f"{v.name} (${v.cost_per_hour_usd:.2f}/hr, {v.memory_gb}GB)"
+                                for k, v in HARDWARE_TIERS.items()
+                            }
+                            selected_tier = st.selectbox(
+                                "Cloud Instance",
+                                options=list(tier_options.keys()),
+                                format_func=lambda x: tier_options[x],
+                                index=1,  # Default to A10G
+                                help="Select cloud GPU instance for cost estimation",
+                            )
+
+                            cost_col1, cost_col2 = st.columns(2)
+                            with cost_col1:
+                                target_fps = st.number_input(
+                                    "Target Throughput (FPS)",
+                                    min_value=1,
+                                    max_value=1000,
+                                    value=30,
+                                    help="How many inferences per second you need",
+                                )
+                                hours_per_day = st.slider(
+                                    "Hours/Day",
+                                    min_value=1,
+                                    max_value=24,
+                                    value=24,
+                                    help="How many hours per day the model runs",
+                                )
+
+                            with cost_col2:
+                                precision_choice = st.selectbox(
+                                    "Precision",
+                                    options=["fp32", "fp16", "int8"],
+                                    index=1,
+                                    help="Inference precision affects speed and cost",
+                                )
+                                replicas = st.number_input(
+                                    "Replicas",
+                                    min_value=1,
+                                    max_value=10,
+                                    value=1,
+                                    help="Number of model instances for redundancy",
+                                )
+
+                            if st.button("Calculate Cost", type="primary"):
+                                try:
+                                    from haoline.eval.deployment import (
+                                        DeploymentScenario,
+                                        calculate_deployment_cost,
+                                    )
+
+                                    scenario = DeploymentScenario(
+                                        target_fps=float(target_fps),
+                                        hours_per_day=float(hours_per_day),
+                                        precision=precision_choice,
+                                        replicas=replicas,
+                                    )
+
+                                    cost_estimate = calculate_deployment_cost(
+                                        model_flops=report.flop_counts.total,
+                                        scenario=scenario,
+                                        model_memory_bytes=report.memory_estimates.model_size_bytes,
+                                    )
+
+                                    # Display results
+                                    st.markdown("---")
+                                    result_col1, result_col2, result_col3 = st.columns(3)
+
+                                    with result_col1:
+                                        st.metric(
+                                            "Monthly Cost",
+                                            f"${cost_estimate.cost_per_month_usd:.2f}",
+                                        )
+
+                                    with result_col2:
+                                        st.metric(
+                                            "Instances Needed",
+                                            str(cost_estimate.num_instances),
+                                        )
+
+                                    with result_col3:
+                                        if cost_estimate.hardware_tier:
+                                            st.metric(
+                                                "Recommended",
+                                                cost_estimate.hardware_tier.name,
+                                            )
+
+                                    if cost_estimate.warnings:
+                                        for warning in cost_estimate.warnings:
+                                            st.warning(warning)
+
+                                except Exception as e:
+                                    st.error(f"Cost calculation failed: {e}")
+
+                    # Run Benchmark Button (Story 41.4.2)
+                    if not (hasattr(report, "batch_size_sweep") and report.batch_size_sweep):
+                        with st.expander("🔬 Run Benchmark (Optional)", expanded=False):
+                            st.caption(
+                                "Run actual inference benchmarks to find optimal batch size. "
+                                "This requires ONNX Runtime and may take a minute."
+                            )
+
+                            bench_col1, bench_col2 = st.columns(2)
+                            with bench_col1:
+                                bench_batch_sizes = st.multiselect(
+                                    "Batch Sizes to Test",
+                                    options=[1, 2, 4, 8, 16, 32, 64],
+                                    default=[1, 2, 4, 8],
+                                )
+                            with bench_col2:
+                                num_runs = st.number_input(
+                                    "Warmup + Test Runs",
+                                    min_value=3,
+                                    max_value=20,
+                                    value=5,
+                                )
+
+                            if st.button("Run Batch Benchmark", type="secondary"):
+                                try:
+                                    import logging
+
+                                    from haoline.operational_profiling import OperationalProfiler
+
+                                    bench_logger = logging.getLogger("haoline.bench")
+                                    profiler = OperationalProfiler(logger=bench_logger)
+
+                                    with st.spinner("Running benchmark..."):
+                                        sweep_result = profiler.sweep_batch_sizes(
+                                            model_path=str(tmp_path),
+                                            batch_sizes=bench_batch_sizes,
+                                            num_runs=num_runs,
+                                        )
+
+                                    if sweep_result:
+                                        report.batch_size_sweep = sweep_result
+                                        st.success(
+                                            f"Benchmark complete! Optimal batch: {sweep_result.optimal_batch_size}"
+                                        )
+                                        st.rerun()
+                                    else:
+                                        st.warning(
+                                            "Benchmark failed - ONNX Runtime may not be available"
+                                        )
+
+                                except Exception as e:
+                                    st.error(f"Benchmark failed: {e}")
+
+                    # Batch Size Sweep Results (Story 41.3.8)
+                    if hasattr(report, "batch_size_sweep") and report.batch_size_sweep:
+                        st.markdown("### Batch Size Sweep Results")
+                        sweep = report.batch_size_sweep
+
+                        import pandas as pd
+
+                        sweep_col1, sweep_col2 = st.columns(2)
+                        with sweep_col1:
+                            st.metric("Optimal Batch Size", str(sweep.optimal_batch_size))
+                        with sweep_col2:
+                            st.metric(
+                                "Peak Throughput",
+                                f"{max(sweep.throughputs):.1f} inf/s",
+                            )
+
+                        # Chart
+                        sweep_df = pd.DataFrame(
+                            {
+                                "Batch Size": sweep.batch_sizes,
+                                "Throughput (inf/s)": sweep.throughputs,
+                                "Latency (ms)": sweep.latencies,
+                            }
+                        )
+                        st.line_chart(sweep_df.set_index("Batch Size")["Throughput (inf/s)"])
+
+                    # Resolution Sweep Results (Story 41.3.9)
+                    if hasattr(report, "resolution_sweep") and report.resolution_sweep:
+                        st.markdown("### Resolution Sweep Results")
+                        res_sweep = report.resolution_sweep
+
+                        import pandas as pd
+
+                        res_col1, res_col2 = st.columns(2)
+                        with res_col1:
+                            st.metric("Optimal Resolution", res_sweep.optimal_resolution)
+                        with res_col2:
+                            st.metric("Max Resolution (fits VRAM)", res_sweep.max_resolution)
+
+                        # Chart
+                        res_df = pd.DataFrame(
+                            {
+                                "Resolution": res_sweep.resolutions,
+                                "Throughput (inf/s)": res_sweep.throughputs,
+                                "VRAM (GB)": res_sweep.vram_usage_gb,
+                            }
+                        )
+                        st.line_chart(res_df.set_index("Resolution")["Throughput (inf/s)"])
+
+                    # Per-Layer Timing (Story 41.3.10)
+                    if (
+                        hasattr(report, "extra_data")
+                        and report.extra_data
+                        and "profiling" in report.extra_data
+                    ):
+                        st.markdown("### Per-Layer Timing")
+                        profiling_data = report.extra_data["profiling"]
+
+                        import pandas as pd
+
+                        if "layer_profiles" in profiling_data and profiling_data["layer_profiles"]:
+                            layers = profiling_data["layer_profiles"]
+
+                            # Show total time
+                            total_ms = profiling_data.get("total_time_ms", 0)
+                            st.metric("Total Inference Time", f"{total_ms:.2f} ms")
+
+                            # Show slowest layers
+                            st.markdown("#### Slowest Layers")
+                            sorted_layers = sorted(layers, key=lambda x: -x.get("duration_ms", 0))[
+                                :10
+                            ]
+
+                            timing_df = pd.DataFrame(
+                                [
+                                    {
+                                        "Layer": lp.get("name", "?")[:25],
+                                        "Op Type": lp.get("op_type", "?"),
+                                        "Time (ms)": f"{lp.get('duration_ms', 0):.3f}",
+                                        "Provider": lp.get("provider", "?"),
+                                    }
+                                    for lp in sorted_layers
+                                ]
+                            )
+                            st.dataframe(timing_df, width="stretch", hide_index=True)
+
+                            # Time by op type chart
+                            time_by_op: dict[str, float] = {}
+                            for lp in layers:
+                                op = lp.get("op_type", "Unknown")
+                                time_by_op[op] = time_by_op.get(op, 0) + lp.get("duration_ms", 0)
+
+                            if time_by_op:
+                                st.markdown("#### Time by Op Type")
+                                op_df = pd.DataFrame(
+                                    [
+                                        {"Op Type": op, "Time (ms)": t}
+                                        for op, t in sorted(
+                                            time_by_op.items(), key=lambda x: -x[1]
+                                        )[:10]
+                                    ]
+                                )
+                                st.bar_chart(op_df.set_index("Op Type")["Time (ms)"])
 
                     # AI Summary (if enabled and API key provided)
                     llm_enabled = st.session_state.get("enable_llm", False)
@@ -2024,79 +3281,13 @@ def main():
                                         st.error(f"AI summary failed: {llm_result.error_message}")
                                     else:
                                         st.warning("AI summary generation returned empty result.")
-
                                 except ImportError:
                                     st.error(
-                                        "LLM module not available. Install with: `pip install haoline[llm]`"
+                                        "LLM summarizer not available. Install with: "
+                                        "`pip install haoline[llm]`"
                                     )
                                 except Exception as e:
-                                    st.error(f"AI summary generation failed: {e}")
-
-                    # Universal IR Summary (if available)
-                    if hasattr(report, "universal_graph") and report.universal_graph:
-                        with st.expander("Universal IR View", expanded=False):
-                            ir = report.universal_graph
-                            st.markdown(
-                                f"""
-                                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%);
-                                border-left: 4px solid #6366f1; border-radius: 8px; padding: 1rem; margin: 0.5rem 0;">
-                                <p style="font-weight: 600; color: #6366f1; margin-bottom: 0.5rem;">Format-Agnostic Graph</p>
-                                <p style="color: #e5e5e5; line-height: 1.6;">
-                                <strong>Source:</strong> {ir.metadata.source_format.value.upper()}<br>
-                                <strong>Nodes:</strong> {ir.num_nodes}<br>
-                                <strong>Tensors:</strong> {len(ir.tensors)}<br>
-                                <strong>Parameters:</strong> {ir.total_parameters:,}<br>
-                                <strong>Weight Size:</strong> {ir.total_weight_bytes / (1024 * 1024):.2f} MB
-                                </p>
-                                </div>
-                                """,
-                                unsafe_allow_html=True,
-                            )
-
-                            # Op type distribution from IR
-                            op_counts = ir.op_type_counts
-                            if op_counts:
-                                st.markdown("**Operation Types (from IR):**")
-                                top_ops = sorted(
-                                    op_counts.items(), key=lambda x: x[1], reverse=True
-                                )[:10]
-                                for op, count in top_ops:
-                                    st.text(f"  {op}: {count}")
-
-                    # Operator distribution
-                    if has_graph and report.graph_summary.op_type_counts:
-                        st.markdown("### Operator Distribution")
-
-                        import pandas as pd
-
-                        op_data = pd.DataFrame(
-                            [
-                                {"Operator": op, "Count": count}
-                                for op, count in sorted(
-                                    report.graph_summary.op_type_counts.items(),
-                                    key=lambda x: x[1],
-                                    reverse=True,
-                                )
-                            ]
-                        )
-                        st.bar_chart(op_data.set_index("Operator"))
-
-                    # Hardware estimates
-                    if report.hardware_estimates:
-                        st.markdown("### Hardware Estimates")
-                        hw = report.hardware_estimates
-
-                        hw_col1, hw_col2, hw_col3 = st.columns(3)
-
-                        with hw_col1:
-                            st.metric("VRAM Required", format_bytes(hw.vram_required_bytes))
-
-                        with hw_col2:
-                            fits = "Yes" if hw.fits_in_vram else "No"
-                            st.metric("Fits in VRAM", fits)
-
-                        with hw_col3:
-                            st.metric("Theoretical Latency", f"{hw.theoretical_latency_ms:.2f} ms")
+                                    st.error(f"Error generating AI summary: {e}")
 
                 with tab2:
                     if not has_graph:
@@ -2112,6 +3303,8 @@ def main():
                         try:
                             # Build the full interactive D3.js graph
                             import logging
+
+                            from haoline.analyzer import ONNXGraphLoader
 
                             graph_logger = logging.getLogger("haoline.graph")
 
@@ -2129,7 +3322,7 @@ def main():
 
                             # Build hierarchical graph
                             builder = HierarchicalGraphBuilder(logger=graph_logger)
-                            model_name = Path(file_name).stem
+                            model_name = Path(uploaded_file.name).stem
                             hier_graph = builder.build(graph_info, blocks, model_name)
 
                             # Generate the full D3.js HTML
@@ -2140,7 +3333,7 @@ def main():
                                 hier_graph,
                                 edge_result,
                                 title=model_name,
-                                model_size_bytes=len(file_bytes),
+                                model_size_bytes=len(uploaded_file.getvalue()),
                             )
 
                             # Embed with generous height for comfortable viewing
@@ -2163,6 +3356,111 @@ def main():
                         )
 
                 with tab3:
+                    # Layer-by-layer breakdown table (Story 41.2.7)
+                    # Respects privacy controls: summary_only, redact_names
+                    if summary_only:
+                        st.info(
+                            "**Summary Only mode enabled** - Per-layer details hidden for IP protection."
+                        )
+                        st.markdown("### Aggregate Statistics")
+                        agg_col1, agg_col2, agg_col3 = st.columns(3)
+                        with agg_col1:
+                            st.metric(
+                                "Total Parameters",
+                                format_number(report.param_counts.total)
+                                if report.param_counts
+                                else "N/A",
+                            )
+                        with agg_col2:
+                            st.metric(
+                                "Total FLOPs",
+                                format_number(report.flop_counts.total)
+                                if report.flop_counts
+                                else "N/A",
+                            )
+                        with agg_col3:
+                            layer_count = (
+                                str(report.graph_summary.num_nodes)
+                                if has_graph and report.graph_summary
+                                else "N/A"
+                            )
+                            st.metric("Total Layers", layer_count)
+                    else:
+                        st.markdown("### Layer-by-Layer Breakdown")
+                        if not has_graph:
+                            st.info(
+                                "Layer table is available for formats with graph structure. Convert to ONNX for per-layer metrics."
+                            )
+                        else:
+                            try:
+                                import logging
+
+                                import pandas as pd
+
+                                from haoline.analyzer import ONNXGraphLoader
+                                from haoline.layer_summary import LayerSummaryBuilder
+
+                                layer_logger = logging.getLogger("haoline.layer")
+                                loader = ONNXGraphLoader(logger=layer_logger)
+                                _, graph_info = loader.load(tmp_path)
+
+                                layer_builder = LayerSummaryBuilder(logger=layer_logger)
+                                layer_summary = layer_builder.build(
+                                    graph_info,
+                                    param_counts=report.param_counts,
+                                    flop_counts=report.flop_counts,
+                                    memory_estimates=report.memory_estimates,
+                                )
+
+                                if layer_summary.layers:
+                                    layer_data = []
+                                    for idx, layer in enumerate(layer_summary.layers[:100]):
+                                        # Apply redact_names if enabled
+                                        if redact_names:
+                                            display_name = f"layer_{idx}"
+                                        else:
+                                            display_name = layer.name[:30] + (
+                                                "..." if len(layer.name) > 30 else ""
+                                            )
+
+                                        layer_data.append(
+                                            {
+                                                "Name": display_name,
+                                                "Op Type": layer.op_type,
+                                                "Parameters": format_number(layer.params)
+                                                if layer.params > 0
+                                                else "-",
+                                                "FLOPs": format_number(layer.flops)
+                                                if layer.flops > 0
+                                                else "-",
+                                                "Output Shape": ", ".join(layer.output_shapes)
+                                                if layer.output_shapes
+                                                else "-",
+                                            }
+                                        )
+
+                                    layer_df = pd.DataFrame(layer_data)
+                                    st.dataframe(
+                                        layer_df,
+                                        width="stretch",
+                                        hide_index=True,
+                                        height=400,
+                                    )
+
+                                    # CSV download button
+                                    csv_data = layer_summary.to_csv()
+                                    st.download_button(
+                                        label="Download Layer CSV",
+                                        data=csv_data,
+                                        file_name=f"{uploaded_file.name.replace('.onnx', '')}_layers.csv",
+                                        mime="text/csv",
+                                    )
+                                else:
+                                    st.info("No layer details available.")
+                            except Exception as e:
+                                st.warning(f"Could not generate layer breakdown: {e}")
+
+                    st.markdown("---")
                     st.markdown("### Detected Patterns")
 
                     if report.detected_blocks:
@@ -2188,7 +3486,7 @@ def main():
                         st.success("No risk signals detected!")
 
                 with tab4:
-                    model_name = file_name.replace(".onnx", "")
+                    model_name = uploaded_file.name.replace(".onnx", "")
 
                     st.markdown(
                         """
@@ -2287,7 +3585,7 @@ def main():
                             data=html_data,
                             file_name=f"{model_name}_report.html",
                             mime="text/html",
-                            use_container_width=True,
+                            width="stretch",
                         )
 
                     with col2:
@@ -2306,7 +3604,7 @@ def main():
                             data=json_data,
                             file_name=f"{model_name}_report.json",
                             mime="application/json",
-                            use_container_width=True,
+                            width="stretch",
                         )
 
                     col3, col4 = st.columns(2)
@@ -2327,7 +3625,7 @@ def main():
                             data=md_data,
                             file_name=f"{model_name}_report.md",
                             mime="text/markdown",
-                            use_container_width=True,
+                            width="stretch",
                         )
 
                     with col4:
@@ -2347,7 +3645,7 @@ def main():
                                 data=pdf_data,
                                 file_name=f"{model_name}_report.pdf",
                                 mime="application/pdf",
-                                use_container_width=True,
+                                width="stretch",
                             )
                         else:
                             st.markdown(
@@ -2360,7 +3658,77 @@ def main():
                             """,
                                 unsafe_allow_html=True,
                             )
-                            st.button("PDF unavailable", disabled=True, use_container_width=True)
+                            st.button("PDF unavailable", disabled=True, width="stretch")
+
+                    # Universal IR Export (Story 41.4.9)
+                    st.markdown("---")
+                    st.markdown("### Advanced Exports")
+
+                    ir_col1, ir_col2 = st.columns(2)
+
+                    with ir_col1:
+                        st.markdown(
+                            """
+                        <div class="export-card">
+                            <div class="export-icon">🔄</div>
+                            <div class="export-title">Universal IR</div>
+                            <div class="export-desc">Format-agnostic graph representation (JSON)</div>
+                        </div>
+                        """,
+                            unsafe_allow_html=True,
+                        )
+                        try:
+                            from haoline.format_adapters import load_model
+
+                            ir_graph = load_model(Path(tmp_path))
+                            # Exclude tensor data (numpy arrays) - they're huge and not JSON-serializable
+                            ir_dict = ir_graph.model_dump(
+                                exclude={"tensors": {"__all__": {"data"}}}
+                            )
+                            ir_json = json.dumps(ir_dict, indent=2, default=str)
+                            st.download_button(
+                                label="Download Universal IR",
+                                data=ir_json,
+                                file_name=f"{model_name}_universal_ir.json",
+                                mime="application/json",
+                                width="stretch",
+                            )
+                        except Exception as e:
+                            st.button(
+                                f"IR export failed: {str(e)[:30]}",
+                                disabled=True,
+                                width="stretch",
+                            )
+
+                    with ir_col2:
+                        st.markdown(
+                            """
+                        <div class="export-card">
+                            <div class="export-icon">📊</div>
+                            <div class="export-title">Graph DOT</div>
+                            <div class="export-desc">Graphviz format for visualization tools</div>
+                        </div>
+                        """,
+                            unsafe_allow_html=True,
+                        )
+                        try:
+                            from haoline.format_adapters import load_model
+
+                            ir_graph = load_model(Path(tmp_path))
+                            dot_data = ir_graph.to_dot()
+                            st.download_button(
+                                label="Download DOT Graph",
+                                data=dot_data,
+                                file_name=f"{model_name}_graph.dot",
+                                mime="text/plain",
+                                width="stretch",
+                            )
+                        except Exception as e:
+                            st.button(
+                                f"DOT export failed: {str(e)[:30]}",
+                                disabled=True,
+                                width="stretch",
+                            )
 
         except Exception as e:
             st.error(f"Error analyzing model: {e}")
