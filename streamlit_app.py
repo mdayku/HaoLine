@@ -1690,6 +1690,9 @@ def main():
                     <strong>Legend:</strong> Yes = In-app (Streamlit) | CLI = Use <code>pip install haoline</code> locally | GPU = Requires NVIDIA GPU.<br>
                     For full analysis, convert to ONNX format.
                 </p>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 0.25rem;">
+                    Graph-based views only render when the format provides a graph. Metadata/weights-only formats (GGUF, SafeTensors) should be converted to ONNX for full visualization.
+                </p>
                 """,
                     unsafe_allow_html=True,
                 )
@@ -1782,6 +1785,10 @@ def main():
         # Metrics cards
         col1, col2, col3, col4 = st.columns(4)
 
+        has_graph = (
+            report.graph_summary is not None and getattr(report.graph_summary, "num_nodes", 0) > 0
+        )
+
         with col1:
             params = report.param_counts.total if report.param_counts else 0
             st.metric("Parameters", format_number(params))
@@ -1795,7 +1802,8 @@ def main():
             st.metric("Memory", format_bytes(memory))
 
         with col4:
-            st.metric("Operators", str(report.graph_summary.num_nodes))
+            operator_count = str(report.graph_summary.num_nodes) if has_graph else "N/A"
+            st.metric("Operators", operator_count)
 
         # Tabs for different views
         tab1, tab2, tab3, tab4 = st.tabs(["Overview", "Interactive Graph", "Details", "Export"])
@@ -1835,7 +1843,7 @@ def main():
                 """)
 
             # Op distribution chart
-            if report.graph_summary and report.graph_summary.op_type_counts:
+            if has_graph and report.graph_summary and report.graph_summary.op_type_counts:
                 st.markdown("### Operator Distribution")
                 op_counts = report.graph_summary.op_type_counts
                 sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)[:10]
@@ -1925,7 +1933,7 @@ def main():
                 st.info("No architecture blocks detected.")
 
             # Op type breakdown
-            if report.graph_summary and report.graph_summary.op_type_counts:
+            if has_graph and report.graph_summary and report.graph_summary.op_type_counts:
                 st.markdown("### Operator Types")
                 op_counts = report.graph_summary.op_type_counts
                 sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)
@@ -2201,25 +2209,53 @@ def main():
             st.stop()
 
         elif file_ext in [".tflite"]:
-            # TFLite analysis
-            st.info("**TFLite model detected** - Analyzing with TFLite reader...")
+            st.info("**TFLite model detected** — attempting auto-convert to ONNX for full analysis.")
             with tempfile.NamedTemporaryFile(suffix=".tflite", delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
-                tmp_path = tmp.name
+                tflite_path = tmp.name
+
+            try:
+                import tflite2onnx
+
+                with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as onnx_tmp:
+                    tflite2onnx.convert(tflite_path, onnx_tmp.name)
+                    tmp_path = onnx_tmp.name
+                    st.success("✅ Converted TFLite → ONNX for analysis.")
+            except Exception as e:
+                st.warning(
+                    f"Could not auto-convert TFLite → ONNX ({str(e)[:120]}). "
+                    "Proceeding with TFLite reader (limited features)."
+                )
+                tmp_path = tflite_path
 
         elif file_ext in [".mlmodel", ".mlpackage"]:
-            # CoreML analysis
-            st.info("**CoreML model detected** - Analyzing with CoreML reader...")
-            st.warning("Note: Full CoreML analysis requires macOS with coremltools installed.")
+            st.info("**CoreML model detected** — attempting auto-convert to ONNX for full analysis.")
             with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
-                tmp_path = tmp.name
+                coreml_path = tmp.name
+
+            try:
+                import coremltools
+                import onnx
+
+                mlmodel = coremltools.models.MLModel(coreml_path)
+                onnx_model = coremltools.converters.onnx.convert(mlmodel)
+                with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as onnx_tmp:
+                    onnx.save(onnx_model, onnx_tmp.name)
+                    tmp_path = onnx_tmp.name
+                    st.success("✅ Converted CoreML → ONNX for analysis.")
+            except Exception as e:
+                st.warning(
+                    f"Could not auto-convert CoreML → ONNX ({str(e)[:120]}). "
+                    "Proceeding with CoreML reader (limited features)."
+                )
+                tmp_path = coreml_path
 
         elif file_ext in [".xml"]:
-            # OpenVINO IR analysis
-            st.info("**OpenVINO IR detected** - Analyzing with OpenVINO reader...")
+            st.info("**OpenVINO IR detected** — attempting analysis.")
             st.warning(
-                "Note: Full analysis requires the .bin file in the same directory. Upload may be partial."
+                "Auto-convert to ONNX is not available here; analysis will use the OpenVINO reader. "
+                "Include the matching .bin for best results."
             )
             with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
@@ -2234,7 +2270,8 @@ def main():
 
         # Save ONNX to temp file (if not already set by conversion)
         if tmp_path is None:
-            with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as tmp:
+            suffix = ".onnx" if file_ext == ".onnx" else file_ext or ".onnx"
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tmp_path = tmp.name
 
@@ -2281,6 +2318,11 @@ def main():
                 # Metrics cards
                 col1, col2, col3, col4 = st.columns(4)
 
+                has_graph = (
+                    report.graph_summary is not None
+                    and getattr(report.graph_summary, "num_nodes", 0) > 0
+                )
+
                 with col1:
                     params = report.param_counts.total if report.param_counts else 0
                     st.metric("Parameters", format_number(params))
@@ -2298,7 +2340,12 @@ def main():
                     st.metric("Memory", format_bytes(memory))
 
                 with col4:
-                    st.metric("Operators", str(report.graph_summary.num_nodes))
+                    operator_count = (
+                        str(report.graph_summary.num_nodes)
+                        if has_graph and report.graph_summary
+                        else "N/A"
+                    )
+                    st.metric("Operators", operator_count)
 
                 # Prepare graph_info (ONNX only) for layer/quant views
                 graph_info = None
@@ -2361,7 +2408,7 @@ def main():
                         """)
 
                     # Operator distribution
-                    if report.graph_summary.op_type_counts:
+                    if has_graph and report.graph_summary.op_type_counts:
                         st.markdown("### Operator Distribution")
 
                         import pandas as pd
@@ -3239,7 +3286,11 @@ def main():
                                     st.error(f"Error generating AI summary: {e}")
 
                 with tab2:
-                    if include_graph:
+                    if not has_graph:
+                        st.info(
+                            "No graph visualization for this format. Convert to ONNX for full interactive graph."
+                        )
+                    elif include_graph:
                         st.markdown("### Interactive Architecture Graph")
                         st.caption(
                             "🖱️ Scroll to zoom | Drag to pan | Click nodes to expand/collapse | Use sidebar controls"
@@ -3324,76 +3375,86 @@ def main():
                                 else "N/A",
                             )
                         with agg_col3:
-                            st.metric("Total Layers", str(report.graph_summary.num_nodes))
+                            layer_count = (
+                                str(report.graph_summary.num_nodes)
+                                if has_graph and report.graph_summary
+                                else "N/A"
+                            )
+                            st.metric("Total Layers", layer_count)
                     else:
                         st.markdown("### Layer-by-Layer Breakdown")
-                        try:
-                            import logging
-
-                            import pandas as pd
-
-                            from haoline.analyzer import ONNXGraphLoader
-                            from haoline.layer_summary import LayerSummaryBuilder
-
-                            layer_logger = logging.getLogger("haoline.layer")
-                            loader = ONNXGraphLoader(logger=layer_logger)
-                            _, graph_info = loader.load(tmp_path)
-
-                            layer_builder = LayerSummaryBuilder(logger=layer_logger)
-                            layer_summary = layer_builder.build(
-                                graph_info,
-                                param_counts=report.param_counts,
-                                flop_counts=report.flop_counts,
-                                memory_estimates=report.memory_estimates,
+                        if not has_graph:
+                            st.info(
+                                "Layer table is available for formats with graph structure. Convert to ONNX for per-layer metrics."
                             )
+                        else:
+                            try:
+                                import logging
 
-                            if layer_summary.layers:
-                                layer_data = []
-                                for idx, layer in enumerate(layer_summary.layers[:100]):
-                                    # Apply redact_names if enabled
-                                    if redact_names:
-                                        display_name = f"layer_{idx}"
-                                    else:
-                                        display_name = layer.name[:30] + (
-                                            "..." if len(layer.name) > 30 else ""
+                                import pandas as pd
+
+                                from haoline.analyzer import ONNXGraphLoader
+                                from haoline.layer_summary import LayerSummaryBuilder
+
+                                layer_logger = logging.getLogger("haoline.layer")
+                                loader = ONNXGraphLoader(logger=layer_logger)
+                                _, graph_info = loader.load(tmp_path)
+
+                                layer_builder = LayerSummaryBuilder(logger=layer_logger)
+                                layer_summary = layer_builder.build(
+                                    graph_info,
+                                    param_counts=report.param_counts,
+                                    flop_counts=report.flop_counts,
+                                    memory_estimates=report.memory_estimates,
+                                )
+
+                                if layer_summary.layers:
+                                    layer_data = []
+                                    for idx, layer in enumerate(layer_summary.layers[:100]):
+                                        # Apply redact_names if enabled
+                                        if redact_names:
+                                            display_name = f"layer_{idx}"
+                                        else:
+                                            display_name = layer.name[:30] + (
+                                                "..." if len(layer.name) > 30 else ""
+                                            )
+
+                                        layer_data.append(
+                                            {
+                                                "Name": display_name,
+                                                "Op Type": layer.op_type,
+                                                "Parameters": format_number(layer.params)
+                                                if layer.params > 0
+                                                else "-",
+                                                "FLOPs": format_number(layer.flops)
+                                                if layer.flops > 0
+                                                else "-",
+                                                "Output Shape": ", ".join(layer.output_shapes)
+                                                if layer.output_shapes
+                                                else "-",
+                                            }
                                         )
 
-                                    layer_data.append(
-                                        {
-                                            "Name": display_name,
-                                            "Op Type": layer.op_type,
-                                            "Parameters": format_number(layer.params)
-                                            if layer.params > 0
-                                            else "-",
-                                            "FLOPs": format_number(layer.flops)
-                                            if layer.flops > 0
-                                            else "-",
-                                            "Output Shape": ", ".join(layer.output_shapes)
-                                            if layer.output_shapes
-                                            else "-",
-                                        }
+                                    layer_df = pd.DataFrame(layer_data)
+                                    st.dataframe(
+                                        layer_df,
+                                        use_container_width=True,
+                                        hide_index=True,
+                                        height=400,
                                     )
 
-                                layer_df = pd.DataFrame(layer_data)
-                                st.dataframe(
-                                    layer_df,
-                                    use_container_width=True,
-                                    hide_index=True,
-                                    height=400,
-                                )
-
-                                # CSV download button
-                                csv_data = layer_summary.to_csv()
-                                st.download_button(
-                                    label="Download Layer CSV",
-                                    data=csv_data,
-                                    file_name=f"{uploaded_file.name.replace('.onnx', '')}_layers.csv",
-                                    mime="text/csv",
-                                )
-                            else:
-                                st.info("No layer details available.")
-                        except Exception as e:
-                            st.warning(f"Could not generate layer breakdown: {e}")
+                                    # CSV download button
+                                    csv_data = layer_summary.to_csv()
+                                    st.download_button(
+                                        label="Download Layer CSV",
+                                        data=csv_data,
+                                        file_name=f"{uploaded_file.name.replace('.onnx', '')}_layers.csv",
+                                        mime="text/csv",
+                                    )
+                                else:
+                                    st.info("No layer details available.")
+                            except Exception as e:
+                                st.warning(f"Could not generate layer breakdown: {e}")
 
                     st.markdown("---")
                     st.markdown("### Detected Patterns")

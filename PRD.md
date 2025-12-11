@@ -1897,6 +1897,19 @@ Not all model formats are created equal. HaoLine supports multiple formats with 
 
 **Legend:** ✅ Full | ⚠️ Partial (no FLOPs) | ❌ Not available | ❓ Partial support
 
+### 19.2.1 Auto-Conversion to ONNX (Streamlit/HF + CLI)
+
+| Source Format | Streamlit/HF auto-convert | CLI flag |
+|---------------|---------------------------|----------|
+| PyTorch (.pt/.pth) | ✅ (input shape required prompt) | `--from-pytorch` |
+| TFLite (.tflite) | ✅ (via `tflite2onnx` when installed) | `--from-tflite` |
+| CoreML (.mlmodel/.mlpackage) | ✅ (via `coremltools` when installed) | `--from-coreml` |
+| TensorFlow/Keras/JAX | CLI-only | `--from-tensorflow`, `--from-keras`, `--from-jax` |
+| OpenVINO (.xml/.bin) | Analyze directly (no auto-convert) | n/a |
+| GGUF / SafeTensors | Metadata/weights only; no auto-convert | n/a |
+
+If conversion deps are missing, the app falls back to native readers with limited features. For PyTorch, auto-convert is skipped unless an input shape is provided.
+
 ### 19.3 Why These Limitations?
 
 **ONNX (Tier 1):** Our native format. Full computational graph with shapes, making all metrics calculable.

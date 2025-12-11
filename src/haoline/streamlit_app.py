@@ -1486,6 +1486,8 @@ def main():
 *PyTorch requires local install for conversion to ONNX.
 
 **Legend:** Yes = Available | No = Not available | GPU = Requires NVIDIA GPU
+
+**Notes:** Streamlit shows graph-based views only when a graph is available for the format. For weight- or metadata-only formats, use the CLI to convert to ONNX for full analysis (`haoline --convert-to onnx model.ext`).
                 """,
                 unsafe_allow_html=True,
             )
@@ -1774,6 +1776,65 @@ def main():
                 )
                 st.stop()
 
+        elif file_ext in [".tflite"]:
+            st.info("**TFLite model detected** — attempting auto-convert to ONNX for full analysis.")
+            with tempfile.NamedTemporaryFile(suffix=".tflite", delete=False) as tmp:
+                tmp.write(file_bytes)
+                tflite_path = tmp.name
+
+            try:
+                import tflite2onnx
+
+                with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as onnx_tmp:
+                    tflite2onnx.convert(tflite_path, onnx_tmp.name)
+                    tmp_path = onnx_tmp.name
+                    st.success("✅ Converted TFLite → ONNX for analysis.")
+            except Exception as e:
+                st.warning(
+                    f"Could not auto-convert TFLite → ONNX ({str(e)[:120]}). "
+                    "Proceeding with TFLite reader (limited features)."
+                )
+                tmp_path = tflite_path
+
+        elif file_ext in [".mlmodel", ".mlpackage"]:
+            st.info("**CoreML model detected** — attempting auto-convert to ONNX for full analysis.")
+            with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
+                tmp.write(file_bytes)
+                coreml_path = tmp.name
+
+            try:
+                import coremltools
+                import onnx
+
+                mlmodel = coremltools.models.MLModel(coreml_path)
+                onnx_model = coremltools.converters.onnx.convert(mlmodel)
+                with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as onnx_tmp:
+                    onnx.save(onnx_model, onnx_tmp.name)
+                    tmp_path = onnx_tmp.name
+                    st.success("✅ Converted CoreML → ONNX for analysis.")
+            except Exception as e:
+                st.warning(
+                    f"Could not auto-convert CoreML → ONNX ({str(e)[:120]}). "
+                    "Proceeding with CoreML reader (limited features)."
+                )
+                tmp_path = coreml_path
+
+        elif file_ext in [".xml"]:
+            st.info("**OpenVINO IR detected** — attempting analysis.")
+            st.warning(
+                "Auto-convert to ONNX is not available here; analysis will use the OpenVINO reader. "
+                "Include the matching .bin for best results."
+            )
+            with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
+                tmp.write(file_bytes)
+                tmp_path = tmp.name
+
+        elif file_ext in [".gguf"]:
+            st.info("**GGUF model detected** — analyzing LLM metadata.")
+            with tempfile.NamedTemporaryFile(suffix=".gguf", delete=False) as tmp:
+                tmp.write(file_bytes)
+                tmp_path = tmp.name
+
         elif file_ext == ".safetensors":
             st.warning(
                 """
@@ -1790,7 +1851,8 @@ def main():
 
         # Save ONNX to temp file (if not already set by conversion)
         if tmp_path is None:
-            with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as tmp:
+            suffix = ".onnx" if file_ext == ".onnx" else file_ext or ".onnx"
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
                 tmp.write(file_bytes)
                 tmp_path = tmp.name
 
@@ -1831,6 +1893,11 @@ def main():
                 # Metrics cards
                 col1, col2, col3, col4 = st.columns(4)
 
+                has_graph = (
+                    report.graph_summary is not None
+                    and getattr(report.graph_summary, "num_nodes", 0) > 0
+                )
+
                 with col1:
                     params = report.param_counts.total if report.param_counts else 0
                     st.metric("Parameters", format_number(params))
@@ -1848,7 +1915,12 @@ def main():
                     st.metric("Memory", format_bytes(memory))
 
                 with col4:
-                    st.metric("Operators", str(report.graph_summary.num_nodes))
+                    operator_count = (
+                        str(report.graph_summary.num_nodes)
+                        if has_graph and report.graph_summary
+                        else "N/A"
+                    )
+                    st.metric("Operators", operator_count)
 
                 # Tabs for different views
                 tab1, tab2, tab3, tab4 = st.tabs(
@@ -1988,7 +2060,7 @@ def main():
                                     st.text(f"  {op}: {count}")
 
                     # Operator distribution
-                    if report.graph_summary.op_type_counts:
+                    if has_graph and report.graph_summary.op_type_counts:
                         st.markdown("### Operator Distribution")
 
                         import pandas as pd
@@ -2023,7 +2095,11 @@ def main():
                             st.metric("Theoretical Latency", f"{hw.theoretical_latency_ms:.2f} ms")
 
                 with tab2:
-                    if include_graph:
+                    if not has_graph:
+                        st.info(
+                            "No graph visualization for this format. Convert to ONNX for full interactive graph."
+                        )
+                    elif include_graph:
                         st.markdown("### Interactive Architecture Graph")
                         st.caption(
                             "🖱️ Scroll to zoom | Drag to pan | Click nodes to expand/collapse | Use sidebar controls"

@@ -454,6 +454,34 @@ Not all formats support all features. Here's what you get with each:
 - **GGUF**: LLM architecture metadata (layers, heads, quantization) but no computational graph - weights only
 - **SafeTensors**: Weights only - tensor shapes and dtypes, no graph structure
 
+### Format Fidelity & Universal IR
+
+| Format | Fidelity | Notes |
+| --- | --- | --- |
+| ONNX | High | Full graph + params + FLOPs + interactive map |
+| PyTorch | Medium | Convert to ONNX for full UI; CLI can export ONNX |
+| TFLite | Medium (CLI) | Graph/params via CLI; convert to ONNX for UI |
+| CoreML | Medium (CLI) | Graph/params via CLI; convert to ONNX for UI |
+| OpenVINO | Medium (CLI) | Graph/params via CLI; convert to ONNX for UI |
+| TensorRT | Metadata | Engine metadata only; graph not available |
+| GGUF | Metadata | LLM arch/quant metadata; no graph |
+| SafeTensors | Weights | Weights only; no graph |
+
+Streamlit renders graph-based views only when the format includes a graph; otherwise, convert to ONNX for full visualization and Universal IR features.
+
+### Auto-conversion to ONNX (app + CLI)
+
+| Source format | Auto-convert in Streamlit | CLI flag |
+| --- | --- | --- |
+| PyTorch (.pt/.pth) | ✅ (requires input shape prompt) | `--from-pytorch` |
+| TFLite (.tflite) | ✅ (uses `tflite2onnx` if installed) | `--from-tflite` |
+| CoreML (.mlmodel/.mlpackage) | ✅ (uses `coremltools` if installed) | `--from-coreml` |
+| TensorFlow/Keras/JAX | CLI-only | `--from-tensorflow`, `--from-keras`, `--from-jax` |
+| OpenVINO (.xml/.bin) | Not auto-converted; analyzed directly | n/a |
+| GGUF / SafeTensors | No (metadata/weights only) | n/a |
+
+If conversion dependencies are missing, the app falls back to native readers with limited features; provide input shapes for PyTorch or use the CLI for full control.
+
 **Full Analysis via ONNX Hub (Coming Soon):**
 
 For TFLite, CoreML, and OpenVINO models, you'll be able to convert to ONNX to unlock all analysis features:

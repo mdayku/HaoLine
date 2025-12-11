@@ -5,6 +5,18 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 0.8.1 - 2025-12-11
+
+### Added
+- Streamlit auto-conversion to ONNX for PyTorch (input shape prompt), TFLite (tflite2onnx), and CoreML (coremltools) with graceful fallbacks.
+- Documentation updates for auto-convert and format fidelity (README/PRD).
+
+### Changed
+- BACKLOG trimmed to tasks-only (removed commentary).
+
+### Fixed
+- Preserve original suffix when not converted to avoid mis-reading non-ONNX uploads.
+
 # 0.8.0 - 2025-12-11
 
 ### Added
