@@ -28,7 +28,7 @@
 - ~~Add `.xml` to Streamlit uploader (Task 23.2.5)~~ ✅
 - Updated format capabilities matrix with tier system
 
-**Recent Release:** v0.8.1 (Dec 11, 2025) — Streamlit auto-convert to ONNX (PyTorch w/ input shape prompt, TFLite via tflite2onnx, CoreML via coremltools), backlog trimmed to tasks-only, docs updated.
+**Recent Release:** v0.8.4 (Dec 11, 2025) — Fixed Pydantic validation errors in QuantizationAdvice when LLM returns nested structures (sensitive_layers, safe_layers, runtime_recommendations). Added robust normalization functions with 35 unit tests.
 
 ---
 
@@ -76,7 +76,7 @@
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
 | Epic 38: Docker Distribution | In Progress | 1 | 1/5 | P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
-| Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 58/58 | Done ✓ v0.5.0 |
+| Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 64/64 | Done ✓ v0.8.4 |
 | Epic 41: Standardized Reporting | **COMPLETE** (+41.7 pending) | 6 | 44/50 | **P1** ← parity |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 (ONNX→TFLite blocked) |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/30 | **P1** ← format UX |
@@ -972,7 +972,17 @@
 
 ## Epic 40: Full Pydantic Dataclass Migration - **COMPLETE**
 
-*Archived to PRDBacklogArchive.md - 58 classes migrated to Pydantic (v0.5.0)*
+*Archived to PRDBacklogArchive.md - 64 tasks total (v0.8.4)*
+
+### Story 40.6: LLM Response Normalization (v0.8.4 hotfix)
+*Fix Pydantic validation errors when LLM returns nested/malformed structures.*
+
+- [x] Task 40.6.1: Fix `_normalize_runtime_recs` to handle deeply nested LLM responses
+- [x] Task 40.6.2: Fix `_normalize_str_list` to handle all LLM edge cases (layer_names dict, etc.)
+- [x] Task 40.6.3: Add `_extract_string_from_nested` helper for recursive extraction
+- [x] Task 40.6.4: Add unit tests for normalization functions (35 tests)
+- [x] Task 40.6.5: Add integration tests reproducing actual production failures
+- [x] Task 40.6.6: Bump version to 0.8.4, run lints, commit and release
 
 ---
 

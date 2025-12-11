@@ -594,6 +594,116 @@ def _generate_fallback_advice(
     )
 
 
+def _extract_string_from_nested(value: Any) -> str:
+    """
+    Recursively extract a readable string from arbitrarily nested LLM output.
+
+    Handles cases like:
+    - "simple string" -> "simple string"
+    - {"recommendation": "text"} -> "text"
+    - {"recommendation": {"description": "text"}} -> "text"
+    - {"settings": "a", "notes": "b"} -> "a. b"
+    """
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        # Priority keys to look for
+        for key in ("recommendation", "description", "text", "value", "summary"):
+            if key in value:
+                return _extract_string_from_nested(value[key])
+        # Fallback: concatenate all string values
+        parts = []
+        for v in value.values():
+            extracted = _extract_string_from_nested(v)
+            if extracted:
+                parts.append(extracted)
+        return ". ".join(parts) if parts else ""
+    if isinstance(value, list):
+        # Join list items
+        return ", ".join(_extract_string_from_nested(item) for item in value if item)
+    # Fallback for other types
+    return str(value) if value is not None else ""
+
+
+def _normalize_str_list(value: Any) -> list[str]:
+    """
+    Coerce LLM/fallback outputs into list[str].
+
+    Handles various LLM response formats:
+    - ["a", "b", "c"] -> ["a", "b", "c"]
+    - {"layer_names": ["a", "b"]} -> ["a", "b"]
+    - [{"name": "a"}, {"name": "b"}] -> ["a", "b"]
+    - "single item" -> ["single item"]
+    """
+    if value is None:
+        return []
+
+    # Case 1: Already a list
+    if isinstance(value, list):
+        out: list[str] = []
+        for item in value:
+            if isinstance(item, str):
+                out.append(item)
+            elif isinstance(item, dict):
+                # Try to extract layer name from dict
+                if "layer_names" in item and isinstance(item["layer_names"], list):
+                    out.extend(str(x) for x in item["layer_names"])
+                elif "name" in item:
+                    out.append(str(item["name"]))
+                elif "layer" in item:
+                    out.append(str(item["layer"]))
+                else:
+                    # Last resort: stringify, but try to extract meaningful content
+                    extracted = _extract_string_from_nested(item)
+                    if extracted:
+                        out.append(extracted)
+            else:
+                out.append(str(item))
+        return out
+
+    # Case 2: Dict with layer_names key
+    if isinstance(value, dict):
+        if "layer_names" in value and isinstance(value["layer_names"], list):
+            return [str(x) for x in value["layer_names"]]
+        if "layers" in value and isinstance(value["layers"], list):
+            return [str(x) for x in value["layers"]]
+        # Try to extract any list values
+        for v in value.values():
+            if isinstance(v, list):
+                return _normalize_str_list(v)
+
+    # Case 3: Single string
+    if isinstance(value, str):
+        return [value]
+
+    return [str(value)] if value else []
+
+
+def _normalize_runtime_recs(runtime_data: Any) -> dict[str, str]:
+    """
+    Coerce runtime recommendations into dict[str, str].
+
+    Handles various LLM response formats:
+    - {"tensorrt": "Use INT8..."} -> {"tensorrt": "Use INT8..."}
+    - {"tensorrt": {"recommendation": "Use INT8..."}} -> {"tensorrt": "Use INT8..."}
+    - {"tensorrt": {"recommendation": {"settings": "...", "notes": "..."}}}
+      -> {"tensorrt": ".... ..."}
+    """
+    if not isinstance(runtime_data, dict):
+        return {}
+
+    normalized: dict[str, str] = {}
+    for key, val in runtime_data.items():
+        if isinstance(val, str):
+            normalized[key] = val
+        elif isinstance(val, dict):
+            # Recursively extract a string from nested structure
+            normalized[key] = _extract_string_from_nested(val)
+        else:
+            normalized[key] = str(val) if val is not None else ""
+    return normalized
+
+
 # =============================================================================
 # MAIN ADVISOR CLASS
 # =============================================================================
@@ -736,13 +846,15 @@ class QuantizationAdvisor:
             architecture_type=arch_type,
             architecture_summary=arch_summary,
             strategy=strategy_data.get("strategy", "No strategy available"),
-            sensitive_layers=strategy_data.get("sensitive_layers", []),
-            safe_layers=strategy_data.get("safe_layers", []),
-            qat_workflow=strategy_data.get("qat_workflow", []),
+            sensitive_layers=_normalize_str_list(strategy_data.get("sensitive_layers", [])),
+            safe_layers=_normalize_str_list(strategy_data.get("safe_layers", [])),
+            qat_workflow=_normalize_str_list(strategy_data.get("qat_workflow", [])),
             calibration_tips=strategy_data.get("calibration_tips", ""),
-            runtime_recommendations=runtime_data,
+            runtime_recommendations=_normalize_runtime_recs(runtime_data),
             expected_accuracy_impact=strategy_data.get("expected_accuracy_impact", "Unknown"),
-            mitigation_strategies=strategy_data.get("mitigation_strategies", []),
+            mitigation_strategies=_normalize_str_list(
+                strategy_data.get("mitigation_strategies", [])
+            ),
             fake_quant_insertions=fake_quant_insertions,
             op_substitutions=op_substitutions,
             granularity_recommendations=granularity_recs,

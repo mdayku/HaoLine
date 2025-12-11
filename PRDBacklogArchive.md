@@ -545,9 +545,9 @@
 
 ---
 
-## Epic 40: Full Pydantic Dataclass Migration (COMPLETE - 58/58)
+## Epic 40: Full Pydantic Dataclass Migration (COMPLETE - 64/64)
 
-*Completed: December 2025 (v0.5.0)*
+*Completed: December 2025 (v0.5.0, hotfix v0.8.4)*
 
 Complete migration from Python dataclasses to Pydantic BaseModel across the entire codebase.
 
@@ -587,6 +587,16 @@ Complete migration from Python dataclasses to Pydantic BaseModel across the enti
 - [x] Convert `compare*.py`, `eval/*.py` (12 classes)
 - [x] Convert `edge_analysis.py`, `hierarchical_graph.py` (6 classes)
 - [x] Convert remaining misc classes (5 classes)
+
+### Story 40.6: LLM Response Normalization (v0.8.4 hotfix)
+*Fix Pydantic validation errors when LLM returns nested/malformed structures.*
+
+- [x] Task 40.6.1: Fix `_normalize_runtime_recs` to handle deeply nested LLM responses
+- [x] Task 40.6.2: Fix `_normalize_str_list` to handle all LLM edge cases (layer_names dict, etc.)
+- [x] Task 40.6.3: Add `_extract_string_from_nested` helper for recursive extraction
+- [x] Task 40.6.4: Add unit tests for normalization functions (35 tests)
+- [x] Task 40.6.5: Add integration tests reproducing actual production failures
+- [x] Task 40.6.6: Bump version to 0.8.4, run lints, commit and release
 
 ---
 
@@ -658,6 +668,7 @@ Complete migration from Python dataclasses to Pydantic BaseModel across the enti
 
 | Date | Section | Change | Reason |
 |------|---------|--------|--------|
+| Dec 11, 2025 | Release | v0.8.4: Fixed Pydantic validation errors in QuantizationAdvice when LLM returns nested structures; added robust normalization functions with 35 tests | Production bug fix |
 | Dec 11, 2025 | Release | v0.8.1: Streamlit auto-convert to ONNX (PyTorch input-shape prompt, TFLite via tflite2onnx, CoreML via coremltools), backlog trimmed to tasks-only, docs updated | Deployment parity + clarity |
 | Dec 2025 | Initial | Created unified PRD from starter pack + visualization extension | Consolidation |
 | Dec 2025 | Structure | Split backlog into BACKLOG.md, brainlift into BRAINLIFT.md | Context window optimization |

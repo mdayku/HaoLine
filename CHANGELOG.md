@@ -5,6 +5,15 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 0.8.4 - 2025-12-11
+
+### Fixed
+- **Critical:** Fixed Pydantic validation errors in `QuantizationAdvice` when LLM returns nested structures
+  - `sensitive_layers` and `safe_layers` fields now properly handle `{"layer_names": [...]}` format
+  - `runtime_recommendations` now properly handles deeply nested dicts like `{"recommendation": {"settings": "...", "description": "..."}}`
+- Added robust normalization functions: `_extract_string_from_nested`, `_normalize_str_list`, `_normalize_runtime_recs`
+- Added 35 unit tests covering LLM response edge cases and production failure patterns
+
 # 0.8.1 - 2025-12-11
 
 ### Added
