@@ -43,7 +43,7 @@ from .llm_summarizer import (
 from .llm_summarizer import (
     is_available as is_llm_available,
 )
-from .operational_profiling import OperationalProfiler
+from .operational_profiling import BatchSizeSweep, OperationalProfiler
 from .patterns import PatternAnalyzer
 from .pdf_generator import (
     PDFGenerator,
@@ -1711,7 +1711,7 @@ def _convert_jax_to_onnx(
 
 def _generate_quant_report_markdown(result: QuantizationLintResult, model_name: str) -> str:
     """Generate a Markdown report for quantization linting results."""
-    from .quantization_linter import QuantizationLintResult, Severity
+    from .quantization_linter import QuantizationLintResult, QuantWarning, Severity
 
     lines = [
         f"# Quantization Readiness Report: {model_name}",
@@ -2411,7 +2411,7 @@ def run_inspect() -> None:
 
         schema = get_schema()
         print(json.dumps(schema, indent=2))
-        return 0
+        return
 
     # Handle --list-hardware
     if args.list_hardware:
@@ -3026,6 +3026,8 @@ def run_inspect() -> None:
             if args.sweep_batch_sizes:
                 profiler = OperationalProfiler(logger=logger)
 
+                sweep_result: BatchSizeSweep | None = None
+
                 if args.no_benchmark:
                     # Use theoretical estimates (faster but less accurate)
                     progress.step("Running batch size sweep (theoretical)")
@@ -3198,7 +3200,7 @@ def run_inspect() -> None:
                 report.extra_data["profiling"] = profiling_result.to_dict()
 
                 # Bottleneck Analysis (Story 9.4) - default ON
-                if not args.no_bottleneck_analysis and hardware_profile:
+                if not args.no_bottleneck_analysis and hardware_profile and report.flop_counts:
                     progress.step("Analyzing bottlenecks")
                     bottleneck = profiler.analyze_bottleneck(
                         model_flops=report.flop_counts.total,
@@ -3267,7 +3269,7 @@ def run_inspect() -> None:
     quant_lint_result = None
     if args.lint_quantization or args.lint_quant:
         progress.step("Analyzing quantization readiness")
-        from .quantization_linter import QuantizationLinter
+        from .quantization_linter import QuantizationLinter, QuantWarning
 
         linter = QuantizationLinter(logger=logger)
         # Need graph_info for linting
@@ -3287,17 +3289,18 @@ def run_inspect() -> None:
         if quant_lint_result.warnings:
             print(f"Issues Found ({len(quant_lint_result.warnings)}):")
             print("-" * 40)
-            for w in sorted(quant_lint_result.warnings, key=lambda x: x.severity.value):
+            warning: QuantWarning
+            for warning in sorted(quant_lint_result.warnings, key=lambda x: x.severity.value):
                 severity_icon = {
                     "critical": "[!!]",
                     "high": "[!] ",
                     "medium": "[~] ",
                     "low": "[.] ",
                     "info": "[i] ",
-                }.get(w.severity.value, "    ")
-                print(f"  {severity_icon} {w.message}")
-                if w.recommendation:
-                    print(f"       -> {w.recommendation}")
+                }.get(warning.severity.value, "    ")
+                print(f"  {severity_icon} {warning.message}")
+                if warning.recommendation:
+                    print(f"       -> {warning.recommendation}")
             print()
 
         # Get recommendations
@@ -3435,8 +3438,8 @@ def run_inspect() -> None:
         from .privacy import collect_names_from_dict, create_name_mapping, redact_dict
 
         logger.info("Applying name redaction")
-        names = collect_names_from_dict(report_dict)
-        mapping = create_name_mapping(names)
+        names_to_redact = collect_names_from_dict(report_dict)
+        mapping = create_name_mapping(names_to_redact)
         report_dict = redact_dict(report_dict, mapping)
         logger.debug(f"Redacted {len(mapping)} names")
 
@@ -3669,16 +3672,16 @@ def run_inspect() -> None:
             model_size = model_path.stat().st_size if model_path.exists() else None
 
             # Extract layer timing from profiling results if available
-            layer_timing = None
+            layer_timing_data: dict[str, float] | None = None
             if (
                 report.extra_data
                 and "profiling" in report.extra_data
                 and "slowest_layers" in report.extra_data["profiling"]
             ):
                 # Build timing dict from profiling results
-                layer_timing = {}
+                layer_timing_data = {}
                 for layer in report.extra_data["profiling"]["slowest_layers"]:
-                    layer_timing[layer["name"]] = layer["duration_ms"]
+                    layer_timing_data[layer["name"]] = layer["duration_ms"]
 
             exporter = HTMLExporter(logger=logger)
             exporter.export(
@@ -3687,7 +3690,7 @@ def run_inspect() -> None:
                 args.html_graph,
                 model_path.stem,
                 model_size_bytes=model_size,
-                layer_timing=layer_timing,
+                layer_timing=layer_timing_data,
             )
 
             logger.info(f"Interactive graph visualization written to: {args.html_graph}")
@@ -3759,13 +3762,13 @@ def run_inspect() -> None:
 
         if report.risk_signals:
             print(f"\nRisk Signals: {len(report.risk_signals)}")
+            risk_icons = {
+                "info": "[INFO]",
+                "warning": "[WARN]",
+                "high": "[HIGH]",
+            }
             for risk in report.risk_signals:
-                severity_icon = {
-                    "info": "[INFO]",
-                    "warning": "[WARN]",
-                    "high": "[HIGH]",
-                }
-                print(f"  {severity_icon.get(risk.severity, '')} {risk.id}")
+                print(f"  {risk_icons.get(risk.severity, '')} {risk.id}")
 
         # LLM Summary
         if llm_summary and llm_summary.success:

@@ -658,7 +658,7 @@ def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
     df = pd.DataFrame(table_data)
     st.dataframe(
         df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         column_config={
             "Model": st.column_config.TextColumn("Model", width="medium"),
@@ -744,7 +744,7 @@ def render_comparison_view(model_a: AnalysisResult, model_b: AnalysisResult):
             for row in op_data:
                 row["Difference"] = row[model_b.name] - row[model_a.name]
             detail_df = pd.DataFrame(op_data)
-            st.dataframe(detail_df, use_container_width=True, hide_index=True)
+            st.dataframe(detail_df, width="stretch", hide_index=True)
 
     # Architecture compatibility check
     if params_a != params_b or flops_a != flops_b:
@@ -819,7 +819,7 @@ def render_compare_mode():
         # Clear selection buttons
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
-            if st.button("Clear Comparison", type="secondary", use_container_width=True):
+            if st.button("Clear Comparison", type="secondary", width="stretch"):
                 st.session_state.compare_models = {"model_a": None, "model_b": None}
                 st.rerun()
 
@@ -1100,7 +1100,7 @@ def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str)
                 "Dtype": b.dtype,
             }
         )
-    st.dataframe(binding_data, use_container_width=True, hide_index=True)
+    st.dataframe(binding_data, width="stretch", hide_index=True)
 
     # Layer type distribution
     col1, col2 = st.columns(2)
@@ -1111,7 +1111,7 @@ def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str)
             {"Type": ltype, "Count": count}
             for ltype, count in sorted(info.layer_type_counts.items(), key=lambda x: -x[1])
         ]
-        st.dataframe(layer_data, use_container_width=True, hide_index=True)
+        st.dataframe(layer_data, width="stretch", hide_index=True)
 
     with col2:
         st.markdown("### Optimization Summary")
@@ -1150,7 +1150,7 @@ def _handle_tensorrt_streamlit(file_bytes: bytes, file_name: str, file_ext: str)
             }
             for i, layer in enumerate(info.layers)
         ]
-        st.dataframe(all_layers, use_container_width=True, hide_index=True)
+        st.dataframe(all_layers, width="stretch", hide_index=True)
 
     # JSON export
     st.markdown("### Export")
@@ -1571,6 +1571,103 @@ def main():
                 unsafe_allow_html=True,
             )
 
+            # Format Capabilities table
+            with st.expander("Format Capabilities", expanded=False):
+                st.markdown(
+                    """
+<style>
+    .cap-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .cap-table th { text-align: left; padding: 0.5rem; border-bottom: 1px solid #333; color: #10b981; }
+    .cap-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid #222; }
+    .cap-table tr:hover { background: rgba(16, 185, 129, 0.05); }
+    .cap-yes { color: #10b981; }
+    .cap-cli { color: #3b82f6; }
+    .cap-no { color: #666; }
+    .cap-warn { color: #f59e0b; }
+</style>
+<table class="cap-table">
+    <tr>
+        <th>Format</th>
+        <th>Graph</th>
+        <th>Params</th>
+        <th>FLOPs</th>
+        <th>Interactive Map</th>
+        <th>Notes</th>
+    </tr>
+    <tr>
+        <td><strong>ONNX</strong></td>
+        <td class="cap-yes">Yes</td>
+        <td class="cap-yes">Yes</td>
+        <td class="cap-yes">Yes</td>
+        <td class="cap-yes">Yes</td>
+        <td class="cap-yes">Full support (recommended)</td>
+    </tr>
+    <tr>
+        <td><strong>PyTorch</strong></td>
+        <td class="cap-cli">CLI</td>
+        <td class="cap-cli">CLI</td>
+        <td class="cap-cli">CLI</td>
+        <td class="cap-cli">CLI</td>
+        <td class="cap-warn">Requires local PyTorch install</td>
+    </tr>
+    <tr>
+        <td><strong>SafeTensors</strong></td>
+        <td class="cap-no">No</td>
+        <td class="cap-yes">Yes</td>
+        <td class="cap-no">No</td>
+        <td class="cap-no">No</td>
+        <td class="cap-warn">Weights only</td>
+    </tr>
+    <tr>
+        <td><strong>TensorRT</strong></td>
+        <td class="cap-warn">GPU</td>
+        <td class="cap-no">N/A</td>
+        <td class="cap-no">N/A</td>
+        <td class="cap-no">No</td>
+        <td class="cap-warn">Quant analysis on GPU only</td>
+    </tr>
+    <tr>
+        <td><strong>TFLite</strong></td>
+        <td class="cap-cli">CLI</td>
+        <td class="cap-yes">CLI</td>
+        <td class="cap-no">No</td>
+        <td class="cap-no">No</td>
+        <td class="cap-warn">Auto-converts to ONNX</td>
+    </tr>
+    <tr>
+        <td><strong>CoreML</strong></td>
+        <td class="cap-cli">CLI</td>
+        <td class="cap-yes">CLI</td>
+        <td class="cap-no">No</td>
+        <td class="cap-no">No</td>
+        <td class="cap-warn">Auto-converts to ONNX (macOS)</td>
+    </tr>
+    <tr>
+        <td><strong>OpenVINO</strong></td>
+        <td class="cap-cli">CLI</td>
+        <td class="cap-yes">CLI</td>
+        <td class="cap-no">No</td>
+        <td class="cap-no">No</td>
+        <td class="cap-warn">Needs .bin file</td>
+    </tr>
+    <tr>
+        <td><strong>GGUF</strong></td>
+        <td class="cap-no">No</td>
+        <td class="cap-yes">Yes</td>
+        <td class="cap-no">No</td>
+        <td class="cap-no">No</td>
+        <td class="cap-warn">LLM architecture metadata</td>
+    </tr>
+</table>
+<p style="font-size: 0.75rem; color: #666; margin-top: 0.75rem;">
+    <strong>Yes</strong> = Available here |
+    <strong>CLI</strong> = Use <code>pip install haoline</code> locally |
+    For full features, use ONNX format.
+</p>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
             # Demo model options
             st.markdown(
                 """<div style="text-align: center; margin: 1rem 0 0.5rem 0;">
@@ -1588,7 +1685,7 @@ def main():
                     if st.button(
                         f"{info['name']}\n({info['size']})",
                         key=f"demo_{key}",
-                        use_container_width=True,
+                        width="stretch",
                         help=info["description"],
                     ):
                         with st.spinner(f"Downloading {info['name']}..."):
@@ -1927,8 +2024,15 @@ def main():
                     st.metric("Operators", operator_count)
 
                 # Tabs for different views
-                tab1, tab2, tab3, tab4 = st.tabs(
-                    ["Overview", "Interactive Graph", "Details", "Export"]
+                tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+                    [
+                        "Overview",
+                        "Interactive Graph",
+                        "Details",
+                        "Layer Details",
+                        "Quantization",
+                        "Export",
+                    ]
                 )
 
                 with tab1:
@@ -2188,6 +2292,106 @@ def main():
                         st.success("No risk signals detected!")
 
                 with tab4:
+                    st.markdown("### Layer Details")
+                    if graph_info is None:
+                        st.info(
+                            "Layer table is available for ONNX models. "
+                            "Upload an ONNX model to view per-layer metrics."
+                        )
+                    else:
+                        try:
+                            from haoline.layer_summary import LayerSummaryBuilder
+
+                            builder = LayerSummaryBuilder(graph_info)
+                            layer_df = builder.build_dataframe()
+
+                            if layer_df is not None and not layer_df.empty:
+                                # Search/filter
+                                search_term = st.text_input(
+                                    "Filter layers",
+                                    placeholder="Search by name or op type...",
+                                )
+                                if search_term:
+                                    mask = layer_df.apply(
+                                        lambda row: search_term.lower() in str(row).lower(),
+                                        axis=1,
+                                    )
+                                    layer_df = layer_df[mask]
+
+                                st.dataframe(layer_df, width="stretch")
+
+                                # Download buttons
+                                col_csv, col_json = st.columns(2)
+                                with col_csv:
+                                    csv_bytes = layer_df.to_csv(index=False).encode()
+                                    st.download_button(
+                                        "Download Layer CSV",
+                                        data=csv_bytes,
+                                        file_name=f"{file_name.replace('.onnx', '')}_layers.csv",
+                                        mime="text/csv",
+                                    )
+                                with col_json:
+                                    json_bytes = layer_df.to_json(orient="records").encode()
+                                    st.download_button(
+                                        "Download Layer JSON",
+                                        data=json_bytes,
+                                        file_name=f"{file_name.replace('.onnx', '')}_layers.json",
+                                        mime="application/json",
+                                    )
+                            else:
+                                st.info("No layer details available.")
+                        except Exception as e:
+                            st.warning(f"Could not load layer details: {e}")
+
+                with tab5:
+                    st.markdown("### Quantization Readiness")
+                    if graph_info is None:
+                        st.info(
+                            "Quantization lint is available for ONNX models. "
+                            "Upload an ONNX model to view."
+                        )
+                    else:
+                        try:
+                            from haoline.quantization_advisor import advise_quantization
+                            from haoline.quantization_linter import QuantizationLinter
+
+                            linter = QuantizationLinter()
+                            lint_result = linter.lint(graph_info)
+
+                            # Score
+                            score = lint_result.readiness_score
+                            score_color = (
+                                "#10b981"
+                                if score >= 80
+                                else "#f59e0b"
+                                if score >= 50
+                                else "#ef4444"
+                            )
+                            st.markdown(
+                                f"**Readiness Score:** "
+                                f"<span style='color:{score_color};font-size:1.5rem;'>{score}%</span>",
+                                unsafe_allow_html=True,
+                            )
+
+                            # Warnings
+                            if lint_result.warnings:
+                                st.markdown("#### Warnings")
+                                for w in lint_result.warnings[:10]:
+                                    st.warning(f"**{w.layer_name}** ({w.op_type}): {w.message}")
+
+                            # Advisor (heuristic only to avoid API key requirement)
+                            advice = advise_quantization(
+                                lint_result, graph_info, api_key=None, use_llm=False
+                            )
+                            if advice.recommendations:
+                                st.markdown("#### Recommendations")
+                                for rec in advice.recommendations[:5]:
+                                    st.info(rec)
+
+                        except Exception as e:
+                            st.warning(f"Could not run quantization analysis: {e}")
+
+                with tab6:
                     model_name = file_name.replace(".onnx", "")
 
                     st.markdown(
@@ -2287,7 +2491,7 @@ def main():
                             data=html_data,
                             file_name=f"{model_name}_report.html",
                             mime="text/html",
-                            use_container_width=True,
+                            width="stretch",
                         )
 
                     with col2:
@@ -2306,7 +2510,7 @@ def main():
                             data=json_data,
                             file_name=f"{model_name}_report.json",
                             mime="application/json",
-                            use_container_width=True,
+                            width="stretch",
                         )
 
                     col3, col4 = st.columns(2)
@@ -2327,7 +2531,7 @@ def main():
                             data=md_data,
                             file_name=f"{model_name}_report.md",
                             mime="text/markdown",
-                            use_container_width=True,
+                            width="stretch",
                         )
 
                     with col4:
@@ -2347,7 +2551,7 @@ def main():
                                 data=pdf_data,
                                 file_name=f"{model_name}_report.pdf",
                                 mime="application/pdf",
-                                use_container_width=True,
+                                width="stretch",
                             )
                         else:
                             st.markdown(
@@ -2360,7 +2564,7 @@ def main():
                             """,
                                 unsafe_allow_html=True,
                             )
-                            st.button("PDF unavailable", disabled=True, use_container_width=True)
+                            st.button("PDF unavailable", disabled=True, width="stretch")
 
         except Exception as e:
             st.error(f"Error analyzing model: {e}")
