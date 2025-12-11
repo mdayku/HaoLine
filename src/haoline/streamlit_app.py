@@ -1463,17 +1463,29 @@ def main():
         with st.expander("📁 Format Capabilities", expanded=False):
             st.markdown(
                 """
-| Format | Graph | Params | FLOPs | Interactive Map | Notes |
-|--------|-------|--------|-------|-----------------|-------|
-| **ONNX** | Yes | Yes | Yes | Yes | Full support (recommended) |
-| **PyTorch** | CLI | CLI | CLI | CLI | Requires local PyTorch install |
-| **SafeTensors** | No | Yes | No | No | Weights only - convert to ONNX for full analysis |
-| **TensorRT** | GPU | GPU | N/A | No | Quant bottleneck analysis |
-| **TFLite** | CLI | CLI | No | No | Basic analysis via CLI |
-| **CoreML** | CLI | CLI | No | No | Basic analysis via CLI (macOS) |
+**Tier 1 - Full Support:**
+| Format | Graph | Params | FLOPs | Interactive Map |
+|--------|-------|--------|-------|-----------------|
+| **ONNX** | Yes | Yes | Yes | Yes |
+| **PyTorch** (.pt) | Yes* | Yes* | Yes* | Yes* |
 
-**CLI** = Use `pip install haoline` and run `haoline model.ext` locally.
-For full features, convert models to ONNX format.
+**Tier 2 - Graph Analysis:**
+| Format | Graph | Params | FLOPs | Interactive Map |
+|--------|-------|--------|-------|-----------------|
+| **TFLite** | Yes | Yes | No | Yes |
+| **CoreML** | Yes | Yes | No | Yes |
+| **OpenVINO** (.xml) | Yes | Yes | No | Yes |
+| **TensorRT** | GPU | GPU | N/A | No |
+
+**Tier 3/4 - Metadata/Weights Only:**
+| Format | Graph | Params | FLOPs | Notes |
+|--------|-------|--------|-------|-------|
+| **GGUF** | No | Yes | No | LLM architecture metadata |
+| **SafeTensors** | No | Yes | No | Weights only, no graph |
+
+*PyTorch requires local install for conversion to ONNX.
+
+**Legend:** Yes = Available | No = Not available | GPU = Requires NVIDIA GPU
                 """,
                 unsafe_allow_html=True,
             )
@@ -1526,7 +1538,16 @@ For full features, convert models to ONNX format.
         # File upload - support multiple formats
         uploaded_file = st.file_uploader(
             "Upload your model",
-            type=["onnx", "pt", "pth", "safetensors", "engine", "plan"],
+            type=[
+                "onnx",  # ONNX (full support)
+                "pt", "pth",  # PyTorch
+                "safetensors",  # HuggingFace weights
+                "engine", "plan",  # TensorRT
+                "tflite",  # TensorFlow Lite
+                "mlmodel", "mlpackage",  # CoreML (macOS)
+                "xml",  # OpenVINO IR
+                "gguf",  # GGUF (LLM weights)
+            ],
             help="Limit 500MB per file",
         )
 

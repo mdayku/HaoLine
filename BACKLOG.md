@@ -21,11 +21,12 @@
 | **P2** | LLM Support | Epic 24 (GGUF UI: context slider, quant charts) |
 | **P2** | CLI UX | Epic 50 (dependency prompting, --check-deps) |
 
-**Quick Wins (< 1 hour each):**
-- Add `.gguf` to Streamlit uploader (Task 24.2.1)
-- Add `.tflite` to Streamlit uploader (Task 21.2.5)
-- Add `.mlmodel` to Streamlit uploader (Task 20.2.5)
-- Add `.xml` to Streamlit uploader (Task 23.2.5)
+**Quick Wins (< 1 hour each):** ✅ **ALL COMPLETE (Dec 11, 2025)**
+- ~~Add `.gguf` to Streamlit uploader (Task 24.2.1)~~ ✅
+- ~~Add `.tflite` to Streamlit uploader (Task 21.2.5)~~ ✅
+- ~~Add `.mlmodel` to Streamlit uploader (Task 20.2.5)~~ ✅
+- ~~Add `.xml` to Streamlit uploader (Task 23.2.5)~~ ✅
+- Updated format capabilities matrix with tier system
 
 ---
 
@@ -51,11 +52,11 @@
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | Epic 18: Universal IR | **COMPLETE** (+18.8 pending) | 7 | 25/31 | **P1** ← honest docs |
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
-| Epic 20: CoreML | In Progress | 3 | 7/19 | P2 |
-| Epic 21: TFLite | In Progress | 3 | 4/18 | P2 (ONNX→TFLite blocked) |
+| Epic 20: CoreML | In Progress | 3 | 8/19 | P2 |
+| Epic 21: TFLite | In Progress | 3 | 5/18 | P2 (ONNX→TFLite blocked) |
 | Epic 22: TensorRT Engine Introspection | **COMPLETE** | 8 | 50/50 | Done |
-| Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
-| Epic 24: GGUF | In Progress | 2 | 6/13 | **P2** ← LLM parity |
+| Epic 23: OpenVINO | In Progress | 3 | 7/16 | P3 |
+| Epic 24: GGUF | In Progress | 2 | 7/13 | **P2** ← LLM parity |
 | Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
@@ -226,7 +227,7 @@
 - [ ] **Task 20.2.2**: Map CoreML layer types to universal ops
 - [ ] **Task 20.2.3**: Extract layer shapes and connections from CoreML spec
 - [ ] **Task 20.2.4**: Register adapter in format_adapters.py
-- [ ] **Task 20.2.5**: Add `.mlmodel`/`.mlpackage` to Streamlit file_uploader accepted types ⚠️ **PARITY GAP**
+- [x] **Task 20.2.5**: Add `.mlmodel`/`.mlpackage` to Streamlit file_uploader accepted types ✅ **DONE**
 - [ ] **Task 20.2.6**: Test interactive graph generation with CoreML model
 - [ ] **Task 20.2.7**: Display CoreML-specific metadata in UI (compute units, iOS version)
 
@@ -263,7 +264,7 @@
 - [ ] **Task 21.2.2**: Map TFLite op codes to universal ops
 - [ ] **Task 21.2.3**: Extract tensor shapes and operator connections from FlatBuffer
 - [ ] **Task 21.2.4**: Register adapter in format_adapters.py
-- [ ] **Task 21.2.5**: Add `.tflite` to Streamlit file_uploader accepted types ⚠️ **PARITY GAP**
+- [x] **Task 21.2.5**: Add `.tflite` to Streamlit file_uploader accepted types ✅ **DONE**
 - [ ] **Task 21.2.6**: Test interactive graph generation with TFLite model
 
 ### Story 21.3: TFLite Writer
@@ -306,7 +307,7 @@
 - [ ] **Task 23.2.2**: Map OpenVINO op types to universal ops
 - [ ] **Task 23.2.3**: Extract layer shapes and connections from IR
 - [ ] **Task 23.2.4**: Register adapter in format_adapters.py
-- [ ] **Task 23.2.5**: Add `.xml` (with `.bin`) to Streamlit file_uploader accepted types ⚠️ **PARITY GAP**
+- [x] **Task 23.2.5**: Add `.xml` to Streamlit file_uploader accepted types ✅ **DONE**
 - [ ] **Task 23.2.6**: Test interactive graph generation with OpenVINO model
 
 ### Story 23.3: OpenVINO Writer
@@ -334,7 +335,7 @@
 ### Story 24.2: GGUF Streamlit UI & Analysis Features **← DEEP RESEARCH PRIORITY**
 **Gap Identified:** GGUF can be analyzed but `.gguf` not in Streamlit file picker. LLM-specific charts (quant-breakdown, context-slider) not implemented.
 
-- [ ] **Task 24.2.1**: Add `.gguf` to Streamlit file_uploader accepted types ⚠️ **PARITY GAP**
+- [x] **Task 24.2.1**: Add `.gguf` to Streamlit file_uploader accepted types ✅ **DONE**
 - [ ] **Task 24.2.2**: Display quantization breakdown chart (bar chart of tensor counts by bit-width)
 - [ ] **Task 24.2.3**: Display architecture details (layers, hidden_size, num_heads, context_length)
 - [ ] **Task 24.2.4**: Add VRAM calculator with context length slider (recompute estimates dynamically)

@@ -1547,8 +1547,17 @@ def main():
         # File upload - support multiple formats
         uploaded_file = st.file_uploader(
             "Upload your model",
-            type=["onnx", "pt", "pth", "safetensors", "engine", "plan"],
-            help="ONNX (recommended), PyTorch (.pt/.pth), SafeTensors, or TensorRT (.engine/.plan)",
+            type=[
+                "onnx",  # ONNX (full support)
+                "pt", "pth",  # PyTorch
+                "safetensors",  # HuggingFace weights
+                "engine", "plan",  # TensorRT
+                "tflite",  # TensorFlow Lite
+                "mlmodel", "mlpackage",  # CoreML (macOS)
+                "xml",  # OpenVINO IR
+                "gguf",  # GGUF (LLM weights)
+            ],
+            help="Limit 500MB per file",
         )
 
         if uploaded_file is None:
@@ -1577,14 +1586,19 @@ def main():
                     .cap-yes { color: #10b981; }
                     .cap-no { color: #666; }
                     .cap-warn { color: #f59e0b; }
+                    .tier-badge { font-size: 0.6rem; padding: 2px 5px; border-radius: 3px; margin-left: 4px; }
+                    .tier-1 { background: #10b981; color: white; }
+                    .tier-2 { background: #3b82f6; color: white; }
+                    .tier-3 { background: #8b5cf6; color: white; }
                 </style>
+                <p style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;"><strong>Tier 1 - Full Analysis</strong></p>
                 <table class="cap-table">
                     <tr>
                         <th>Format</th>
                         <th>Graph</th>
                         <th>Params</th>
                         <th>FLOPs</th>
-                        <th>Interactive Map</th>
+                        <th>Map</th>
                         <th>Notes</th>
                     </tr>
                     <tr>
@@ -1597,11 +1611,57 @@ def main():
                     </tr>
                     <tr>
                         <td><strong>PyTorch</strong></td>
-                        <td class="cap-warn">CLI only</td>
-                        <td class="cap-warn">CLI only</td>
-                        <td class="cap-warn">CLI only</td>
-                        <td class="cap-warn">CLI only</td>
-                        <td class="cap-warn">Requires local PyTorch install</td>
+                        <td class="cap-yes">Yes*</td>
+                        <td class="cap-yes">Yes*</td>
+                        <td class="cap-yes">Yes*</td>
+                        <td class="cap-yes">Yes*</td>
+                        <td class="cap-warn">*Requires local PyTorch</td>
+                    </tr>
+                </table>
+                <p style="font-size: 0.8rem; color: #888; margin: 0.75rem 0 0.5rem 0;"><strong>Tier 2 - Graph Analysis</strong></p>
+                <table class="cap-table">
+                    <tr>
+                        <td><strong>TFLite</strong></td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-warn">Convert to ONNX for FLOPs</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CoreML</strong></td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-warn">macOS for full features</td>
+                    </tr>
+                    <tr>
+                        <td><strong>OpenVINO</strong></td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-warn">Upload .xml file</td>
+                    </tr>
+                    <tr>
+                        <td><strong>TensorRT</strong> <span style="background:#7c3aed;color:white;font-size:0.65rem;padding:1px 4px;border-radius:3px;">GPU</span></td>
+                        <td class="cap-warn">GPU</td>
+                        <td class="cap-no">N/A</td>
+                        <td class="cap-no">N/A</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-warn">Requires NVIDIA GPU</td>
+                    </tr>
+                </table>
+                <p style="font-size: 0.8rem; color: #888; margin: 0.75rem 0 0.5rem 0;"><strong>Tier 3/4 - Metadata Only</strong></p>
+                <table class="cap-table">
+                    <tr>
+                        <td><strong>GGUF</strong></td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-no">No</td>
+                        <td class="cap-warn">LLM metadata + quant info</td>
                     </tr>
                     <tr>
                         <td><strong>SafeTensors</strong></td>
@@ -1609,36 +1669,11 @@ def main():
                         <td class="cap-yes">Yes</td>
                         <td class="cap-no">No</td>
                         <td class="cap-no">No</td>
-                        <td class="cap-warn">Weights only - convert to ONNX for full analysis</td>
-                    </tr>
-                    <tr>
-                        <td><strong>TensorRT</strong> <span style="background:#7c3aed;color:white;font-size:0.65rem;padding:1px 4px;border-radius:3px;">GPU</span></td>
-                        <td class="cap-warn">GPU only</td>
-                        <td class="cap-no">N/A</td>
-                        <td class="cap-no">N/A</td>
-                        <td class="cap-no">No</td>
-                        <td class="cap-warn">Quant bottleneck analysis</td>
-                    </tr>
-                    <tr>
-                        <td><strong>TFLite</strong></td>
-                        <td class="cap-no">CLI only</td>
-                        <td class="cap-yes">CLI</td>
-                        <td class="cap-no">No</td>
-                        <td class="cap-no">No</td>
-                        <td class="cap-warn">Basic analysis via CLI</td>
-                    </tr>
-                    <tr>
-                        <td><strong>CoreML</strong></td>
-                        <td class="cap-no">CLI only</td>
-                        <td class="cap-yes">CLI</td>
-                        <td class="cap-no">No</td>
-                        <td class="cap-no">No</td>
-                        <td class="cap-warn">Basic analysis via CLI (macOS)</td>
+                        <td class="cap-warn">Weights only</td>
                     </tr>
                 </table>
-                <p style="font-size: 0.75rem; color: #666; margin-top: 0.75rem;">
-                    <strong>CLI only</strong> = Use <code>pip install haoline</code> and run <code>haoline model.ext</code> locally.<br>
-                    For full features, convert models to ONNX format.
+                <p style="font-size: 0.7rem; color: #555; margin-top: 0.75rem;">
+                    <strong>Tip:</strong> For full analysis, convert to ONNX format.
                 </p>
                 """,
                     unsafe_allow_html=True,
@@ -2017,6 +2052,36 @@ def main():
             # TensorRT engine analysis
             _handle_tensorrt_streamlit(uploaded_file)
             st.stop()
+
+        elif file_ext in [".tflite"]:
+            # TFLite analysis
+            st.info("**TFLite model detected** - Analyzing with TFLite reader...")
+            with tempfile.NamedTemporaryFile(suffix=".tflite", delete=False) as tmp:
+                tmp.write(uploaded_file.getvalue())
+                tmp_path = tmp.name
+
+        elif file_ext in [".mlmodel", ".mlpackage"]:
+            # CoreML analysis
+            st.info("**CoreML model detected** - Analyzing with CoreML reader...")
+            st.warning("Note: Full CoreML analysis requires macOS with coremltools installed.")
+            with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
+                tmp.write(uploaded_file.getvalue())
+                tmp_path = tmp.name
+
+        elif file_ext in [".xml"]:
+            # OpenVINO IR analysis
+            st.info("**OpenVINO IR detected** - Analyzing with OpenVINO reader...")
+            st.warning("Note: Full analysis requires the .bin file in the same directory. Upload may be partial.")
+            with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
+                tmp.write(uploaded_file.getvalue())
+                tmp_path = tmp.name
+
+        elif file_ext in [".gguf"]:
+            # GGUF (LLM) analysis
+            st.info("**GGUF model detected** - Analyzing LLM architecture metadata...")
+            with tempfile.NamedTemporaryFile(suffix=".gguf", delete=False) as tmp:
+                tmp.write(uploaded_file.getvalue())
+                tmp_path = tmp.name
 
         # Save ONNX to temp file (if not already set by conversion)
         if tmp_path is None:
