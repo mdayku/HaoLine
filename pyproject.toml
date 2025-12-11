@@ -158,6 +158,18 @@ include = [
     "src/haoline/**/*.py",
     "src/haoline/.streamlit/**/*",
 ]
+# Exclude development-only files (memory bank, demos, scripts)
+exclude = [
+    "memory_bank/",
+    "demos/",
+    "scripts/",
+    "docs/",
+    "demo_outputs/",
+    "*.md",
+    "!README.md",
+    "test_format_readers.py",
+    ".cursorrules",
+]
 
 [tool.ruff]
 line-length = 100
