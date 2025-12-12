@@ -13,7 +13,6 @@ Run locally:
 Deploy to HuggingFace Spaces or Streamlit Cloud for public access.
 """
 
-import json
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -94,6 +93,14 @@ from haoline.hardware import (
 from haoline.hierarchical_graph import HierarchicalGraphBuilder
 from haoline.html_export import generate_html as generate_graph_html
 from haoline.patterns import PatternAnalyzer
+from haoline.streamlit_tabs import (
+    render_details_tab,
+    render_export_tab,
+    render_graph_tab,
+    render_layer_details_tab,
+    render_overview_tab,
+    render_quantization_tab,
+)
 
 # Demo models for quick start
 DEMO_MODELS = {
@@ -1804,280 +1811,30 @@ def main():
             ["Overview", "Interactive Graph", "Details", "Layer Details", "Quantization", "Export"]
         )
 
+        # Use shared tab render functions (single source of truth)
         with tab1:
-            st.markdown("### Model Information")
-
-            info_col1, info_col2 = st.columns(2)
-
-            with info_col1:
-                st.markdown(f"""
-                | Property | Value |
-                |----------|-------|
-                | **Model** | `{model_name}` |
-                | **IR Version** | {report.metadata.ir_version} |
-                | **Producer** | {report.metadata.producer_name or "Unknown"} |
-                | **Opset** | {list(report.metadata.opsets.values())[0] if report.metadata.opsets else "Unknown"} |
-                """)
-
-            with info_col2:
-                params_total = report.param_counts.total if report.param_counts else 0
-                flops_total = report.flop_counts.total if report.flop_counts else 0
-                peak_mem = (
-                    report.memory_estimates.peak_activation_bytes if report.memory_estimates else 0
-                )
-                model_size = (
-                    report.memory_estimates.model_size_bytes if report.memory_estimates else 0
-                )
-
-                st.markdown(f"""
-                | Metric | Value |
-                |--------|-------|
-                | **Total Parameters** | {params_total:,} |
-                | **Total FLOPs** | {flops_total:,} |
-                | **Peak Memory** | {format_bytes(peak_mem)} |
-                | **Model Size** | {format_bytes(model_size)} |
-                """)
-
-            # Op distribution chart
-            if report.graph_summary and report.graph_summary.op_type_counts:
-                st.markdown("### Operator Distribution")
-                op_counts = report.graph_summary.op_type_counts
-                sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-
-                import pandas as pd
-
-                df = pd.DataFrame(sorted_ops, columns=["Operator", "Count"])
-                st.bar_chart(df.set_index("Operator"))
+            render_overview_tab(report, model_name)
 
         with tab2:
-            # Interactive Graph (needs model file)
-            if result.model_path and Path(result.model_path).exists():
-                st.markdown(
-                    """
-                    <p style="font-size: 0.85rem; color: #737373; margin-bottom: 1rem;">
-                    Scroll to zoom | Drag to pan | Click nodes to expand/collapse
-                    </p>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-                try:
-                    if graph_info is None:
-                        if Path(result.model_path).suffix.lower() != ".onnx":
-                            raise ValueError("Interactive graph available only for ONNX models.")
-                        graph_loader = ONNXGraphLoader()
-                        _, graph_info_local = graph_loader.load(result.model_path)
-                    else:
-                        graph_info_local = graph_info
-
-                    # Analyze patterns
-                    pattern_analyzer = PatternAnalyzer()
-                    blocks = pattern_analyzer.group_into_blocks(graph_info_local)
-
-                    # Edge analysis
-                    edge_analyzer = EdgeAnalyzer()
-                    edge_result = edge_analyzer.analyze(graph_info_local)
-
-                    # Build hierarchical graph
-                    builder = HierarchicalGraphBuilder()
-                    hier_graph = builder.build(
-                        graph_info_local,
-                        blocks,
-                        model_name.replace(".onnx", ""),
-                    )
-
-                    # Generate the full D3.js HTML
-                    graph_html = generate_graph_html(
-                        hier_graph,
-                        edge_result,
-                        title=model_name,
-                        model_size_bytes=result.file_size,
-                    )
-
-                    # Embed with generous height
-                    components.html(graph_html, height=800, scrolling=False)
-
-                except Exception as e:
-                    st.warning(f"Could not generate interactive graph: {e}")
-                    # Fallback to block list
-                    if report.detected_blocks:
-                        st.markdown("#### Detected Architecture Blocks")
-                        for i, block in enumerate(report.detected_blocks[:15]):
-                            with st.expander(f"{block.block_type}: {block.name}", expanded=(i < 3)):
-                                st.write(f"**Type:** {block.block_type}")
-                                st.write(f"**Nodes:** {len(block.nodes)}")
-            else:
-                st.info("Interactive graph not available - model file not cached.")
-                # Show blocks as fallback
-                if report.detected_blocks:
-                    st.markdown("#### Detected Architecture Blocks")
-                    for i, block in enumerate(report.detected_blocks[:15]):
-                        with st.expander(f"{block.block_type}: {block.name}", expanded=(i < 3)):
-                            st.write(f"**Type:** {block.block_type}")
-                            st.write(f"**Nodes:** {len(block.nodes)}")
+            render_graph_tab(
+                report,
+                result.model_path,
+                model_name,
+                result.file_size,
+                graph_info,
+            )
 
         with tab3:
-            st.markdown("### Architecture Blocks")
-            if report.detected_blocks:
-                for i, block in enumerate(report.detected_blocks[:15]):
-                    with st.expander(f"{block.block_type}: {block.name}", expanded=(i < 3)):
-                        st.write(f"**Type:** {block.block_type}")
-                        st.write(f"**Nodes:** {len(block.nodes)}")
-                        if hasattr(block, "params") and block.params:
-                            st.write(f"**Parameters:** {format_number(block.params)}")
-            else:
-                st.info("No architecture blocks detected.")
-
-            # Op type breakdown
-            if report.graph_summary and report.graph_summary.op_type_counts:
-                st.markdown("### Operator Types")
-                op_counts = report.graph_summary.op_type_counts
-                sorted_ops = sorted(op_counts.items(), key=lambda x: x[1], reverse=True)
-                op_data = [{"Operator": op, "Count": count} for op, count in sorted_ops[:20]]
-                st.dataframe(op_data, width="stretch")
+            render_details_tab(report)
 
         with tab4:
-            st.markdown("### Layer Details")
-            if graph_info is None:
-                st.info(
-                    "Layer table is available for ONNX models. Upload an ONNX model to view per-layer metrics."
-                )
-            else:
-                try:
-                    from haoline.layer_summary import LayerSummaryBuilder
-
-                    builder = LayerSummaryBuilder()
-                    layer_summary = builder.build(
-                        graph_info,
-                        param_counts=report.param_counts,
-                        flop_counts=report.flop_counts,
-                        memory_estimates=report.memory_estimates,
-                    )
-                    data = []
-                    for layer in layer_summary.layers:
-                        data.append(
-                            {
-                                "Name": layer.name,
-                                "Op": layer.op_type,
-                                "Params": layer.params,
-                                "FLOPs": layer.flops,
-                                "Memory (bytes)": layer.memory_bytes,
-                                "% Params": round(layer.pct_params, 2),
-                                "% FLOPs": round(layer.pct_flops, 2),
-                                "Inputs": layer.input_shapes,
-                                "Outputs": layer.output_shapes,
-                            }
-                        )
-                    df = pd.DataFrame(data)
-
-                    # Simple search/filter
-                    filter_text = st.text_input("Filter by name or op type", "")
-                    if filter_text:
-                        mask = df["Name"].str.contains(filter_text, case=False, na=False) | df[
-                            "Op"
-                        ].str.contains(filter_text, case=False, na=False)
-                        df_filtered = df[mask]
-                    else:
-                        df_filtered = df
-
-                    st.dataframe(df_filtered, width="stretch", hide_index=True)
-
-                    csv_bytes = df.to_csv(index=False).encode("utf-8")
-                    json_bytes = df.to_json(orient="records", indent=2).encode("utf-8")
-                    col_dl1, col_dl2 = st.columns(2)
-                    with col_dl1:
-                        st.download_button(
-                            "Download Layer CSV",
-                            data=csv_bytes,
-                            file_name=f"{model_name.replace('.onnx', '')}_layers.csv",
-                            mime="text/csv",
-                        )
-                    with col_dl2:
-                        st.download_button(
-                            "Download Layer JSON",
-                            data=json_bytes,
-                            file_name=f"{model_name.replace('.onnx', '')}_layers.json",
-                            mime="application/json",
-                        )
-                except Exception as e:
-                    st.warning(f"Could not generate layer table: {e}")
+            render_layer_details_tab(report, graph_info, model_name)
 
         with tab5:
-            st.markdown("### Quantization Readiness")
-            if graph_info is None:
-                st.info(
-                    "Quantization lint is available for ONNX models. Upload an ONNX model to view."
-                )
-            else:
-                try:
-                    from haoline.quantization_advisor import advise_quantization
-                    from haoline.quantization_linter import QuantizationLinter
-
-                    linter = QuantizationLinter()
-                    lint_result = linter.lint(graph_info)
-
-                    # Score card
-                    score = lint_result.readiness_score
-                    st.metric("Readiness Score", f"{score:.0f}")
-
-                    # Warnings
-                    if lint_result.warnings:
-                        st.markdown("#### Warnings")
-                        for w in lint_result.warnings:
-                            st.markdown(f"- {w}")
-
-                    # Unsupported ops
-                    if lint_result.unsupported_ops:
-                        st.markdown("#### Unsupported Ops")
-                        st.write(", ".join(sorted(lint_result.unsupported_ops)))
-
-                    # Accuracy-sensitive ops
-                    if lint_result.accuracy_sensitive_ops:
-                        st.markdown("#### Accuracy-Sensitive Ops")
-                        st.write(", ".join(sorted(lint_result.accuracy_sensitive_ops)))
-
-                    # Advisor (heuristic only to avoid API key requirement)
-                    advice = advise_quantization(
-                        lint_result, graph_info, api_key=None, use_llm=False
-                    )
-                    if advice.recommendations:
-                        st.markdown("#### Recommendations")
-                        for rec in advice.recommendations:
-                            st.markdown(f"- {rec}")
-
-                    # Per-layer sensitivity (if available)
-                    if lint_result.layer_risk_scores:
-                        st.markdown("#### Layer Sensitivity")
-                        risk_rows = []
-                        for risk in lint_result.layer_risk_scores:
-                            risk_rows.append(
-                                {
-                                    "Layer": risk.layer_name,
-                                    "Op": risk.op_type,
-                                    "Risk": risk.risk_score,
-                                    "Reason": risk.reason,
-                                }
-                            )
-                        risk_df = pd.DataFrame(risk_rows)
-                        st.dataframe(risk_df, width="stretch", hide_index=True)
-
-                except Exception as e:
-                    st.warning(f"Quantization lint not available: {e}")
+            render_quantization_tab(report, graph_info)
 
         with tab6:
-            st.markdown("### Export Report")
-            # JSON export
-            report_dict = (
-                report.to_dict()
-                if hasattr(report, "to_dict")
-                else {"error": "Export not available"}
-            )
-            st.download_button(
-                "Download JSON Report",
-                data=json.dumps(report_dict, indent=2, default=str),
-                file_name=f"{model_name.replace('.onnx', '')}_report.json",
-                mime="application/json",
-            )
+            render_export_tab(report, model_name.replace(".onnx", ""), result.model_path)
 
     # Analysis (file upload)
     elif uploaded_file is not None:
@@ -3312,369 +3069,28 @@ def main():
                         )
 
                 with tab3:
-                    # Layer-by-layer breakdown table (Story 41.2.7)
-                    # Respects privacy controls: summary_only, redact_names
-                    if summary_only:
-                        st.info(
-                            "**Summary Only mode enabled** - Per-layer details hidden for IP protection."
-                        )
-                        st.markdown("### Aggregate Statistics")
-                        agg_col1, agg_col2, agg_col3 = st.columns(3)
-                        with agg_col1:
-                            st.metric(
-                                "Total Parameters",
-                                format_number(report.param_counts.total)
-                                if report.param_counts
-                                else "N/A",
-                            )
-                        with agg_col2:
-                            st.metric(
-                                "Total FLOPs",
-                                format_number(report.flop_counts.total)
-                                if report.flop_counts
-                                else "N/A",
-                            )
-                        with agg_col3:
-                            st.metric("Total Layers", str(report.graph_summary.num_nodes))
-                    else:
-                        st.markdown("### Layer-by-Layer Breakdown")
-                        try:
-                            import logging
-
-                            import pandas as pd
-
-                            from haoline.analyzer import ONNXGraphLoader
-                            from haoline.layer_summary import LayerSummaryBuilder
-
-                            layer_logger = logging.getLogger("haoline.layer")
-                            loader = ONNXGraphLoader(logger=layer_logger)
-                            _, graph_info = loader.load(tmp_path)
-
-                            layer_builder = LayerSummaryBuilder(logger=layer_logger)
-                            layer_summary = layer_builder.build(
-                                graph_info,
-                                param_counts=report.param_counts,
-                                flop_counts=report.flop_counts,
-                                memory_estimates=report.memory_estimates,
-                            )
-
-                            if layer_summary.layers:
-                                layer_data = []
-                                for idx, layer in enumerate(layer_summary.layers[:100]):
-                                    # Apply redact_names if enabled
-                                    if redact_names:
-                                        display_name = f"layer_{idx}"
-                                    else:
-                                        display_name = layer.name[:30] + (
-                                            "..." if len(layer.name) > 30 else ""
-                                        )
-
-                                    layer_data.append(
-                                        {
-                                            "Name": display_name,
-                                            "Op Type": layer.op_type,
-                                            "Parameters": format_number(layer.params)
-                                            if layer.params > 0
-                                            else "-",
-                                            "FLOPs": format_number(layer.flops)
-                                            if layer.flops > 0
-                                            else "-",
-                                            "Output Shape": ", ".join(layer.output_shapes)
-                                            if layer.output_shapes
-                                            else "-",
-                                        }
-                                    )
-
-                                layer_df = pd.DataFrame(layer_data)
-                                st.dataframe(
-                                    layer_df,
-                                    width="stretch",
-                                    hide_index=True,
-                                    height=400,
-                                )
-
-                                # CSV download button
-                                csv_data = layer_summary.to_csv()
-                                st.download_button(
-                                    label="Download Layer CSV",
-                                    data=csv_data,
-                                    file_name=f"{uploaded_file.name.replace('.onnx', '')}_layers.csv",
-                                    mime="text/csv",
-                                )
-                            else:
-                                st.info("No layer details available.")
-                        except Exception as e:
-                            st.warning(f"Could not generate layer breakdown: {e}")
-
-                    st.markdown("---")
-                    st.markdown("### Detected Patterns")
-
-                    if report.detected_blocks:
-                        for block in report.detected_blocks[:10]:  # Limit to first 10
-                            with st.expander(f"{block.block_type}: {block.name}"):
-                                st.write(
-                                    f"**Nodes:** {', '.join(block.nodes[:5])}{'...' if len(block.nodes) > 5 else ''}"
-                                )
-                    else:
-                        st.info("No architectural patterns detected.")
-
-                    st.markdown("### Risk Signals")
-
-                    if report.risk_signals:
-                        for risk in report.risk_signals:
-                            severity_color = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(
-                                risk.severity, "⚪"
-                            )
-
-                            st.markdown(f"{severity_color} **{risk.id}** ({risk.severity})")
-                            st.caption(risk.description)
-                    else:
-                        st.success("No risk signals detected!")
+                    # Details tab - patterns and risk signals
+                    render_details_tab(report)
 
                 with tab4:
+                    # Layer Details tab
                     model_name = uploaded_file.name.replace(".onnx", "")
-
-                    st.markdown(
-                        """
-                    <div style="margin-bottom: 1.5rem;">
-                        <h3 style="color: #f5f5f5; margin-bottom: 0.25rem;">Export Reports</h3>
-                        <p style="color: #737373; font-size: 0.9rem; margin: 0;">
-                            Download your analysis in various formats
-                        </p>
-                    </div>
-                    """,
-                        unsafe_allow_html=True,
+                    render_layer_details_tab(
+                        report,
+                        graph_info,
+                        model_name,
+                        redact_names=redact_names,
+                        summary_only=summary_only,
                     )
 
-                    # Generate all export data
-                    json_data = report.to_json()
-                    md_data = report.to_markdown()
-                    html_data = report.to_html()
+                with tab5:
+                    # Quantization tab
+                    render_quantization_tab(report, graph_info)
 
-                    # Try to generate PDF
-                    pdf_data = None
-                    try:
-                        from haoline.pdf_generator import (
-                            PDFGenerator,
-                        )
-                        from haoline.pdf_generator import (
-                            is_available as pdf_available,
-                        )
-
-                        if pdf_available():
-                            import tempfile as tf_pdf
-
-                            pdf_gen = PDFGenerator()
-                            with tf_pdf.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_tmp:
-                                if pdf_gen.generate_from_html(html_data, pdf_tmp.name):
-                                    with open(pdf_tmp.name, "rb") as f:
-                                        pdf_data = f.read()
-                    except Exception:
-                        pass
-
-                    # Custom styled export grid
-                    st.markdown(
-                        """
-                    <style>
-                        .export-grid {
-                            display: grid;
-                            grid-template-columns: repeat(2, 1fr);
-                            gap: 1rem;
-                            margin-top: 1rem;
-                        }
-                        .export-card {
-                            background: #1a1a1a;
-                            border: 1px solid rgba(255,255,255,0.1);
-                            border-radius: 12px;
-                            padding: 1.25rem;
-                            transition: all 0.2s ease;
-                        }
-                        .export-card:hover {
-                            border-color: #10b981;
-                            background: #1f1f1f;
-                        }
-                        .export-icon {
-                            font-size: 1.5rem;
-                            margin-bottom: 0.5rem;
-                        }
-                        .export-title {
-                            color: #f5f5f5;
-                            font-weight: 600;
-                            font-size: 1rem;
-                            margin-bottom: 0.25rem;
-                        }
-                        .export-desc {
-                            color: #737373;
-                            font-size: 0.8rem;
-                            line-height: 1.4;
-                        }
-                    </style>
-                    """,
-                        unsafe_allow_html=True,
-                    )
-
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-                        st.markdown(
-                            """
-                        <div class="export-card">
-                            <div class="export-icon">📊</div>
-                            <div class="export-title">HTML Report</div>
-                            <div class="export-desc">Interactive report with D3.js graph visualization</div>
-                        </div>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-                        st.download_button(
-                            label="Download HTML",
-                            data=html_data,
-                            file_name=f"{model_name}_report.html",
-                            mime="text/html",
-                            width="stretch",
-                        )
-
-                    with col2:
-                        st.markdown(
-                            """
-                        <div class="export-card">
-                            <div class="export-icon">📄</div>
-                            <div class="export-title">JSON Data</div>
-                            <div class="export-desc">Raw analysis data for programmatic use</div>
-                        </div>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-                        st.download_button(
-                            label="Download JSON",
-                            data=json_data,
-                            file_name=f"{model_name}_report.json",
-                            mime="application/json",
-                            width="stretch",
-                        )
-
-                    col3, col4 = st.columns(2)
-
-                    with col3:
-                        st.markdown(
-                            """
-                        <div class="export-card">
-                            <div class="export-icon">📝</div>
-                            <div class="export-title">Markdown</div>
-                            <div class="export-desc">Text report for docs, READMEs, or wikis</div>
-                        </div>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-                        st.download_button(
-                            label="Download Markdown",
-                            data=md_data,
-                            file_name=f"{model_name}_report.md",
-                            mime="text/markdown",
-                            width="stretch",
-                        )
-
-                    with col4:
-                        if pdf_data:
-                            st.markdown(
-                                """
-                            <div class="export-card">
-                                <div class="export-icon">📑</div>
-                                <div class="export-title">PDF Report</div>
-                                <div class="export-desc">Print-ready document for sharing</div>
-                            </div>
-                            """,
-                                unsafe_allow_html=True,
-                            )
-                            st.download_button(
-                                label="Download PDF",
-                                data=pdf_data,
-                                file_name=f"{model_name}_report.pdf",
-                                mime="application/pdf",
-                                width="stretch",
-                            )
-                        else:
-                            st.markdown(
-                                """
-                            <div class="export-card" style="opacity: 0.5;">
-                                <div class="export-icon">📑</div>
-                                <div class="export-title">PDF Report</div>
-                                <div class="export-desc">Requires Playwright · Use CLI for PDF export</div>
-                            </div>
-                            """,
-                                unsafe_allow_html=True,
-                            )
-                            st.button("PDF unavailable", disabled=True, width="stretch")
-
-                    # Universal IR Export (Story 41.4.9)
-                    st.markdown("---")
-                    st.markdown("### Advanced Exports")
-
-                    ir_col1, ir_col2 = st.columns(2)
-
-                    with ir_col1:
-                        st.markdown(
-                            """
-                        <div class="export-card">
-                            <div class="export-icon">🔄</div>
-                            <div class="export-title">Universal IR</div>
-                            <div class="export-desc">Format-agnostic graph representation (JSON)</div>
-                        </div>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-                        try:
-                            from haoline.format_adapters import load_model
-
-                            ir_graph = load_model(Path(tmp_path))
-                            # Exclude tensor data (numpy arrays) - they're huge and not JSON-serializable
-                            ir_dict = ir_graph.model_dump(
-                                exclude={"tensors": {"__all__": {"data"}}}
-                            )
-                            ir_json = json.dumps(ir_dict, indent=2, default=str)
-                            st.download_button(
-                                label="Download Universal IR",
-                                data=ir_json,
-                                file_name=f"{model_name}_universal_ir.json",
-                                mime="application/json",
-                                width="stretch",
-                            )
-                        except Exception as e:
-                            st.button(
-                                f"IR export failed: {str(e)[:30]}",
-                                disabled=True,
-                                width="stretch",
-                            )
-
-                    with ir_col2:
-                        st.markdown(
-                            """
-                        <div class="export-card">
-                            <div class="export-icon">📊</div>
-                            <div class="export-title">Graph DOT</div>
-                            <div class="export-desc">Graphviz format for visualization tools</div>
-                        </div>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-                        try:
-                            from haoline.format_adapters import load_model
-
-                            ir_graph = load_model(Path(tmp_path))
-                            dot_data = ir_graph.to_dot()
-                            st.download_button(
-                                label="Download DOT Graph",
-                                data=dot_data,
-                                file_name=f"{model_name}_graph.dot",
-                                mime="text/plain",
-                                width="stretch",
-                            )
-                        except Exception as e:
-                            st.button(
-                                f"DOT export failed: {str(e)[:30]}",
-                                disabled=True,
-                                width="stretch",
-                            )
+                with tab6:
+                    # Export tab
+                    model_name = uploaded_file.name.replace(".onnx", "")
+                    render_export_tab(report, model_name, tmp_path)
 
         except Exception as e:
             st.error(f"Error analyzing model: {e}")
