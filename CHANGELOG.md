@@ -5,6 +5,12 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 0.9.3 - 2025-12-12
+
+### Fixed
+- **CI test fix:** Made `streamlit_tabs.py` importable without streamlit installed
+- Lazy imports for streamlit in render functions (data prep functions don't require it)
+
 # 0.9.2 - 2025-12-12
 
 ### Changed

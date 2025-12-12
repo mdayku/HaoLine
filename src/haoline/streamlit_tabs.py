@@ -12,8 +12,6 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import streamlit as st
-
 if TYPE_CHECKING:
     from haoline.report import InspectionReport
 
@@ -237,6 +235,7 @@ def render_overview_tab(
 ) -> None:
     """Render the Overview tab content."""
     import pandas as pd
+    import streamlit as st
 
     st.markdown("### Model Information")
 
@@ -272,6 +271,7 @@ def render_graph_tab(
     graph_info: Any = None,
 ) -> None:
     """Render the Interactive Graph tab content."""
+    import streamlit as st
     import streamlit.components.v1 as components
 
     if not model_path or not Path(model_path).exists():
@@ -335,6 +335,8 @@ def render_graph_tab(
 
 def _render_blocks_fallback(report: InspectionReport) -> None:
     """Render block list as fallback when graph unavailable."""
+    import streamlit as st
+
     if report.detected_blocks:
         st.markdown("#### Detected Architecture Blocks")
         for i, block in enumerate(report.detected_blocks[:15]):
@@ -345,6 +347,7 @@ def _render_blocks_fallback(report: InspectionReport) -> None:
 
 def render_details_tab(report: InspectionReport) -> None:
     """Render the Details tab content."""
+    import streamlit as st
 
     data = prepare_details_data(report)
 
@@ -385,6 +388,7 @@ def render_layer_details_tab(
 ) -> None:
     """Render the Layer Details tab content."""
     import pandas as pd
+    import streamlit as st
 
     st.markdown("### Layer Details")
 
@@ -454,6 +458,8 @@ def render_layer_details_tab(
 
 def _render_aggregate_stats(report: InspectionReport) -> None:
     """Render aggregate statistics when summary_only is enabled."""
+    import streamlit as st
+
     st.markdown("### Aggregate Statistics")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -476,6 +482,7 @@ def render_quantization_tab(
 ) -> None:
     """Render the Quantization tab content."""
     import pandas as pd
+    import streamlit as st
 
     st.markdown("### Quantization Readiness")
 
@@ -536,6 +543,8 @@ def render_export_tab(
     tmp_path: str | None = None,
 ) -> None:
     """Render the Export tab content."""
+    import streamlit as st
+
     st.markdown(
         """
         <div style="margin-bottom: 1.5rem;">
