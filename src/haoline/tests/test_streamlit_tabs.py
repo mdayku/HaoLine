@@ -3,7 +3,6 @@
 Tests the data preparation functions (not the Streamlit rendering).
 """
 
-
 from haoline.streamlit_tabs import (
     format_bytes,
     format_number,

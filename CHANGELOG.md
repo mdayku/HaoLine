@@ -5,6 +5,13 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# 0.9.2 - 2025-12-12
+
+### Changed
+- **Refactored Streamlit tabs:** Extracted tab rendering into `streamlit_tabs.py` module
+- **Single source of truth:** Both demo and upload flows now share the same render functions
+- **Added 39 unit tests** for tab data preparation logic (format_number, format_bytes, prepare_* functions)
+
 # 0.8.10 - 2025-12-11
 
 ### Fixed
