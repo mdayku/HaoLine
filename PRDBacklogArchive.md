@@ -349,6 +349,13 @@
 - [x] Create deployment documentation (DEPLOYMENT.md)
 - [x] Set up CI/CD for auto-deploy
 
+### Story 11.4: Sample Model Preloading
+*Bundle demo models for quick testing in Streamlit UI.*
+
+- [x] Bundle 3 demo models (MNIST, SqueezeNet, EfficientNet-Lite4)
+- [x] Add "Try a demo model" buttons in Streamlit
+- [x] Download + analyze demo models on demand
+
 ---
 
 ## Epic 12: Eval Import & Comparison (COMPLETE - 30/30)
@@ -441,6 +448,22 @@
 - [x] Update Streamlit app with IR summary
 - [x] Enable IR-based comparison
 - [x] Test integration end-to-end
+
+---
+
+## Epic 19: SafeTensors Format (COMPLETE - Story 19.1: 6/6 tasks)
+
+*Completed: December 2025*
+
+### Story 19.1: SafeTensors Reader - COMPLETE
+*HuggingFace ecosystem, widely used for LLM weights.*
+
+- [x] **Task 19.1.1**: Add safetensors dependency (optional) - in `[formats]` extra
+- [x] **Task 19.1.2**: Implement SafeTensorsReader.read() - load tensor dict
+- [x] **Task 19.1.3**: Extract metadata (tensor names, shapes, dtypes)
+- [x] **Task 19.1.4**: Integrate with analysis pipeline (param counts, memory)
+- [x] **Task 19.1.5**: Test with real SafeTensors model (sentence-transformers/all-MiniLM-L6-v2, 22.7M params)
+- [x] **Task 19.1.6**: Write unit tests for SafeTensorsReader (8 tests in test_formats.py)
 
 ---
 

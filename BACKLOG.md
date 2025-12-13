@@ -41,15 +41,16 @@
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/30 | **P1** ← format UX |
 | **Active Development** ||||
-| Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
-| Epic 20: CoreML | In Progress | 3 | 8/19 | P2 |
-| Epic 21: TFLite | In Progress | 3 | 5/18 | P2 (ONNX→TFLite blocked) |
-| Epic 23: OpenVINO | In Progress | 3 | 7/16 | P3 |
-| Epic 24: GGUF | In Progress | 2 | 7/13 | **P2** ← LLM parity |
+| Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 (Story 19.1 complete) |
+| Epic 20: CoreML | In Progress | 3 | 8/19 | P2 (Story 20.1 complete) |
+| Epic 21: TFLite | In Progress | 3 | 4/18 | P2 (ONNX→TFLite blocked) |
+| Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 (Story 23.1: 5/6) |
+| Epic 24: GGUF | In Progress | 2 | 7/13 | **P2** ← LLM parity (Story 24.1 complete) |
 | Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
-| Epic 36: Layer Visualization | In Progress | 5 | 4/25 | **P2** |
+| Epic 36: Layer Visualization | In Progress | 5 | 4/25 | **P2** *(4 tasks via Epic 22)* |
 | Epic 38: Docker Distribution | In Progress | 1 | 1/5 | P3 |
 | Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/18 | **P2** ← dep prompts |
+| Epic 52: TensorRT 1.0 Documentation & Testing | Not Started | 5 | 0/24 | **P2** |
 | **Future Work** ||||
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
@@ -60,20 +61,13 @@
 | Epic 29: Sparse/Efficient | Not Started | 4 | 0/16 | P3 |
 | Epic 30: LLM Deployment | Not Started | 4 | 0/19 | P3 |
 | **OPTIMIZATION** ||||
-| Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
 | Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
 | Epic 33: QAT Linters | **COMPLETE** | 5 | 41/41 | **P1** |
 | Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
-| Epic 36: Layer Visualization | In Progress | 5 | 4/25 | **P2** *(4 tasks via Epic 22)* |
 | Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
-| Epic 38: Docker Distribution | In Progress | 1 | 1/5 | P3 |
 | Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
 | Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 64/64 | Done ✓ v0.8.4 |
-| Epic 41: Standardized Reporting | **COMPLETE** (+41.7 pending) | 6 | 44/50 | **P1** ← parity |
-| Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 (ONNX→TFLite blocked) |
-| Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/30 | **P1** ← format UX |
-| Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/18 | **P2** ← dep prompts |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
 | **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
 | Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
@@ -145,12 +139,7 @@
 **Note:** Story 19.2 (Writer) exports *to* SafeTensors. Epic 49 imports *from* SafeTensors/HuggingFace *to* ONNX. They are independent - Story 19.2 is NOT a prerequisite for Epic 49.
 
 ### Story 19.1: SafeTensors Reader - **COMPLETE**
-- [x] **Task 19.1.1**: Add safetensors dependency (optional) - in `[formats]` extra
-- [x] **Task 19.1.2**: Implement SafeTensorsReader.read() - load tensor dict
-- [x] **Task 19.1.3**: Extract metadata (tensor names, shapes, dtypes)
-- [x] **Task 19.1.4**: Integrate with analysis pipeline (param counts, memory)
-- [x] **Task 19.1.5**: Test with real SafeTensors model (sentence-transformers/all-MiniLM-L6-v2, 22.7M params)
-- [x] **Task 19.1.6**: Write unit tests for SafeTensorsReader (8 tests in test_formats.py)
+*Archived to PRDBacklogArchive.md - 6/6 tasks complete*
 
 ### Story 19.2: SafeTensors Writer
 - [ ] **Task 19.2.1**: Implement SafeTensorsAdapter.write() - export weights
@@ -479,6 +468,59 @@
 - [ ] **Task 51.5.6**: Add deployment cost calculator UI ($/day, $/month estimates)
 - [ ] **Task 51.5.7**: Show accuracy vs size/speed tradeoff visualization
 - [ ] **Task 51.5.8**: Export combined report as JSON/PDF
+
+---
+
+## Epic 52: TensorRT 1.0 Documentation & Testing (P2)
+
+*Polish existing TensorRT support for 1.0 release by addressing documentation gaps, test coverage, and clearly documenting known limitations vs guaranteed features.*
+
+**Goal:** Ensure TensorRT features are well-documented, tested, and users understand what's guaranteed vs best-effort.
+
+### Story 52.1: README Documentation Enhancement
+
+- [ ] **Task 52.1.1**: Expand existing "TensorRT Options" section in README (lines 282-307) with feature summary and limitations
+- [ ] **Task 52.1.2**: Document guaranteed vs best-effort features (layer enumeration, fusion detection, precision stats)
+- [ ] **Task 52.1.3**: Add "Known Limitations" subsection covering:
+  - Dynamic shapes (heuristic detection only, not full profile reconstruction)
+  - Plugin/custom layers (may show as "Unknown" type)
+  - Precision inference (best-effort, TRT uses mixed precision internally)
+  - No ONNX→TRT or TRT→ONNX conversion (users must build externally)
+- [ ] **Task 52.1.4**: Add workflow example: "To analyze a TensorRT engine, first build it with TensorRT (outside HaoLine), then use HaoLine to inspect or compare it"
+- [ ] **Task 52.1.5**: Clarify `pip install haoline[tensorrt]` requirement and GPU/CUDA dependencies
+- [ ] **Task 52.1.6**: Add troubleshooting section for common TRT errors (missing tensorrt package, incompatible CUDA version, etc.)
+
+### Story 52.2: PRD TensorRT Section
+
+- [ ] **Task 52.2.1**: Add new section "20. TensorRT Engine Analysis" to PRD.md
+- [ ] **Task 52.2.2**: Document core features (engine parsing, layer breakdown, ONNX comparison)
+- [ ] **Task 52.2.3**: Document technical limitations (dynamic shapes, plugins, precision inference)
+- [ ] **Task 52.2.4**: Add architecture decision notes on why ONNX→TRT conversion is not included
+- [ ] **Task 52.2.5**: Document CLI surface (`haoline model.engine`, `--compare-trt`, `--quant-bottlenecks`)
+
+### Story 52.3: Test Coverage Gaps
+
+- [ ] **Task 52.3.1**: Test JSON/MD output format validation (ensure all TRT fields present in reports)
+- [ ] **Task 52.3.2**: Test graceful degradation when TRT inspector unavailable (older TRT versions, missing CUDA)
+- [ ] **Task 52.3.3**: Test `is_tensorrt_file()` edge cases (invalid files, corrupted engines, permission errors)
+- [ ] **Task 52.3.4**: Test `TRTEngineReader` with malformed engine files (graceful error handling)
+- [ ] **Task 52.3.5**: Test CLI error messages for missing tensorrt package (verify install command shown)
+
+**Note:** Integration tests for `--compare-trt`, comparison report generation, and `analyze_quant_bottlenecks()` are already covered by Epic 42.4 (Tasks 42.4.1, 42.4.5, 42.4.6). Basic `is_tensorrt_file()` tests already exist in test_formats.py - this task focuses on edge cases.
+
+### Story 52.4: Stability Guarantees & Error Handling
+
+- [ ] **Task 52.4.1**: Ensure CLI exits gracefully with clear error messages for invalid engine files
+- [ ] **Task 52.4.2**: Add validation that well-formed engine files return non-null `TRTEngineInfo` with correct counts
+- [ ] **Task 52.4.3**: Improve error messages when TRT package missing (show install command)
+- [ ] **Task 52.4.4**: Add warnings (not exceptions) when plugin layers detected or precision unavailable
+- [ ] **Task 52.4.5**: Document expected behavior when engine inspector fails (fallback to basic stub)
+
+### Story 52.5: CLI Help Text Enhancement
+
+- [ ] **Task 52.5.1**: Enhance `--compare-trt` help text with clearer usage examples
+- [ ] **Task 52.5.2**: Add example to CLI epilog showing TRT comparison workflow
+- [ ] **Task 52.5.3**: Update `--list-formats` output to clearly indicate TRT requires GPU and `[tensorrt]` extra
 
 ---
 
@@ -922,16 +964,6 @@
 
 *Archived to PRDBacklogArchive.md - 64 tasks total (v0.8.4)*
 
-### Story 40.6: LLM Response Normalization (v0.8.4 hotfix)
-*Fix Pydantic validation errors when LLM returns nested/malformed structures.*
-
-- [x] Task 40.6.1: Fix `_normalize_runtime_recs` to handle deeply nested LLM responses
-- [x] Task 40.6.2: Fix `_normalize_str_list` to handle all LLM edge cases (layer_names dict, etc.)
-- [x] Task 40.6.3: Add `_extract_string_from_nested` helper for recursive extraction
-- [x] Task 40.6.4: Add unit tests for normalization functions (35 tests)
-- [x] Task 40.6.5: Add integration tests reproducing actual production failures
-- [x] Task 40.6.6: Bump version to 0.8.4, run lints, commit and release
-
 ---
 
 ## Epic 42: Format Conversion Testing (P1)
@@ -1125,12 +1157,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 
 ## ~~Epic 45: UI Demo Polish~~ → MERGED INTO EPIC 11
 
-*Sample model preloading merged into Epic 11 (Streamlit Web UI). Visual risk indicators and comparison polish already covered by Epic 41.*
-
-**New Story 11.4 (in Epic 11):** Sample Model Preloading ✅ **COMPLETE**
-- [x] Bundle 3 demo models (MNIST, SqueezeNet, EfficientNet-Lite4)
-- [x] Add "Try a demo model" buttons in Streamlit
-- [x] Download + analyze demo models on demand
+*Sample model preloading merged into Epic 11 (Streamlit Web UI). Visual risk indicators and comparison polish already covered by Epic 41. Story 11.4 archived to PRDBacklogArchive.md.*
 
 ---
 
