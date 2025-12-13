@@ -2996,13 +2996,14 @@ def run_inspect() -> None:
     progress.start(total_steps, f"Analyzing {model_path.name}")
 
     # Check format capabilities and warn about limitations
+    from typing import Optional
+
     from .format_adapters import get_format_capabilities
     from .universal_ir import SourceFormat
-    from typing import Optional
 
     # Detect format from file extension
     file_ext = model_path.suffix.lower()
-    detected_format: Optional[SourceFormat] = None
+    detected_format: SourceFormat | None = None
     if file_ext == ".onnx":
         detected_format = SourceFormat.ONNX
     elif file_ext in (".pt", ".pth"):
