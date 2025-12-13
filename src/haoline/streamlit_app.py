@@ -63,7 +63,9 @@ def init_session_state():
         st.session_state.current_result = None  # Currently displayed analysis
 
 
-def add_to_history(name: str, report: Any, file_size: int, model_path: str | None = None):
+def add_to_history(
+    name: str, report: Any, file_size: int, model_path: str | None = None
+) -> AnalysisResult:
     """Add an analysis result to session history."""
     result = AnalysisResult(
         name=name,

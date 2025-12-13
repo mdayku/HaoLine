@@ -216,16 +216,16 @@ class TFLiteInfo(BaseModel):
         """Count of tensors by type."""
         breakdown: dict[str, int] = {}
         for t in self.tensors:
-            type_name = t.type_name
-            breakdown[type_name] = breakdown.get(type_name, 0) + 1
+            dtype = t.dtype
+            breakdown[dtype] = breakdown.get(dtype, 0) + 1
         return breakdown
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def is_quantized(self) -> bool:
         """Check if model uses quantized types."""
-        quant_types = {"INT8", "UINT8", "INT16", "INT4"}
-        return any(t.type_name in quant_types for t in self.tensors)
+        quant_types = {"int8", "uint8", "int16", "int4"}
+        return any(t.dtype.lower() in quant_types for t in self.tensors)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""

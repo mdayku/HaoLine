@@ -473,7 +473,10 @@ def _render_aggregate_stats(report: InspectionReport) -> None:
             format_number(report.flop_counts.total) if report.flop_counts else "N/A",
         )
     with col3:
-        st.metric("Total Layers", str(report.graph_summary.num_nodes))
+        st.metric(
+            "Total Layers",
+            str(report.graph_summary.num_nodes) if report.graph_summary else "N/A",
+        )
 
 
 def render_quantization_tab(
@@ -668,7 +671,9 @@ def render_export_tab(
 
                 pdf_gen = PDFGenerator()
                 with tf_pdf.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_tmp:
-                    if pdf_gen.generate_from_html(html_data, pdf_tmp.name):
+                    from pathlib import Path
+
+                    if pdf_gen.generate_from_html(html_data, Path(pdf_tmp.name)):
                         with open(pdf_tmp.name, "rb") as f:
                             pdf_data = f.read()
         except Exception:

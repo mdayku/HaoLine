@@ -412,7 +412,7 @@ class TestOnnxToOpenVINO:
             reader = OpenVINOReader(xml_path)
             info = reader.read()
 
-            assert info.framework_version is not None
+            assert info.framework is not None
             assert len(info.inputs) > 0, "No inputs detected"
             assert len(info.outputs) > 0, "No outputs detected"
 
@@ -655,7 +655,7 @@ class TestPyTorchToOnnx:
         try:
             torch.onnx.export(
                 model,
-                dummy_input,
+                dummy_input,  # type: ignore[arg-type]
                 str(onnx_path),
                 input_names=["input"],
                 output_names=["output"],
@@ -702,7 +702,7 @@ class TestPyTorchToOnnx:
                 attn = (q @ k.transpose(-2, -1)) * self.scale
                 attn = attn.softmax(dim=-1)
                 x = (attn @ v).transpose(1, 2).reshape(B, N, C)
-                return self.proj(x)
+                return self.proj(x)  # type: ignore[no-any-return]
 
         model = SimpleAttention(dim=64, heads=4)
         model.eval()
@@ -716,7 +716,7 @@ class TestPyTorchToOnnx:
         try:
             torch.onnx.export(
                 model,
-                dummy_input,
+                dummy_input,  # type: ignore[arg-type]
                 str(onnx_path),
                 input_names=["input"],
                 output_names=["output"],
@@ -786,7 +786,7 @@ class TestPyTorchToTensorRT:
 
         torch.onnx.export(
             model,
-            dummy_input,
+            dummy_input,  # type: ignore[arg-type]
             str(onnx_path),
             input_names=["input"],
             output_names=["output"],
@@ -852,7 +852,7 @@ class TestPyTorchToTensorRT:
                 self.fc = nn.Linear(100, 10)
 
             def forward(self, x: torch.Tensor) -> torch.Tensor:
-                return self.fc(x)
+                return self.fc(x)  # type: ignore[no-any-return]
 
         model = TinyNet()
         model.eval()
@@ -864,7 +864,7 @@ class TestPyTorchToTensorRT:
 
         torch.onnx.export(
             model,
-            dummy_input,
+            dummy_input,  # type: ignore[arg-type]
             str(onnx_path),
             input_names=["input"],
             output_names=["output"],
@@ -1471,7 +1471,7 @@ class TestOnnxRoundTripValidation:
 
             def forward(self, x: torch.Tensor) -> torch.Tensor:
                 x = torch.relu(self.fc1(x))
-                return self.fc2(x)
+                return self.fc2(x)  # type: ignore[no-any-return]
 
         model = SimpleNet()
         model.eval()
@@ -1486,7 +1486,12 @@ class TestOnnxRoundTripValidation:
             onnx_path = Path(f.name)
 
         try:
-            torch.onnx.export(model, dummy_input, str(onnx_path), opset_version=17)
+            torch.onnx.export(
+                model,
+                dummy_input,
+                str(onnx_path),
+                opset_version=17,  # type: ignore[arg-type]
+            )
 
             # Load and count ONNX params
             from haoline.format_adapters import OnnxAdapter
@@ -1536,7 +1541,7 @@ class TestOnnxRoundTripValidation:
                 x = self.relu(self.conv1(x))
                 x = self.pool(x)
                 x = self.relu(self.conv2(x))
-                return self.pool(x)
+                return self.pool(x)  # type: ignore[no-any-return]
 
         model = ConvNet()
         model.eval()
@@ -1546,7 +1551,12 @@ class TestOnnxRoundTripValidation:
             onnx_path = Path(f.name)
 
         try:
-            torch.onnx.export(model, dummy_input, str(onnx_path), opset_version=17)
+            torch.onnx.export(
+                model,
+                dummy_input,
+                str(onnx_path),
+                opset_version=17,  # type: ignore[arg-type]
+            )
 
             from haoline.format_adapters import OnnxAdapter
 
@@ -1711,10 +1721,12 @@ class TestOnnxTfliteRoundTrip:
             )
 
             # I/O counts must match
-            assert len(original_graph.inputs) == len(roundtrip_graph.inputs), "Input count mismatch"
-            assert len(original_graph.outputs) == len(roundtrip_graph.outputs), (
-                "Output count mismatch"
-            )
+            assert len(original_graph.metadata.input_names) == len(
+                roundtrip_graph.metadata.input_names
+            ), "Input count mismatch"
+            assert len(original_graph.metadata.output_names) == len(
+                roundtrip_graph.metadata.output_names
+            ), "Output count mismatch"
 
             # Clean up onnx2tf output directory
             shutil.rmtree(tflite_dir, ignore_errors=True)
