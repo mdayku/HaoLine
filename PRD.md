@@ -6,7 +6,7 @@
 |-------|-------|
 | Project | HaoLine - Universal Model Inspector |
 | Author | Marcus |
-| Version | 2.2 |
+| Version | 2.3 |
 | Last Updated | December 13, 2025 |
 | Status | In Development |
 
@@ -39,6 +39,7 @@
 17. [LLM-Scale Analysis (Epics 26-30)](#17-llm-scale-analysis-epics-26-30)
 18. [Model Optimization Service (Epics 31-32)](#18-model-optimization-service-epics-31-32)
 19. [Format Capabilities and Limitations](#19-format-capabilities-and-limitations)
+20. [TensorRT Engine Analysis](#20-tensorrt-engine-analysis)
 
 ---
 
@@ -1948,6 +1949,104 @@ The CLI and Streamlit UI adapt to format capabilities:
 
 ---
 
+## 20. TensorRT Engine Analysis
+
+*Epic 22 (COMPLETE) + Epic 52 (P2 - Documentation & Testing)*
+
+### 20.1 Overview
+
+HaoLine provides deep introspection of NVIDIA TensorRT compiled engines (`.engine`, `.plan` files). This enables analysis of optimized models that have been compiled for specific GPU architectures, with layer fusion, precision optimization, and kernel selection already applied.
+
+**Key Capabilities:**
+- Engine metadata extraction (TRT version, build configuration, compute capability)
+- Fused layer enumeration (Conv+BN+ReLU → single kernel)
+- Precision breakdown per layer (FP32/FP16/INT8/TF32)
+- ONNX ↔ TRT comparison (shows optimizations applied)
+- Quantization bottleneck analysis
+- Per-layer timing and memory metrics (when profiling data available)
+
+### 20.2 Core Features
+
+**Engine Parsing:**
+- Deserialize TensorRT engine files
+- Extract layer list with names, types, shapes
+- Identify fused operations and layer rewrites
+- Extract hardware binding information
+
+**ONNX Comparison:**
+- Map TRT layers back to original ONNX nodes
+- Visualize fusion patterns (N ONNX nodes → 1 TRT layer)
+- Show precision changes (FP32 → FP16/INT8)
+- Display layer rewrites (FlashAttention, GELU optimizations)
+- Generate side-by-side HTML comparison reports
+
+**Performance Analysis:**
+- Per-layer latency from profiling data
+- Workspace and device memory allocation
+- Compute vs memory bound classification
+- Timing breakdown charts
+
+### 20.3 Technical Limitations
+
+**Guaranteed Features:**
+- Layer enumeration (all layers in engine)
+- Binding information (input/output shapes)
+- Basic statistics (layer count, memory footprint)
+- Engine metadata (TRT version, build config)
+
+**Best-Effort Features:**
+- Precision inference (TRT uses mixed precision internally, detection is heuristic)
+- Dynamic shapes (heuristic detection only, not full profile reconstruction)
+- Plugin/custom layers (may show as "Unknown" type)
+- Timing data (requires profiling during engine build)
+
+**Not Supported:**
+- ONNX → TRT conversion (users must build engines externally with TensorRT)
+- TRT → ONNX conversion (compiled engines cannot be converted back)
+- Full dynamic shape profile reconstruction (only detects presence, not all profiles)
+
+### 20.4 Architecture Decisions
+
+**Why No ONNX→TRT Conversion?**
+
+TensorRT engine building is a complex, GPU-specific process that requires:
+- Calibration datasets for INT8 quantization
+- Profile selection for dynamic shapes
+- Builder configuration (workspace size, precision modes)
+- Hardware-specific kernel selection
+
+This is outside HaoLine's scope as a model analysis tool. Users should build engines with TensorRT's tools, then use HaoLine to inspect the result.
+
+**Why TRT Analysis is Valuable:**
+
+Even though engines are already optimized, analysis reveals:
+- What optimizations were actually applied (fusion, precision)
+- Bottleneck layers that failed to quantize
+- Memory and compute characteristics of the optimized model
+- Comparison with original ONNX to understand optimization impact
+
+### 20.5 CLI Surface
+
+```bash
+# Analyze TensorRT engine
+haoline model.engine --out-json report.json
+
+# Compare ONNX source with compiled TRT engine
+haoline model.onnx --compare-trt model.engine --out-html comparison.html
+
+# Quantization bottleneck analysis
+haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
+```
+
+**Requirements:**
+- `pip install haoline[tensorrt]`
+- NVIDIA GPU with compatible CUDA driver
+- TensorRT 10.0+ installed
+
+**See Also:** [Epic 52: TensorRT 1.0 Documentation & Testing](BACKLOG.md#epic-52-tensorrt-10-documentation--testing-p2) for planned documentation enhancements.
+
+---
+
 ## Appendix: Delta Log
 
 *Full historical changelog archived in [PRDBacklogArchive.md](PRDBacklogArchive.md) to reduce context window usage.*
@@ -1956,6 +2055,7 @@ The CLI and Streamlit UI adapt to format capabilities:
 
 | Date | Change |
 |------|--------|
+| Dec 13, 2025 | **Epic 52 Added** - TensorRT 1.0 Documentation & Testing (P2). Plans for README/PRD enhancements, test coverage gaps, stability guarantees, and CLI help text improvements. Added section 20 to PRD documenting TensorRT analysis capabilities and limitations. |
 | Dec 11, 2025 | **v0.8.4 Released** - Fixed Pydantic validation errors in QuantizationAdvice when LLM returns nested structures; added robust normalization functions with 35 tests |
 | Dec 11, 2025 | **v0.8.1 Released** - Streamlit auto-convert to ONNX (PyTorch input-shape prompt, TFLite via tflite2onnx, CoreML via coremltools), backlog trimmed to tasks-only, docs updated |
 | Dec 11, 2025 | **v0.8.0 Released** - Streamlit Layer/Quant tabs, uploader covers TFLite/CoreML/OpenVINO/GGUF, clarified format tiers, `--lint-quant` alias; HF Spaces redeploy |

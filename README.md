@@ -306,6 +306,8 @@ Features include:
 - Per-layer timing breakdown charts (when profiling data available)
 - Interactive side-by-side ONNX vs TRT comparison HTML
 
+**Note:** Epic 52 (TensorRT 1.0 Documentation & Testing) is planned to enhance this section with detailed limitations, troubleshooting, and guaranteed vs best-effort feature documentation. See [BACKLOG.md](BACKLOG.md#epic-52-tensorrt-10-documentation--testing-p2) for details.
+
 ### Universal IR Export
 
 | Flag | Description |
