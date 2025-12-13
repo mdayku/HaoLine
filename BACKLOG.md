@@ -37,9 +37,9 @@
 | Epic | Status | Stories | Tasks Complete | Priority |
 |------|--------|---------|----------------|----------|
 | **Current Priority Focus** ||||
-| Epic 41: Standardized Reporting | **COMPLETE** (+41.7 pending) | 6 | 44/50 | **P1** ← parity |
+| Epic 41: Standardized Reporting | **COMPLETE** (+41.7 partial) | 6 | 47/50 | **P1** ← parity |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
-| Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/30 | **P1** ← format UX |
+| Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | **P1** ← format UX |
 | **Active Development** ||||
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 (Story 19.1 complete) |
 | Epic 20: CoreML | In Progress | 3 | 8/19 | P2 (Story 20.1 complete) |
@@ -111,12 +111,12 @@
 **New Story 41.7 (in Epic 41):** Output Parity Gap Closure
 *Address remaining gaps between CLI and Streamlit capabilities.*
 
-- [ ] **Task 41.7.1**: Document PyTorch upload limitation in Streamlit (needs local torch install)
+- [x] **Task 41.7.1**: Document PyTorch upload limitation in Streamlit (needs local torch install) ✅ **COMPLETE**
 - [ ] **Task 41.7.2**: Fix PDF export in Streamlit (playwright issues on HF Spaces) + reexamine PDF output for smart page breaks
-- [ ] **Task 41.7.3**: Add "CLI Only" badges to Streamlit for features requiring local install
+- [x] **Task 41.7.3**: Add "CLI Only" badges to Streamlit for features requiring local install ✅ **COMPLETE**
 - [ ] **Task 41.7.4**: Add "Export as CLI command" button (generate equivalent haoline CLI command)
 - [ ] **Task 41.7.5**: Ensure JSON report schema identical between CLI and Streamlit
-- [ ] **Task 41.7.6**: Add format support comparison table to docs (what works where)
+- [x] **Task 41.7.6**: Add format support comparison table to docs (what works where) ✅ **COMPLETE**
 
 ---
 
@@ -284,31 +284,13 @@
 
 ---
 
-## Epic 49: Format Capability Tiers & HuggingFace Integration (P2)
+## Epic 49: Format Capability Tiers & HuggingFace Integration (P1)
 
 *Rationalize what metrics are available per format, and add auto-conversion for weight-only formats.*
 
 **Relationship to Epic 42:** Epic 42 tests existing conversion paths work correctly. Epic 49 adds NEW features (HuggingFace CLI, format-aware UI). Testing for Epic 49 features should be added to Epic 42 after implementation.
 
-### Format Capability Matrix
-
-| Format | Graph | Params | FLOPs | Memory | Interactive Map | Quant Info | Convert to ONNX | ONNX Compare |
-|--------|-------|--------|-------|--------|-----------------|------------|-----------------|--------------|
-| **ONNX** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | N/A (native) | N/A |
-| **PyTorch** | ✅ via export | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ torch.onnx | N/A |
-| **TensorRT** | ✅ fused | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ `--compare-trt` |
-| **TFLite** | ✅ | ✅ | ❓ | ✅ | ✅ | ✅ | ⚠️ lossy | ❌ |
-| **CoreML** | ✅ layers | ✅ | ❓ | ❓ | ✅ | ❓ | ⚠️ lossy | ❌ |
-| **OpenVINO** | ✅ | ✅ | ❓ | ❓ | ✅ | ✅ | ⚠️ lossy | ❌ |
-| **GGUF** | ❌ metadata | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
-| **SafeTensors** | ❌ weights | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ (needs arch) | ❌ |
-
-**Tier System:**
-- **Tier 1 (Full)**: ONNX, PyTorch - all metrics, interactive graph
-- **Tier 1.5 (Optimized)**: TensorRT - fused graph, ONNX comparison, precision breakdown (requires NVIDIA GPU)
-- **Tier 2 (Graph)**: TFLite, CoreML, OpenVINO - graph structure, most metrics
-- **Tier 3 (Metadata)**: GGUF - architecture metadata, no graph
-- **Tier 4 (Weights)**: SafeTensors - weights only, needs external architecture
+*Format Capability Matrix and Tier System details archived to PRDBacklogArchive.md*
 
 ### Story 49.1: HuggingFace Model Integration
 *Load HF models (config + weights) and auto-convert to ONNX for full analysis.*
@@ -324,9 +306,9 @@
 ### Story 49.2: Format-Aware UI/CLI
 *Show appropriate metrics and disable unavailable features per format.*
 
-- [ ] **Task 49.2.1**: Define `FormatCapabilities` dataclass with feature flags
-- [ ] **Task 49.2.2**: Return capabilities from each format reader
-- [ ] **Task 49.2.3**: CLI: Skip FLOPs/graph for weight-only formats with clear message
+- [x] **Task 49.2.1**: Define `FormatCapabilities` dataclass with feature flags ✅ **COMPLETE**
+- [x] **Task 49.2.2**: Return capabilities from each format reader ✅ **COMPLETE**
+- [x] **Task 49.2.3**: CLI: Skip FLOPs/graph for weight-only formats with clear message ✅ **COMPLETE**
 - [ ] **Task 49.2.4**: Streamlit: Disable graph tab for formats without graph
 - [ ] **Task 49.2.5**: Show "Convert to ONNX for full analysis" prompt for Tier 3/4 formats
 - [ ] **Task 49.2.6**: Add format tier badge in reports (Full/Graph/Metadata/Weights)
