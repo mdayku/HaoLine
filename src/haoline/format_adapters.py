@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -42,6 +43,153 @@ from .universal_ir import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FormatCapabilities:
+    """Capabilities and feature availability for a specific model format.
+
+    Used to determine what analysis features are available for each format
+    and provide appropriate user guidance.
+    """
+
+    # Core analysis capabilities
+    has_graph: bool = True  # Does this format have a computational graph?
+    has_flops: bool = True  # Can FLOPs be calculated?
+    has_interactive_viz: bool = True  # Supports interactive graph visualization?
+
+    # Metadata capabilities
+    has_param_counts: bool = True  # Can parameter counts be extracted?
+    has_memory_estimates: bool = True  # Can memory usage be estimated?
+    has_quantization_info: bool = True  # Contains quantization metadata?
+
+    # Hardware analysis
+    supports_hardware_estimation: bool = True  # Can be used with hardware profiles?
+
+    # Conversion capabilities
+    can_convert_to_onnx: bool = False  # Can be converted to ONNX for full analysis?
+
+    # UI/UX hints
+    tier: str = "Full"  # Full/Graph/Metadata/Weights
+    description: str = ""  # User-friendly description of limitations
+
+
+# Predefined capabilities for each format
+FORMAT_CAPABILITIES: dict[SourceFormat, FormatCapabilities] = {
+    SourceFormat.ONNX: FormatCapabilities(
+        has_graph=True,
+        has_flops=True,
+        has_interactive_viz=True,
+        has_param_counts=True,
+        has_memory_estimates=True,
+        has_quantization_info=True,
+        supports_hardware_estimation=True,
+        can_convert_to_onnx=False,
+        tier="Full",
+        description="Complete analysis including graph visualization and FLOP estimation",
+    ),
+    SourceFormat.PYTORCH: FormatCapabilities(
+        has_graph=True,
+        has_flops=True,
+        has_interactive_viz=True,
+        has_param_counts=True,
+        has_memory_estimates=True,
+        has_quantization_info=True,
+        supports_hardware_estimation=True,
+        can_convert_to_onnx=True,
+        tier="Full",
+        description="Converted to ONNX for complete analysis",
+    ),
+    SourceFormat.TENSORFLOW: FormatCapabilities(
+        has_graph=True,
+        has_flops=True,
+        has_interactive_viz=True,
+        has_param_counts=True,
+        has_memory_estimates=True,
+        has_quantization_info=True,
+        supports_hardware_estimation=True,
+        can_convert_to_onnx=True,
+        tier="Full",
+        description="Converted to ONNX for complete analysis",
+    ),
+    SourceFormat.TFLITE: FormatCapabilities(
+        has_graph=True,
+        has_flops=False,  # FLOP formulas not yet implemented for TFLite ops
+        has_interactive_viz=True,
+        has_param_counts=True,
+        has_memory_estimates=True,
+        has_quantization_info=True,
+        supports_hardware_estimation=True,
+        can_convert_to_onnx=True,
+        tier="Graph",
+        description="Graph structure available, convert to ONNX for FLOP analysis",
+    ),
+    SourceFormat.COREML: FormatCapabilities(
+        has_graph=True,
+        has_flops=False,  # FLOP formulas not yet implemented for CoreML ops
+        has_interactive_viz=True,
+        has_param_counts=True,
+        has_memory_estimates=False,  # Memory estimation may be incomplete
+        has_quantization_info=False,  # Quantization info extraction unclear
+        supports_hardware_estimation=True,
+        can_convert_to_onnx=True,
+        tier="Graph",
+        description="Graph structure available, convert to ONNX for complete analysis",
+    ),
+    SourceFormat.OPENVINO: FormatCapabilities(
+        has_graph=True,
+        has_flops=False,  # FLOP formulas not yet implemented for OpenVINO ops
+        has_interactive_viz=True,
+        has_param_counts=True,
+        has_memory_estimates=False,  # Memory estimation may be incomplete
+        has_quantization_info=True,
+        supports_hardware_estimation=True,
+        can_convert_to_onnx=True,
+        tier="Graph",
+        description="Graph structure available, convert to ONNX for complete analysis",
+    ),
+    SourceFormat.TENSORRT: FormatCapabilities(
+        has_graph=False,  # TRT engines are compiled/fused, no original graph
+        has_flops=False,  # FLOP estimation not available for fused operations
+        has_interactive_viz=False,  # No graph to visualize
+        has_param_counts=False,  # Parameter counts not available in compiled engines
+        has_memory_estimates=True,  # Memory usage can be estimated from engine
+        has_quantization_info=True,  # Precision information available
+        supports_hardware_estimation=True,
+        can_convert_to_onnx=False,
+        tier="Metadata",
+        description="Compiled engine metadata, compare with source ONNX for fusion analysis",
+    ),
+    SourceFormat.GGUF: FormatCapabilities(
+        has_graph=False,  # GGUF is weights-only, no computational graph
+        has_flops=False,  # No operations to count
+        has_interactive_viz=False,  # No graph to visualize
+        has_param_counts=True,  # Parameter counts available from metadata
+        has_memory_estimates=True,  # VRAM estimation available
+        has_quantization_info=True,  # Quantization type information available
+        supports_hardware_estimation=True,  # Hardware estimation works for LLM inference
+        can_convert_to_onnx=False,  # No way to reconstruct full model from weights
+        tier="Metadata",
+        description="LLM architecture metadata and quantization info, no computational graph",
+    ),
+    SourceFormat.SAFETENSORS: FormatCapabilities(
+        has_graph=False,  # SafeTensors is weights-only
+        has_flops=False,  # No operations to count
+        has_interactive_viz=False,  # No graph to visualize
+        has_param_counts=True,  # Parameter counts available
+        has_memory_estimates=True,  # Memory estimation available
+        has_quantization_info=False,  # No quantization metadata
+        supports_hardware_estimation=False,  # No architecture info for inference estimation
+        can_convert_to_onnx=False,  # Needs external architecture (config.json)
+        tier="Weights",
+        description="Weights only, requires external architecture config for analysis",
+    ),
+}
+
+
+def get_format_capabilities(format: SourceFormat) -> FormatCapabilities:
+    """Get capabilities for a specific format."""
+    return FORMAT_CAPABILITIES.get(format, FormatCapabilities())
 
 
 # =============================================================================

@@ -2995,6 +2995,42 @@ def run_inspect() -> None:
 
     progress.start(total_steps, f"Analyzing {model_path.name}")
 
+    # Check format capabilities and warn about limitations
+    from .format_adapters import get_format_capabilities
+    from .universal_ir import SourceFormat
+    from typing import Optional
+
+    # Detect format from file extension
+    file_ext = model_path.suffix.lower()
+    detected_format: Optional[SourceFormat] = None
+    if file_ext == ".onnx":
+        detected_format = SourceFormat.ONNX
+    elif file_ext in (".pt", ".pth"):
+        detected_format = SourceFormat.PYTORCH
+    elif file_ext == ".safetensors":
+        detected_format = SourceFormat.SAFETENSORS
+    elif file_ext == ".gguf":
+        detected_format = SourceFormat.GGUF
+    elif file_ext == ".tflite":
+        detected_format = SourceFormat.TFLITE
+    elif file_ext in (".mlmodel", ".mlpackage"):
+        detected_format = SourceFormat.COREML
+    elif file_ext == ".xml":
+        detected_format = SourceFormat.OPENVINO
+    elif file_ext in (".engine", ".plan"):
+        detected_format = SourceFormat.TENSORRT
+
+    capabilities = get_format_capabilities(detected_format) if detected_format else None
+
+    # Warn about format limitations
+    if capabilities and detected_format and not capabilities.has_graph:
+        logger.warning(f"Format {detected_format.value}: {capabilities.description}")
+        logger.warning("Skipping graph visualization and FLOP estimation for weight-only formats")
+
+    if capabilities and detected_format and not capabilities.has_flops:
+        logger.warning(f"Format {detected_format.value}: FLOP estimation not available")
+        logger.warning("Consider converting to ONNX for complete analysis")
+
     # Run inspection
     try:
         progress.step("Loading model and extracting graph structure")

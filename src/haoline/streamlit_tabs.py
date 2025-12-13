@@ -678,8 +678,8 @@ def render_export_tab(
             """
             <div class="export-card">
                 <div class="export-icon">📑</div>
-                <div class="export-title">PDF Report</div>
-                <div class="export-desc">Requires Playwright - Use CLI for PDF export</div>
+                <div class="export-title">PDF Report <span style="background:#dc2626;color:white;font-size:0.65rem;padding:1px 4px;border-radius:3px;">CLI Only</span></div>
+                <div class="export-desc">Requires Playwright installation - use CLI locally</div>
             </div>
             """,
             unsafe_allow_html=True,

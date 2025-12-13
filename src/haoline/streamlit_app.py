@@ -1572,7 +1572,7 @@ def main():
                 "xml",  # OpenVINO IR
                 "gguf",  # GGUF (LLM weights)
             ],
-            help="Limit 500MB per file",
+            help="Limit 500MB per file. PyTorch models (.pt/.pth) require local PyTorch installation for conversion.",
         )
 
         if uploaded_file is None:

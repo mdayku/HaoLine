@@ -11,13 +11,13 @@
 
 ## Current Priority Focus (Dec 2025)
 
-**Goal:** Close UI parity gaps identified by deep research audit.
+**Goal:** Close remaining UI parity gaps and improve format user experience.
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
-| **P1** | UI Parity Gaps | Stories 11.5 (layer table), 11.6 (quant UI), format uploaders |
+| **P1** | UI Parity Gaps | Story 41.7 (CLI-Streamlit feature parity) |
 | **P1** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
-| **P1** | Honest Docs | Story 18.8 (Universal IR limitations documented) |
+| **P1** | Format Testing | Epic 42 (comprehensive conversion testing) |
 | **P2** | LLM Support | Epic 24 (GGUF UI: context slider, quant charts) |
 | **P2** | CLI UX | Epic 50 (dependency prompting, --check-deps) |
 
@@ -36,30 +36,23 @@
 
 | Epic | Status | Stories | Tasks Complete | Priority |
 |------|--------|---------|----------------|----------|
-| Epic 1: Environment Setup | **Complete** | 3 | 11/11 | Done |
-| Epic 2: Core Analysis Engine | **Complete** | 4 | 17/17 | Done |
-| Epic 3: Pattern Analysis | **Complete** | 2 | 9/9 | Done |
-| Epic 4: CLI and Output | **Complete** | 4 | 18/18 | Done |
-| Epic 4B: PyTorch Integration | **Complete** | 2 | 14/14 | Done |
-| Epic 4C: TensorFlow/Keras/JAX | **Complete** | 3 | 15/15 | Done |
-| Epic 5: Visualization | **Complete** | 8 | 52/52 | Done |
-| Epic 6: Hardware/Compare | **COMPLETE** | 10 | 56/56 | P3 |
-| Epic 7: LLM Integration | **COMPLETE** | 2 | 5/5 | P3 |
-| Epic 8: Testing & CI/CD | **COMPLETE** | 4 | 18/18 | P3 |
-| Epic 9: Runtime Profiling | **COMPLETE** | 6 | 22/22 | P2 |
-| Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
-| Epic 10B: Standalone Package | **COMPLETE** | 4 | 23/23 | Done |
-| Epic 11: Streamlit Web UI | **COMPLETE** (29/29) | 5 | 29/29 | Done |
-| Epic 12: Eval Import & Comparison | **COMPLETE** | 7 | 30/30 | Done |
-| Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| Epic 18: Universal IR | **COMPLETE** (+18.8 pending) | 7 | 25/31 | **P1** ← honest docs |
+| **Current Priority Focus** ||||
+| Epic 41: Standardized Reporting | **COMPLETE** (+41.7 pending) | 6 | 44/50 | **P1** ← parity |
+| Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
+| Epic 49: Format Tiers & HuggingFace | Not Started | 5 | 0/30 | **P1** ← format UX |
+| **Active Development** ||||
 | Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 |
 | Epic 20: CoreML | In Progress | 3 | 8/19 | P2 |
 | Epic 21: TFLite | In Progress | 3 | 5/18 | P2 (ONNX→TFLite blocked) |
-| Epic 22: TensorRT Engine Introspection | **COMPLETE** | 8 | 50/50 | Done |
 | Epic 23: OpenVINO | In Progress | 3 | 7/16 | P3 |
 | Epic 24: GGUF | In Progress | 2 | 7/13 | **P2** ← LLM parity |
-| Epic 25: Privacy/Trust | **COMPLETE** | 3 | 9/9 | P1 |
+| Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
+| Epic 36: Layer Visualization | In Progress | 5 | 4/25 | **P2** |
+| Epic 38: Docker Distribution | In Progress | 1 | 1/5 | P3 |
+| Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/18 | **P2** ← dep prompts |
+| **Future Work** ||||
+| Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
+| Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 | **LLM-SCALE ANALYSIS** ||||
 | Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
 | Epic 27: Attention Variants | Not Started | 4 | 0/19 | P3 |
@@ -96,18 +89,7 @@
 
 *Detailed task lists archived in [PRDBacklogArchive.md](PRDBacklogArchive.md)*
 
-- **Epic 1: Environment Setup** (11/11) - Fork, build, scaffolding
-- **Epic 2: Core Analysis Engine** (17/17) - Graph loader, params, FLOPs, memory
-- **Epic 3: Pattern Analysis** (9/9) - Block detection, risk heuristics
-- **Epic 4: CLI and Output** (18/18) - CLI, JSON, Markdown, HTML
-
-- **Epic 4B: PyTorch Integration** (14/14) - PyTorch→ONNX conversion
-- **Epic 4C: TensorFlow/Keras/JAX** (15/15) - TF/Keras/JAX→ONNX conversion
-- **Epic 5: Visualization** (52/52) - Charts, patterns, icons, edges, interactive graph, layer table
-- **Epic 6: Hardware/Compare** (56/56) - Hardware profiles, estimates, compare mode, quantization impact
-- **Epic 7: LLM Integration** (5/5) - OpenAI API, summaries, env var config
-- **Epic 8: Testing & CI/CD** (18/18) - Unit tests, integration tests, GitHub Actions
-- **Epic 9: Runtime Profiling** (22/22) - Batch benchmarking, GPU memory, per-layer timing, bottleneck detection
+*All core foundation epics (1-9, 4B, 4C) completed and archived.*
 
 ---
 
@@ -130,40 +112,13 @@
 ### Story 10.5: Model History and Comparison
 - [ ] **Task 10.5.1-10.5.5**: Versioning features (5 tasks)
 
-- **Epic 10B: Standalone Package** (23/23) - Greenfield extraction, PyPI publishing, CI/CD
-- **Epic 11: Streamlit Web UI** (17/17 + 11.5-11.6 pending) - Web interface, HuggingFace Spaces deployment
 
-**New Story 11.5 (in Epic 11):** Layer Summary In-App Table **← DEEP RESEARCH PRIORITY**
-*Gap: Per-layer breakdowns exist internally but only downloadable via CSV, no in-app table.*
-
-- [x] **Task 11.5.1**: Add "Layer Details" tab in Streamlit analysis view
-- [x] **Task 11.5.2**: Use LayerSummaryBuilder to generate pandas DataFrame
-- [x] **Task 11.5.3**: Display layer table via st.dataframe (sortable, filterable)
-- [x] **Task 11.5.4**: Show layer name, op type, param count, FLOPs, output shape
-- [x] **Task 11.5.5**: Add download buttons for CSV/JSON export (mirror CLI --layer-csv)
-- [x] **Task 11.5.6**: Add layer search/filter input
-
-**New Story 11.6 (in Epic 11):** Quantization Lint/Advice Display **← DEEP RESEARCH PRIORITY**
-*Gap: Quantization lint/advice computed in CLI but no UI display.*
-
-- [x] **Task 11.6.1**: Add "Quantization" panel/tab in Streamlit
-- [x] **Task 11.6.2**: Display readiness_score from QuantizationLinter
-- [x] **Task 11.6.3**: List quantization warnings with severity colors
-- [x] **Task 11.6.4**: Show QuantizationAdvisor strategy recommendations
-- [x] **Task 11.6.5**: Display per-layer quantization sensitivity if available
-- [x] **Task 11.6.6**: Add --lint-quant CLI flag to print lint warnings
-- **Epic 12: Eval Import** (30/30) - Eval schemas, adapters, cost calculator, YOLO demo
-- **Epic 18: Universal IR** (25/25) - Universal graph, format adapters, conversion matrix
-- **Epic 25: Privacy/Trust** (9/9) - Local-first, output controls, enterprise documentation
-- **Epic 33: QAT Linters** (41/41) - Quantization readiness, QAT validation, recommendations
-- **Epic 39: Pydantic Migration** (12/12) - Schema validation, Pydantic models
-- **Epic 41: Standardized Reporting** (44/44 + 41.7 in progress) - CLI-Streamlit parity, enhanced LLM prompts
 
 **New Story 41.7 (in Epic 41):** Output Parity Gap Closure
 *Address remaining gaps between CLI and Streamlit capabilities.*
 
 - [ ] **Task 41.7.1**: Document PyTorch upload limitation in Streamlit (needs local torch install)
-- [ ] **Task 41.7.2**: Fix or remove PDF export in Streamlit (playwright issues on HF Spaces)
+- [ ] **Task 41.7.2**: Fix PDF export in Streamlit (playwright issues on HF Spaces) + reexamine PDF output for smart page breaks
 - [ ] **Task 41.7.3**: Add "CLI Only" badges to Streamlit for features requiring local install
 - [ ] **Task 41.7.4**: Add "Export as CLI command" button (generate equivalent haoline CLI command)
 - [ ] **Task 41.7.5**: Ensure JSON report schema identical between CLI and Streamlit
@@ -278,13 +233,6 @@
 
 ---
 
-## Epic 22: TensorRT Engine Introspection - **COMPLETE**
-
-*Archived to [PRDBacklogArchive.md](PRDBacklogArchive.md) - 50/50 tasks (v0.7.2)*
-
-**Summary:** Deep analysis of NVIDIA TensorRT compiled engines including layer rewrite detection (FlashAttention, GELU, LayerNorm), ONNX↔TRT side-by-side HTML comparison, performance metadata panel, quantization bottleneck analysis, and timing charts.
-
----
 
 ## Epic 23: OpenVINO Format (P3)
 

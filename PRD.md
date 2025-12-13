@@ -6,8 +6,8 @@
 |-------|-------|
 | Project | HaoLine - Universal Model Inspector |
 | Author | Marcus |
-| Version | 2.1 |
-| Last Updated | December 11, 2025 |
+| Version | 2.2 |
+| Last Updated | December 13, 2025 |
 | Status | In Development |
 
 **Related Documents:**
@@ -1954,8 +1954,11 @@ The CLI and Streamlit UI adapt to format capabilities:
 
 **Recent Changes (December 2025):**
 
-| Date | Change | 
+| Date | Change |
 |------|--------|
+| Dec 11, 2025 | **v0.8.4 Released** - Fixed Pydantic validation errors in QuantizationAdvice when LLM returns nested structures; added robust normalization functions with 35 tests |
+| Dec 11, 2025 | **v0.8.1 Released** - Streamlit auto-convert to ONNX (PyTorch input-shape prompt, TFLite via tflite2onnx, CoreML via coremltools), backlog trimmed to tasks-only, docs updated |
+| Dec 11, 2025 | **v0.8.0 Released** - Streamlit Layer/Quant tabs, uploader covers TFLite/CoreML/OpenVINO/GGUF, clarified format tiers, `--lint-quant` alias; HF Spaces redeploy |
 | Dec 6, 2025 | **Epic 22 COMPLETE (50/50)** - TensorRT Engine Introspection. New: LayerRewrite detection (FlashAttention, GELU, LayerNorm), TRTPerformanceMetadata (workspace, bound_type), side-by-side HTML comparison, timing/bound-type charts. CLI `--out-html` for comparison, Epic 36 tasks 36.1.1-2 and 36.3.3-4 partially covered. Ready for v0.7 release. |
 | Dec 6, 2025 | **TensorRT Foundation (Epic 22)** - Added TRTEngineReader, ONNX↔TRT comparison, fused graph reconstruction, memory metrics. CLI `--compare-trt` flag, Streamlit integration with GPU disclaimers. |
 | Dec 6, 2025 | **Format Reader Tests Complete** - Added test_formats.py with 33 unit tests. SafeTensors (19.1.6) and CoreML (20.1.6, 20.1.7) reader stories complete. 350 tests total. |
