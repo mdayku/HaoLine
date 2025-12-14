@@ -286,7 +286,7 @@ Or use the web UI's comparison mode for an interactive experience.
 | `--compare-trt ENGINE` | Compare ONNX model with its compiled TensorRT engine |
 | `--quant-bottlenecks` | Show detailed quantization bottleneck analysis |
 
-**TensorRT Engine Analysis (v0.7):** Analyze compiled `.engine` or `.plan` files directly:
+**TensorRT Engine Analysis:** Analyze compiled `.engine` or `.plan` files directly:
 
 ```bash
 # Analyze TensorRT engine

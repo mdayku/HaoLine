@@ -28,7 +28,7 @@
 - ~~Add `.xml` to Streamlit uploader (Task 23.2.5)~~ ✅
 - Updated format capabilities matrix with tier system
 
-**Recent Release:** v0.8.4 (Dec 11, 2025) — Fixed Pydantic validation errors in QuantizationAdvice when LLM returns nested structures (sensitive_layers, safe_layers, runtime_recommendations). Added robust normalization functions with 35 unit tests.
+**Recent Release:** v0.9.3 (Dec 12, 2025) — CI test fixes, Streamlit tab refactoring, improved import structure.
 
 ---
 

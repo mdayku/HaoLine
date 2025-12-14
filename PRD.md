@@ -2056,6 +2056,8 @@ haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
 | Date | Change |
 |------|--------|
 | Dec 13, 2025 | **Epic 52 Added** - TensorRT 1.0 Documentation & Testing (P2). Plans for README/PRD enhancements, test coverage gaps, stability guarantees, and CLI help text improvements. Added section 20 to PRD documenting TensorRT analysis capabilities and limitations. |
+| Dec 12, 2025 | **v0.9.3 Released** - CI test fixes, Streamlit tab refactoring, improved import structure (lazy imports for streamlit in render functions) |
+| Dec 12, 2025 | **v0.9.2 Released** - Refactored Streamlit tabs into `streamlit_tabs.py` module, single source of truth for demo/upload flows, added 39 unit tests for tab data preparation |
 | Dec 11, 2025 | **v0.8.4 Released** - Fixed Pydantic validation errors in QuantizationAdvice when LLM returns nested structures; added robust normalization functions with 35 tests |
 | Dec 11, 2025 | **v0.8.1 Released** - Streamlit auto-convert to ONNX (PyTorch input-shape prompt, TFLite via tflite2onnx, CoreML via coremltools), backlog trimmed to tasks-only, docs updated |
 | Dec 11, 2025 | **v0.8.0 Released** - Streamlit Layer/Quant tabs, uploader covers TFLite/CoreML/OpenVINO/GGUF, clarified format tiers, `--lint-quant` alias; HF Spaces redeploy |
