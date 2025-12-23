@@ -1,208 +1,76 @@
 # HaoLine Cursor Rules
 
-## Code Style (ALWAYS Follow)
+## Quick Reference
 
-When writing Python code:
-- **Ruff-formatted**: 100 char line limit, double quotes, trailing commas in multi-line
-- **Ruff-linted**: No unused imports, no undefined names, proper import sorting (I, F, E, W)
-- **Type hints**: Add type hints to all function signatures (args and return types)
-- **Docstrings**: Google-style docstrings for public functions/classes
-- **No trailing whitespace or extra blank lines at end of file**
+```bash
+python scripts/check.py         # Format + lint (run before every commit)
+python scripts/check.py --all   # Format + lint + mypy + tests (before push/PR)
+```
 
-Example function:
+## Code Style
+
+- **Ruff**: 100 char lines, double quotes, trailing commas in multi-line
+- **Type hints**: All function signatures (args + return types)
+- **Docstrings**: Google-style for public functions/classes
+
 ```python
-def analyze_model(
-    model_path: Path,
-    hardware: str = "auto",
-    precision: str = "fp32",
-) -> InspectionReport:
+def analyze_model(model_path: Path, hardware: str = "auto") -> InspectionReport:
     """Analyze a model and return inspection report.
 
     Args:
         model_path: Path to the ONNX model file.
         hardware: Hardware profile name or 'auto' for detection.
-        precision: Precision for estimates (fp32, fp16, int8).
 
     Returns:
         InspectionReport with analysis results.
     """
-    ...
 ```
 
-## Code Quality
+## Agent Safety Rules (MUST FOLLOW)
 
-**Before EVERY commit (MANDATORY):**
-1. Run `ruff format src/haoline/` to format Python code
-2. Run `ruff check src/haoline/ --fix` to fix linting issues
-3. Verify both pass before committing
+1. **No broad refactors** without explicit user request
+2. **No new dependencies** without updating `pyproject.toml` extras + README table
+3. **No changes to public dataclasses** (`InspectionReport`, `ModelMetadata`, `GraphSummary`, IR classes) without updating HF safe-access logic and tests
+4. **Always add/update tests** when touching IR, adapters, or CLI
 
-**Every 3 commits (or before any release):**
-4. Run `mypy src/haoline/ --ignore-missing-imports` to check types
-5. Fix any type errors before proceeding
+## Where to Add Things
 
-Quick commands:
-```bash
-# Every commit (required):
-ruff format src/haoline/; ruff check src/haoline/ --fix
+| What | Where |
+|------|-------|
+| CLI commands/flags | `src/haoline/cli_typer.py` (NOT `_cli_legacy.py`) |
+| Format readers | `src/haoline/formats/<format>.py` |
+| Tests | `src/haoline/tests/` |
+| Format reader integration tests | `test_format_readers.py` (repo root) |
 
-# Every 3 commits or before release:
-mypy src/haoline/ --ignore-missing-imports
-```
+## CLI Changes Checklist
 
-**Commit frequency tracking:** Keep a mental note of commits since last mypy run. If unsure, just run it - it's fast.
+When adding CLI flags/commands:
+- [ ] Add to `cli_typer.py`
+- [ ] Add to README.md CLI Reference table
+- [ ] Add test in `test_cli_typer.py`
+- [ ] Update `generate_cli_command()` in `streamlit_tabs.py` (if web-relevant)
 
-### Common mypy Fixes
+## Dependency Changes Checklist
 
-- **no-any-return**: Add explicit type cast or fix return type
-  ```python
-  # Bad: return some_dict.get("key")  # Returns Any
-  # Good: return cast(str, some_dict.get("key"))
-  # Or: result: str = some_dict.get("key", "")
-  ```
+When adding optional dependencies:
+- [ ] Add to `pyproject.toml` under `[project.optional-dependencies]`
+- [ ] Add to `full` extra (if cross-platform)
+- [ ] Update README.md extras table
 
-- **assignment type mismatch**: Use correct types
-  ```python
-  # Bad: count: int = 1.5
-  # Good: count: int = int(1.5)
-  ```
+## HuggingFace Spaces Compatibility (CRITICAL)
 
-- **numpy dtype issues**: Use `np.dtype` or `Any` for complex dtype expressions
+`streamlit_app.py` runs against PyPI version (may be older). Use safe access for new attributes:
 
-## Git Workflow
-
-- Always check `git status` before committing
-- Use conventional commit messages (feat:, fix:, docs:, refactor:, test:, chore:)
-- Push after committing to keep GitHub in sync
-
-## Testing
-
-- Run `pytest src/haoline/tests/ -v` before major changes
-- CI runs on push to main - check GitHub Actions if build fails
-
-## File Organization
-
-- Core analysis: `src/haoline/` 
-- Tests: `src/haoline/tests/`
-- Format readers: `src/haoline/formats/`
-- Eval import: `src/haoline/eval/`
-- Docs: `README.md`, `PRD.md`, `BACKLOG.md`, `Architecture.md`, `DEPLOYMENT.md`, `PRIVACY.md`
-
-## Format Reader Testing (IMPORTANT)
-
-**Single test script rule:** All format reader tests go in `test_format_readers.py` at repo root.
-
-**When adding a new format reader:**
-1. Create the reader in `src/haoline/formats/<format>.py`
-2. Add a `test_<format>()` function to `test_format_readers.py`
-3. Register it in the `TESTS` dict in `main()`
-4. **DO NOT** create a separate test script
-
-This keeps format testing consolidated and prevents script sprawl.
-
-## Dependency Management (IMPORTANT)
-
-**When adding a new optional dependency:**
-
-1. Add it to `pyproject.toml` under `[project.optional-dependencies]`
-2. Create a dedicated extra if it's format/feature-specific (e.g., `ultralytics`, `pytorch`)
-3. Add to `full` extra if it works cross-platform
-4. **Update README.md** - add to the "Format-Specific Extras" or "Other Extras" table
-5. If it's a format reader, also update `test_format_readers.py`
-
-**Current extras structure:**
-- Framework converters: `pytorch`, `tensorflow`, `ultralytics`, `jax`
-- Format readers: `safetensors`, `tflite`, `coreml`, `openvino`, `tensorrt`
-- Features: `llm`, `web`, `pdf`, `gpu`, `runtime`
-- Bundle: `full` (everything cross-platform, excludes `tensorrt` which requires NVIDIA GPU)
-
-**Checklist when adding dependency:**
-- [ ] Added to pyproject.toml extras
-- [ ] Added to `full` extra (if cross-platform)
-- [ ] Updated README.md extras table
-- [ ] Updated test script (if format reader)
-
-## CLI Architecture (IMPORTANT)
-
-**CLI Files:**
-- `src/haoline/cli_typer.py` - **MAIN CLI** (Typer-based, add new features here)
-- `src/haoline/_cli_legacy.py` - **DEPRECATED** (legacy argparse, kept for helper functions only)
-
-**When adding a new CLI flag or command:**
-
-1. Add to `src/haoline/cli_typer.py` (Typer)
-2. **Update README.md** - add to the appropriate table in "CLI Reference" section
-3. Update the `generate_cli_command()` function in `streamlit_tabs.py` if the flag is relevant to web UI exports
-4. Add tests to `src/haoline/tests/test_cli_typer.py`
-
-**Checklist when adding CLI flags:**
-- [ ] Added to `cli_typer.py` (NOT _cli_legacy.py)
-- [ ] Added to README.md CLI Reference table
-- [ ] Updated `generate_cli_command()` (if web-relevant)
-- [ ] Added test in test_cli_typer.py
-
-## Version Compatibility (IMPORTANT)
-
-**HuggingFace Spaces Deployment:**
-- `streamlit_app.py` is copied directly from GitHub to HF Spaces
-- BUT `haoline` package is installed from PyPI (may be older version)
-- This means `streamlit_app.py` code may run against older `InspectionReport`, etc.
-
-**Rule:** When accessing NEW attributes on core classes in `streamlit_app.py`:
 ```python
-# BAD - will crash if attribute doesn't exist in PyPI version:
-if report.universal_graph:
-    ...
+# BAD - crashes if attribute doesn't exist:
+if report.universal_graph: ...
 
-# GOOD - safe access with fallback:
-if hasattr(report, "universal_graph") and report.universal_graph:
-    ...
-
-# Or:
-universal_graph = getattr(report, "universal_graph", None)
-if universal_graph:
-    ...
+# GOOD - safe access:
+if hasattr(report, "universal_graph") and report.universal_graph: ...
 ```
 
-**Core classes that may have version mismatches:**
-- `InspectionReport`
-- `ModelMetadata`
-- `GraphSummary`
-- Any dataclass in `report.py`, `schema.py`
+## Documentation
 
-**When to use safe access:**
-- In `streamlit_app.py` for any attribute added after v0.2.4
-- When the attribute was added in a commit but not yet published to PyPI
-
-## Documentation Archival (IMPORTANT)
-
-**When editing PRD.md or BACKLOG.md:**
-
-These files can grow large and consume context window. After editing:
-
-1. **Check for completed epics** in BACKLOG.md - if an epic is 100% complete, move detailed task lists to `PRDBacklogArchive.md`
-2. **Check for old delta log entries** in PRD.md - entries older than 7 days should be moved to `PRDBacklogArchive.md`
-3. **Keep summaries** - completed epics should retain a one-line summary in BACKLOG.md, not full task lists
-
-**Archive file:** `PRDBacklogArchive.md` - contains:
-- Detailed task lists from completed epics
-- Historical delta log entries
-- This is for reference only, not active development
-
-**What to keep in active docs:**
-- BACKLOG.md: Progress summary table, in-progress epics, future epics
-- PRD.md: Requirements, specs, architecture decisions, recent (7 days) delta log
-
-**Example trimming:**
-```markdown
-# Before (in BACKLOG.md):
-## Epic 5: Visualization (COMPLETE - 52/52)
-### Story 5.1: Chart Infrastructure
-- [x] Task 5.1.1: Set up matplotlib...
-- [x] Task 5.1.2: Create theme...
-(20 more tasks)
-
-# After:
-## Epic 5: Visualization (COMPLETE - 52/52)
-*Archived to PRDBacklogArchive.md*
-```
-
+- Keep BACKLOG.md focused on active work
+- Archive completed epics to `PRDBacklogArchive.md`
+- Move PRD.md delta log entries older than 7 days to archive
