@@ -253,11 +253,59 @@ def inspect(
             # Show full traceback
             console.print_exception(show_locals=True)
         else:
-            # User-friendly error
+            # User-friendly error with suggestions
             error_type = type(e).__name__
             err_console.print(f"[red]Error:[/red] {error_type}: {e}")
-            err_console.print("[dim]Run with --verbose for full traceback[/dim]")
+
+            # Suggest fixes for common errors
+            suggestion = _get_error_suggestion(e, model_path, from_pytorch)
+            if suggestion:
+                err_console.print(f"\n[yellow]Suggestion:[/yellow] {suggestion}")
+
+            err_console.print("\n[dim]Run with --verbose for full traceback[/dim]")
         raise typer.Exit(1) from None
+
+
+def _get_error_suggestion(
+    error: Exception,
+    model_path: Path | None,
+    from_pytorch: Path | None,
+) -> str | None:
+    """Return a helpful suggestion for common errors."""
+    error_msg = str(error).lower()
+    error_type = type(error).__name__
+
+    # File not found
+    if error_type == "FileNotFoundError" or "no such file" in error_msg:
+        return "Check that the model file exists and the path is correct."
+
+    # ONNX format errors
+    if "onnx" in error_msg and ("invalid" in error_msg or "corrupt" in error_msg):
+        return "The ONNX file may be corrupted. Try re-exporting from your framework."
+
+    # Missing dependency
+    if error_type == "ModuleNotFoundError":
+        module = error_msg.replace("no module named ", "").strip("'\"")
+        return f"Missing dependency. Try: pip install {module}"
+
+    # PyTorch conversion without input shape
+    if from_pytorch and "shape" in error_msg:
+        return "Ensure --input-shape matches your model's expected input (e.g., 1,3,224,224)."
+
+    # Memory errors
+    if "memory" in error_msg or error_type == "MemoryError":
+        return "Model too large for available memory. Try closing other applications."
+
+    # Permission errors
+    if error_type == "PermissionError":
+        return "Check file permissions and ensure you have read access."
+
+    # TensorRT errors
+    if model_path and str(model_path).endswith(".engine"):
+        if "tensorrt" in error_msg:
+            return "TensorRT engine may be incompatible. Engines are GPU-specific."
+
+    return None
 
 
 def _run_inspect(
@@ -700,11 +748,21 @@ def _check_module(module: str) -> bool:
 
 
 @app.command("check-deps")
-def check_deps_cmd() -> None:
+def check_deps_cmd(
+    install: Annotated[
+        bool,
+        typer.Option("--install", "-i", help="Offer to install missing dependencies"),
+    ] = False,
+) -> None:
     """Check optional dependencies and show what features are available.
 
     Groups dependencies by feature category and shows install commands
     for missing ones.
+
+    [bold]Examples:[/bold]
+
+        python -m haoline check-deps
+        python -m haoline check-deps --install
     """
     from haoline import __version__
 
@@ -758,6 +816,23 @@ def check_deps_cmd() -> None:
         # Full install hint
         console.print("\n  [dim]Or install everything:[/dim]")
         console.print("  [cyan]pip install haoline[full][/cyan]")
+
+        # Offer to install if --install flag used
+        if install:
+            console.print()
+            if typer.confirm("Would you like to install all missing dependencies?"):
+                extras = list(missing_by_extra.keys())
+                extras_str = ",".join(extras)
+                cmd = f"pip install haoline[{extras_str}]"
+                console.print(f"\n[bold]Running:[/bold] {cmd}")
+                import subprocess
+
+                result = subprocess.run(cmd, shell=True)
+                if result.returncode == 0:
+                    console.print("\n[green]Installation complete![/green]")
+                else:
+                    err_console.print("\n[red]Installation failed[/red]")
+                    raise typer.Exit(1)
     else:
         console.print("\n[green]All optional dependencies are installed![/green]")
 

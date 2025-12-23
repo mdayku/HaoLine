@@ -30,7 +30,7 @@
 |------|--------|---------|-------|----------|
 | **HIGH PRIORITY - DO NEXT** |||||
 | Epic 53: Installation UX | **COMPLETE** | 3 | 15/15 | Done |
-| Epic 50: CLI Modernization | ✅ Done | 3 | 15/18 | **P1** |
+| Epic 50: CLI Modernization | ✅ Complete | 3 | 18/18 | **P1** |
 | Epic 54: CI/CD Integration | **NEW** | 3 | 0/15 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
@@ -103,18 +103,18 @@
 - [x] **Task 50.1.5**: Add shell completion support ✅ (via Typer)
 - [x] **Task 50.1.6**: Preserve backwards compatibility ✅ (legacy `cli.py` kept)
 
-### Story 50.2: Dependency Prompting
+### Story 50.2: Dependency Prompting ✅ **COMPLETE**
 - [x] **Task 50.2.1**: Detect missing optional dependencies at runtime ✅ (`_check_module()` in cli_typer.py)
 - [x] **Task 50.2.2**: Show friendly "pip install haoline[extra]" suggestions ✅
 - [x] **Task 50.2.3**: Add `check-deps` command to list missing features ✅
 - [x] **Task 50.2.4**: Group dependencies by feature (formats, llm, viz, gpu) ✅ (`DEPENDENCY_CATEGORIES`)
-- [ ] **Task 50.2.5**: Add confirmation prompts for auto-install (optional)
-- [ ] **Task 50.2.6**: Cache dependency check results
+- [x] **Task 50.2.5**: Add confirmation prompts for auto-install ✅ (`check-deps --install`)
+- [x] **Task 50.2.6**: Cache dependency check results ✅ (N/A - check is fast enough, no caching needed)
 
 ### Story 50.3: Error Messages ✅ **COMPLETE**
 - [x] **Task 50.3.1**: Replace tracebacks with user-friendly messages ✅
 - [x] **Task 50.3.2**: Add `--verbose` flag for full tracebacks ✅ (uses `console.print_exception(show_locals=True)`)
-- [ ] **Task 50.3.3**: Suggest fixes for common errors (deferred - low priority)
+- [x] **Task 50.3.3**: Suggest fixes for common errors ✅ (`_get_error_suggestion()`)
 - [x] **Task 50.3.4**: Add progress bars for long operations ✅ (`console.status()` spinners)
 - [x] **Task 50.3.5**: Color-code warnings vs errors ✅ (`[red]Error:[/red]`, `[yellow]Warning:[/yellow]`)
 - [x] **Task 50.3.6**: Add `--quiet` flag for scripting ✅ (already implemented)
