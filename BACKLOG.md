@@ -8,15 +8,81 @@
 
 ---
 
+## Version 1.0 Exit Criteria
+
+**Definition:** HaoLine 1.0 means *"a user can reliably analyze, compare, and make deployment decisions about real-world models across major formats, with predictable behavior and clear limitations."*
+
+### 1.0 Checklist (18 tasks)
+
+| # | Category | Task | Status |
+|---|----------|------|--------|
+| 1 | **Testing** | PyTorch→ONNX conversion tests pass | ✅ Done |
+| 2 | **Testing** | ONNX analysis produces correct metrics | ✅ Done |
+| 3 | **Testing** | TensorRT comparison (`--compare-trt`) works | ✅ Done |
+| 4 | **Testing** | Conversion error handling test (42.5.6) | ☐ TODO |
+| 5 | **Testing** | TF/Keras→ONNX conversion test (42.2.4-5) | ☐ TODO |
+| 6 | **UX** | Disable graph tab for formats without graph (49.2.4) | ☐ TODO |
+| 7 | **UX** | Show "Convert to ONNX for full analysis" prompt (49.2.5) | ☐ TODO |
+| 8 | **UX** | Add format tier badge in reports (49.2.6) | ☐ TODO |
+| 9 | **UX** | Show "Feature unavailable" with upgrade path (49.2.7) | ☐ TODO |
+| 10 | **TRT Docs** | README: TensorRT limitations section (52.1.1-3) | ☐ TODO |
+| 11 | **TRT Docs** | README: TensorRT troubleshooting (52.1.6) | ☐ TODO |
+| 12 | **TRT Docs** | Test graceful degradation when TRT missing (52.3.2) | ☐ TODO |
+| 13 | **TRT Docs** | CLI error message when TRT missing (52.3.5) | ☐ TODO |
+| 14 | **README** | Verify all CLI examples work | ☐ TODO |
+| 15 | **README** | Verify format support claims match reality | ☐ TODO |
+| 16 | **README** | Remove/update any "coming soon" language | ☐ TODO |
+| 17 | **Stability** | CI passes on main branch | ✅ Done |
+| 18 | **Stability** | No known critical bugs in issue tracker | ☐ TODO |
+
+**Progress:** 4/18 complete
+
+### README Accuracy Checklist
+
+Before 1.0, verify each claim in README.md is true:
+
+| Section | Claim | Verify |
+|---------|-------|--------|
+| Quick Start | `pip install haoline` works | ☐ |
+| Quick Start | `python -m haoline model.onnx --out-html report.html` works | ☐ |
+| Quick Start | `python -m haoline compare --models v1.onnx v2.onnx` works | ☐ |
+| Beginner Guide | HuggingFace model download example works | ☐ |
+| Beginner Guide | `--from-pytorch` with input-shape works | ☐ |
+| Web Interface | HF Spaces link is live and functional | ☐ |
+| Web Interface | `haoline-web` command works | ☐ |
+| Installation | All extras install correctly (`[llm]`, `[full]`, etc.) | ☐ |
+| Common Commands | `haoline --list-hardware` works | ☐ |
+| Common Commands | `--from-tensorflow` conversion works | ☐ |
+| CI/CD Section | `--fail-on` example works | ☐ |
+| CI/CD Section | `--decision-report` example works | ☐ |
+| Format Support | All listed formats actually load | ☐ |
+
+### What's NOT Required for 1.0
+
+These are explicitly post-1.0:
+- AWS GPU deployment (Epic 51)
+- SaaS web app (Epic 10)
+- LLM-scale analysis (Epics 26-30)
+- Native FLOPs for non-ONNX formats (Epic 49.5)
+- Model optimization service (Epics 31-32)
+- Model card standards (Epic 47)
+- JAX conversion tests (42.2.7-8, 42.3.8-9)
+- SafeTensors writer tests (42.6.x)
+- GGUF advanced UI (Epic 24.2)
+
+---
+
 ## Current Priority Focus (Dec 2025)
 
-**Goal:** Position HaoLine as "The Model Decision Layer" — a CI/CD gatekeeper, not just an analyzer.
+**Goal:** Ship HaoLine 1.0 — trustworthy, not just impressive.
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
-| ✅ | CI/CD Integration | Epic 54 COMPLETE (`--fail-on` flags, GitHub Actions, Decision Reports) |
-| **P1** | Format Testing | Epic 42 (comprehensive conversion testing) |
-| **P2** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
+| ✅ | CI/CD Integration | Epic 54 COMPLETE |
+| **P0** | 1.0 Blockers | Tasks 4-16 from 1.0 Checklist above |
+| **P1** | Format Testing | Epic 42 (1.0-critical subset only) |
+| **P1** | Format UX | Epic 49.2 (core tasks only) |
+| **P1** | TRT Docs | Epic 52 (README + graceful degradation) |
 
 **Recent Release:** v0.9.7 (Dec 23, 2025) — CLI bug fixes, `--list-hardware`/`--list-formats` flags, comprehensive CI testing
 
@@ -28,11 +94,14 @@
 
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
-| **NEXT UP** |||||
-| Epic 54: CI/CD Integration | ✅ COMPLETE | 3 | 23/23 | P1 |
-| Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
-| **ACTIVE DEVELOPMENT** |||||
-| Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | P2 |
+| **1.0 BLOCKERS** |||||
+| Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 (3 for 1.0) | **P0** |
+| Epic 49.2: Format-Aware UI | In Progress | 1 | 3/9 (4 for 1.0) | **P0** |
+| Epic 52: TensorRT Docs | Not Started | 5 | 0/24 (6 for 1.0) | **P0** |
+| **COMPLETE** |||||
+| Epic 54: CI/CD Integration | ✅ COMPLETE | 3 | 23/23 | Done |
+| **POST-1.0** |||||
+| Epic 49: Full HuggingFace Integration | In Progress | 5 | 3/30 | P2 |
 | Epic 24: GGUF LLM Support | In Progress | 2 | 7/13 | P2 |
 | Epic 52: TensorRT Documentation | Not Started | 5 | 0/24 | P2 |
 | **FORMAT READERS (Partial)** |||||
@@ -245,15 +314,17 @@ Made HaoLine a gatekeeper in ML pipelines with `--fail-on` threshold flags, GitH
 ### Story 49.2: Format-Aware UI/CLI
 *Show appropriate metrics and disable unavailable features per format.*
 
+**1.0 Scope:** Tasks 49.2.4-7 are required for 1.0. Tasks 49.2.8-9 are polish (post-1.0).
+
 - [x] **Task 49.2.1**: Define `FormatCapabilities` dataclass with feature flags ✅ **COMPLETE**
 - [x] **Task 49.2.2**: Return capabilities from each format reader ✅ **COMPLETE**
 - [x] **Task 49.2.3**: CLI: Skip FLOPs/graph for weight-only formats with clear message ✅ **COMPLETE**
-- [ ] **Task 49.2.4**: Streamlit: Disable graph tab for formats without graph
-- [ ] **Task 49.2.5**: Show "Convert to ONNX for full analysis" prompt for Tier 3/4 formats
-- [ ] **Task 49.2.6**: Add format tier badge in reports (Full/Graph/Metadata/Weights)
-- [ ] **Task 49.2.7**: Show "Feature unavailable for [format]" with upgrade path in UI
-- [ ] **Task 49.2.8**: Add "Why is this grayed out?" help tooltip explaining format limitations
-- [ ] **Task 49.2.9**: Generate "Format Capabilities Report" section showing what was/wasn't analyzed
+- [ ] **Task 49.2.4**: Streamlit: Disable graph tab for formats without graph **[1.0]**
+- [ ] **Task 49.2.5**: Show "Convert to ONNX for full analysis" prompt for Tier 3/4 formats **[1.0]**
+- [ ] **Task 49.2.6**: Add format tier badge in reports (Full/Graph/Metadata/Weights) **[1.0]**
+- [ ] **Task 49.2.7**: Show "Feature unavailable for [format]" with upgrade path in UI **[1.0]**
+- [ ] **Task 49.2.8**: Add "Why is this grayed out?" help tooltip explaining format limitations *(post-1.0)*
+- [ ] **Task 49.2.9**: Generate "Format Capabilities Report" section showing what was/wasn't analyzed *(post-1.0)*
 
 ### Story 49.3: SafeTensors → ONNX Path
 *If SafeTensors is alongside config.json, auto-load and convert.*
@@ -347,28 +418,30 @@ Made HaoLine a gatekeeper in ML pipelines with `--fail-on` threshold flags, GitH
 
 ---
 
-## Epic 52: TensorRT 1.0 Documentation & Testing (P2)
+## Epic 52: TensorRT 1.0 Documentation & Testing (P1 for docs, P2 for deep tests)
 
 *Polish existing TensorRT support for 1.0 release by addressing documentation gaps, test coverage, and clearly documenting known limitations vs guaranteed features.*
 
 **Goal:** Ensure TensorRT features are well-documented, tested, and users understand what's guaranteed vs best-effort.
 
+**1.0 Scope:** README docs (52.1.1-3, 52.1.6) and graceful degradation tests (52.3.2, 52.3.5) are required. PRD updates and deep tests are post-1.0.
+
 ### Story 52.1: README Documentation Enhancement
 
-- [ ] **Task 52.1.1**: Expand existing "TensorRT Options" section in README (lines 282-307) with feature summary and limitations
-- [ ] **Task 52.1.2**: Document guaranteed vs best-effort features (layer enumeration, fusion detection, precision stats)
-- [ ] **Task 52.1.3**: Add "Known Limitations" subsection covering:
+- [ ] **Task 52.1.1**: Expand existing "TensorRT Options" section in README with feature summary and limitations **[1.0]**
+- [ ] **Task 52.1.2**: Document guaranteed vs best-effort features (layer enumeration, fusion detection, precision stats) **[1.0]**
+- [ ] **Task 52.1.3**: Add "Known Limitations" subsection **[1.0]**
   - Dynamic shapes (heuristic detection only, not full profile reconstruction)
   - Plugin/custom layers (may show as "Unknown" type)
   - Precision inference (best-effort, TRT uses mixed precision internally)
   - No ONNX→TRT or TRT→ONNX conversion (users must build externally)
-- [ ] **Task 52.1.4**: Add workflow example: "To analyze a TensorRT engine, first build it with TensorRT (outside HaoLine), then use HaoLine to inspect or compare it"
-- [ ] **Task 52.1.5**: Clarify `pip install haoline[tensorrt]` requirement and GPU/CUDA dependencies
-- [ ] **Task 52.1.6**: Add troubleshooting section for common TRT errors (missing tensorrt package, incompatible CUDA version, etc.)
+- [ ] **Task 52.1.4**: Add workflow example *(post-1.0)*
+- [ ] **Task 52.1.5**: Clarify `pip install haoline[tensorrt]` requirement *(post-1.0)*
+- [ ] **Task 52.1.6**: Add troubleshooting section for common TRT errors **[1.0]**
 
-### Story 52.2: PRD TensorRT Section
+### Story 52.2: PRD TensorRT Section *(post-1.0 - PRD already has Section 20)*
 
-- [ ] **Task 52.2.1**: Add new section "20. TensorRT Engine Analysis" to PRD.md
+- [ ] **Task 52.2.1**: Add new section "20. TensorRT Engine Analysis" to PRD.md *(already done)*
 - [ ] **Task 52.2.2**: Document core features (engine parsing, layer breakdown, ONNX comparison)
 - [ ] **Task 52.2.3**: Document technical limitations (dynamic shapes, plugins, precision inference)
 - [ ] **Task 52.2.4**: Add architecture decision notes on why ONNX→TRT conversion is not included
@@ -376,11 +449,11 @@ Made HaoLine a gatekeeper in ML pipelines with `--fail-on` threshold flags, GitH
 
 ### Story 52.3: Test Coverage Gaps
 
-- [ ] **Task 52.3.1**: Test JSON/MD output format validation (ensure all TRT fields present in reports)
-- [ ] **Task 52.3.2**: Test graceful degradation when TRT inspector unavailable (older TRT versions, missing CUDA)
-- [ ] **Task 52.3.3**: Test `is_tensorrt_file()` edge cases (invalid files, corrupted engines, permission errors)
-- [ ] **Task 52.3.4**: Test `TRTEngineReader` with malformed engine files (graceful error handling)
-- [ ] **Task 52.3.5**: Test CLI error messages for missing tensorrt package (verify install command shown)
+- [ ] **Task 52.3.1**: Test JSON/MD output format validation *(post-1.0)*
+- [ ] **Task 52.3.2**: Test graceful degradation when TRT inspector unavailable **[1.0]**
+- [ ] **Task 52.3.3**: Test `is_tensorrt_file()` edge cases *(post-1.0)*
+- [ ] **Task 52.3.4**: Test `TRTEngineReader` with malformed engine files *(post-1.0)*
+- [ ] **Task 52.3.5**: Test CLI error messages for missing tensorrt package **[1.0]**
 
 **Note:** Integration tests for `--compare-trt`, comparison report generation, and `analyze_quant_bottlenecks()` are already covered by Epic 42.4 (Tasks 42.4.1, 42.4.5, 42.4.6). Basic `is_tensorrt_file()` tests already exist in test_formats.py - this task focuses on edge cases.
 
@@ -848,6 +921,8 @@ Made HaoLine a gatekeeper in ML pipelines with `--fail-on` threshold flags, GitH
 
 **Goal:** Ensure every `to` and `from` conversion path works correctly, preserves metadata, and handles edge cases gracefully.
 
+**1.0 Scope:** Only tasks marked **[1.0]** are required for v1.0 release. Others are post-1.0.
+
 **Relationship to Epic 49:** This epic tests EXISTING conversions. When Epic 49 adds new paths (HuggingFace → ONNX), add corresponding tests here.
 
 **Conversion Matrix:**
@@ -904,34 +979,38 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [x] **Task 42.2.3**: Test PyTorch → ONNX with transformer model (attention patterns) ✅ **COMPLETE**
 
 **TensorFlow/Keras → ONNX:**
-- [ ] **Task 42.2.4**: Test TensorFlow SavedModel → ONNX conversion
-- [ ] **Task 42.2.5**: Test Keras .h5 → ONNX conversion
-- [ ] **Task 42.2.6**: Test TensorFlow frozen graph → ONNX conversion
+- [ ] **Task 42.2.4**: Test TensorFlow SavedModel → ONNX conversion **[1.0]**
+- [ ] **Task 42.2.5**: Test Keras .h5 → ONNX conversion **[1.0]**
+- [ ] **Task 42.2.6**: Test TensorFlow frozen graph → ONNX conversion *(post-1.0)*
 
-**JAX → ONNX:**
+**JAX → ONNX:** *(post-1.0 - JAX is niche)*
 - [ ] **Task 42.2.7**: Test JAX/Flax → ONNX with simple MLP
 - [ ] **Task 42.2.8**: Test JAX → ONNX with custom apply function
 
-### Story 42.3: Multi-Hop & Direct Conversions
+### Story 42.3: Multi-Hop & Direct Conversions *(post-1.0)*
 *Test conversions that go through ONNX as intermediary or direct paths.*
 
+**Note:** Multi-hop conversions are edge cases. PyTorch→TRT is the critical path (complete). Others are post-1.0.
+
 **PyTorch Multi-Hop:**
-- [ ] **Task 42.3.1**: Test PyTorch → TFLite (via ONNX) ✅ **UNBLOCKED**
-- [ ] **Task 42.3.2**: Test PyTorch → CoreML (via coremltools direct) ✅ **UNBLOCKED**
-- [ ] **Task 42.3.3**: Test PyTorch → OpenVINO (via ONNX) ✅ **UNBLOCKED**
+- [ ] **Task 42.3.1**: Test PyTorch → TFLite (via ONNX)
+- [ ] **Task 42.3.2**: Test PyTorch → CoreML (via coremltools direct)
+- [ ] **Task 42.3.3**: Test PyTorch → OpenVINO (via ONNX)
 - [x] **Task 42.3.4**: Test PyTorch → TensorRT (via ONNX) ✅ **COMPLETE** (2 tests pass)
 
 **TensorFlow Multi-Hop:**
-- [ ] **Task 42.3.5**: Test TensorFlow → TFLite (direct tf.lite.TFLiteConverter) ✅ **UNBLOCKED**
-- [ ] **Task 42.3.6**: Test TensorFlow → CoreML (via coremltools) ✅ **UNBLOCKED**
-- [ ] **Task 42.3.7**: Test TensorFlow → OpenVINO (via ONNX) ✅ **UNBLOCKED**
+- [ ] **Task 42.3.5**: Test TensorFlow → TFLite (direct tf.lite.TFLiteConverter)
+- [ ] **Task 42.3.6**: Test TensorFlow → CoreML (via coremltools)
+- [ ] **Task 42.3.7**: Test TensorFlow → OpenVINO (via ONNX)
 
 **JAX Multi-Hop:**
-- [ ] **Task 42.3.8**: Test JAX → TFLite (via ONNX) ✅ **UNBLOCKED**
-- [ ] **Task 42.3.9**: Test JAX → CoreML (via ONNX) ✅ **UNBLOCKED**
+- [ ] **Task 42.3.8**: Test JAX → TFLite (via ONNX)
+- [ ] **Task 42.3.9**: Test JAX → CoreML (via ONNX)
 
-### Story 42.4: ONNX↔TRT Comparison Tests ✅ **UNBLOCKED**
+### Story 42.4: ONNX↔TRT Comparison Tests *(post-1.0 - requires GPU)*
 *Test the TensorRT comparison features from Epic 22.*
+
+**Note:** TRT is already documented as best-effort. These tests require GPU CI which we don't have yet.
 
 - [ ] **Task 42.4.1**: Test `--compare-trt` with ResNet ONNX + compiled engine
 - [ ] **Task 42.4.2**: Verify fusion detection accuracy (Conv+BN+ReLU → single kernel)
@@ -948,10 +1027,10 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [x] **Task 42.5.3**: Test ONNX → CoreML → ONNX round-trip (measures lossy delta) ✅
 - [x] **Task 42.5.4**: Validate op_type_counts preserved across conversions ✅
 - [x] **Task 42.5.5**: Validate precision_breakdown preserved across conversions ✅
-- [ ] **Task 42.5.6**: Test conversion error handling (unsupported ops, invalid models)
+- [ ] **Task 42.5.6**: Test conversion error handling (unsupported ops, invalid models) **[1.0]**
 - [x] **Task 42.5.7**: Verify param_counts match before/after conversion (within tolerance) ✅
 
-### Story 42.6: Weight Export Tests
+### Story 42.6: Weight Export Tests *(post-1.0 - SafeTensors writer not built)*
 *Test weight extraction and SafeTensors export paths.*
 
 - [ ] **Task 42.6.1**: Test PyTorch state_dict → SafeTensors export
@@ -959,7 +1038,7 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [ ] **Task 42.6.3**: Verify tensor name preservation
 - [ ] **Task 42.6.4**: Verify dtype preservation (fp16, bf16, int8)
 
-**Task Summary:** 38 total tasks (all unblocked! 8 require TRT GPU)
+**Task Summary:** 38 total tasks. **1.0-critical: 5 tasks** (42.2.4, 42.2.5, 42.5.6, plus 2 already done). Post-1.0: 18 tasks.
 
 ---
 
