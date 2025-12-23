@@ -21,21 +21,26 @@
 | 3 | **Testing** | TensorRT comparison (`--compare-trt`) works | ✅ Done |
 | 4 | **Testing** | Conversion error handling test (42.5.6) | ☐ TODO |
 | 5 | **Testing** | TF/Keras→ONNX conversion test (42.2.4-5) | ☐ TODO |
-| 6 | **UX** | Disable graph tab for formats without graph (49.2.4) | ☐ TODO |
-| 7 | **UX** | Show "Convert to ONNX for full analysis" prompt (49.2.5) | ☐ TODO |
-| 8 | **UX** | Add format tier badge in reports (49.2.6) | ☐ TODO |
-| 9 | **UX** | Show "Feature unavailable" with upgrade path (49.2.7) | ☐ TODO |
-| 10 | **TRT Docs** | README: TensorRT limitations section (52.1.1-3) | ☐ TODO |
-| 11 | **TRT Docs** | README: TensorRT troubleshooting (52.1.6) | ☐ TODO |
-| 12 | **TRT Docs** | Test graceful degradation when TRT missing (52.3.2) | ☐ TODO |
-| 13 | **TRT Docs** | CLI error message when TRT missing (52.3.5) | ☐ TODO |
-| 14 | **README** | Verify all CLI examples work | ☐ TODO |
-| 15 | **README** | Verify format support claims match reality | ☐ TODO |
-| 16 | **README** | Remove/update any "coming soon" language | ☐ TODO |
-| 17 | **Stability** | CI passes on main branch | ✅ Done |
-| 18 | **Stability** | No known critical bugs in issue tracker | ☐ TODO |
+| 6 | **Testing** | IR invariant: same model via different paths → identical metrics | ☐ TODO |
+| 7 | **UX** | Disable graph tab for formats without graph (49.2.4) | ☐ TODO |
+| 8 | **UX** | Show "Convert to ONNX for full analysis" prompt (49.2.5) | ☐ TODO |
+| 9 | **UX** | Add format tier badge in reports (49.2.6) | ☐ TODO |
+| 10 | **UX** | Show "Feature unavailable" with upgrade path (49.2.7) | ☐ TODO |
+| 11 | **TRT Docs** | README: TensorRT limitations section (52.1.1-3) | ☐ TODO |
+| 12 | **TRT Docs** | README: TensorRT troubleshooting (52.1.6) | ☐ TODO |
+| 13 | **TRT Docs** | Test graceful degradation when TRT missing (52.3.2) | ☐ TODO |
+| 14 | **TRT Docs** | CLI error message when TRT missing (52.3.5) | ☐ TODO |
+| 15 | **README** | Verify all CLI examples work | ☐ TODO |
+| 16 | **README** | Verify format support claims match reality | ☐ TODO |
+| 17 | **README** | Remove/update any "coming soon" language | ☐ TODO |
+| 18 | **Stability** | CI passes on main branch | ✅ Done |
+| 19 | **Stability** | No open issues that produce incorrect metrics without warning | ☐ TODO |
 
-**Progress:** 4/18 complete
+**Progress:** 4/19 complete
+
+**IR Invariant (Task 6):** Structurally equivalent models analyzed via different paths (e.g., PyTorch→ONNX vs native ONNX) must produce identical Universal IR summaries: same node counts, op types, and parameter totals. This is the foundation of "decision layer" credibility.
+
+**Stability Rule (Task 19):** "No known critical bugs" means: no open issues where HaoLine produces incorrect metrics (params, FLOPs, memory) without a warning. Correctness bugs with documented warnings are acceptable for 1.0.
 
 ### README Accuracy Checklist
 
