@@ -15,12 +15,12 @@
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
 | **P0** | Installation UX | Epic 53 ✅ COMPLETE |
-| **P1** | CLI Modernization | Epic 50 ✅ **COMPLETE** (Typer, check-deps, error handling) |
-| **P1** | CI/CD Integration | Epic 54 **NEW** (`--fail-on` flags, GitHub Actions, Decision Reports) |
+| **P0** | CLI Modernization | Epic 50 ✅ COMPLETE (Typer, check-deps, error handling) |
+| **P1** | CI/CD Integration | Epic 54 (`--fail-on` flags, GitHub Actions, Decision Reports) |
 | **P1** | Format Testing | Epic 42 (comprehensive conversion testing) |
 | **P2** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
 
-**Recent Release:** v0.9.4 (Dec 22, 2025) — Epic 53 complete, `python -m haoline` support, `--check-install` diagnostics
+**Recent Release:** v0.9.4 (Dec 23, 2025) — Epic 50 complete, Typer CLI migration, check-deps command, user-friendly error handling
 
 ---
 
@@ -29,9 +29,9 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **HIGH PRIORITY - DO NEXT** |||||
-| Epic 53: Installation UX | **COMPLETE** | 3 | 15/15 | Done |
-| Epic 50: CLI Modernization | ✅ Complete | 3 | 18/18 | **P1** |
-| Epic 54: CI/CD Integration | **NEW** | 3 | 0/15 | **P1** |
+| Epic 53: Installation UX | ✅ Complete | 3 | 15/15 | Done |
+| Epic 50: CLI Modernization | ✅ Complete | 3 | 18/18 | Done |
+| Epic 54: CI/CD Integration | Not Started | 3 | 0/23 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
 | Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | P2 |
