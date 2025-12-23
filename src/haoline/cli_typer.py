@@ -483,8 +483,8 @@ def display_report_summary(report) -> None:
         table.add_row("Model Size", format_size(report.memory_estimates.model_size_bytes))
     if report.graph_summary:
         table.add_row("Operators", str(report.graph_summary.num_nodes))
-        table.add_row("Inputs", str(len(report.graph_summary.input_names)))
-        table.add_row("Outputs", str(len(report.graph_summary.output_names)))
+        table.add_row("Inputs", str(report.graph_summary.num_inputs))
+        table.add_row("Outputs", str(report.graph_summary.num_outputs))
 
     console.print()
     console.print(table)
