@@ -44,6 +44,66 @@ app = typer.Typer(
 )
 
 
+def _list_hardware_callback(value: bool) -> None:
+    """Callback for --list-hardware flag (backwards compatibility)."""
+    if value:
+        from haoline.hardware import HARDWARE_PROFILES
+
+        table = Table(
+            title="Available Hardware Profiles", show_header=True, header_style="bold cyan"
+        )
+        table.add_column("Key", style="dim")
+        table.add_column("Name")
+        table.add_column("Type")
+        table.add_column("VRAM", justify="right")
+
+        for key, profile in sorted(HARDWARE_PROFILES.items()):
+            vram_gb = profile.vram_bytes / (1024**3)
+            table.add_row(key, profile.name, profile.device_type, f"{vram_gb:.0f} GB")
+
+        console.print(table)
+        raise typer.Exit()
+
+
+def _list_formats_callback(value: bool) -> None:
+    """Callback for --list-formats flag (backwards compatibility)."""
+    if value:
+        from haoline.format_adapters import (
+            FORMAT_CAPABILITIES,
+            SourceFormat,
+            list_adapters,
+        )
+
+        table = Table(title="Supported Formats", show_header=True, header_style="bold cyan")
+        table.add_column("Format", style="dim")
+        table.add_column("Extensions")
+        table.add_column("Graph")
+        table.add_column("FLOPs")
+
+        for adapter_info in list_adapters():
+            name = str(adapter_info["name"])
+            ext_list = adapter_info["extensions"]
+            extensions = ", ".join(ext_list) if isinstance(ext_list, list) else str(ext_list)
+            source_fmt_str = adapter_info["source_format"]
+            # Convert string to SourceFormat enum
+            try:
+                source_fmt = SourceFormat(source_fmt_str)
+                caps = FORMAT_CAPABILITIES.get(source_fmt)
+                if caps:
+                    graph = "[green]Yes[/green]" if caps.has_graph else "[dim]No[/dim]"
+                    flops = "[green]Yes[/green]" if caps.has_flops else "[dim]No[/dim]"
+                else:
+                    graph = "[dim]?[/dim]"
+                    flops = "[dim]?[/dim]"
+            except (ValueError, KeyError):
+                graph = "[dim]?[/dim]"
+                flops = "[dim]?[/dim]"
+            table.add_row(name.upper(), extensions, graph, flops)
+
+        console.print(table)
+        raise typer.Exit()
+
+
 @app.callback()
 def callback(
     version: Annotated[
@@ -56,6 +116,24 @@ def callback(
             is_eager=True,
         ),
     ] = None,
+    list_hardware: Annotated[
+        bool,
+        typer.Option(
+            "--list-hardware",
+            help="List available hardware profiles and exit",
+            callback=_list_hardware_callback,
+            is_eager=True,
+        ),
+    ] = False,
+    list_formats: Annotated[
+        bool,
+        typer.Option(
+            "--list-formats",
+            help="List supported model formats and exit",
+            callback=_list_formats_callback,
+            is_eager=True,
+        ),
+    ] = False,
 ) -> None:
     """HaoLine - Universal Model Inspector."""
     pass
