@@ -623,9 +623,19 @@ Complete migration from Python dataclasses to Pydantic BaseModel across the enti
 
 ---
 
-## Epic 41: Standardized Reporting (COMPLETE - 44/44)
+## Epic 41: Standardized Reporting (COMPLETE - 50/50)
 
-*Completed: December 2025*
+*Completed: December 22, 2025*
+
+### Story 41.7: Output Parity Gap Closure (6/6)
+*Address remaining gaps between CLI and Streamlit capabilities.*
+
+- [x] **Task 41.7.1**: Document PyTorch upload limitation in Streamlit (needs local torch install)
+- [x] **Task 41.7.2**: Fix PDF export in Streamlit (gracefully shows "CLI Only" badge when unavailable)
+- [x] **Task 41.7.3**: Add "CLI Only" badges to Streamlit for features requiring local install
+- [x] **Task 41.7.4**: Add "Export as CLI command" button (`generate_cli_command()` function, 11 tests)
+- [x] **Task 41.7.5**: Ensure JSON report schema identical between CLI and Streamlit (both use `report.to_dict()`)
+- [x] **Task 41.7.6**: Add format support comparison table to docs
 
 ### Story 41.1: Audit Current Report Differences
 - [x] Create comparison matrix: CLI HTML vs Streamlit

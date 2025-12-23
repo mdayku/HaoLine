@@ -4,135 +4,122 @@
 
 **Related Documents:**
 - [PRD.md](PRD.md) - Product requirements and specifications
-- [BRAINLIFT.md](BRAINLIFT.md) - Daily learning logs
 - [Architecture.md](Architecture.md) - System design details
 
 ---
 
 ## Current Priority Focus (Dec 2025)
 
-**Goal:** Close remaining UI parity gaps and improve format user experience.
+**Goal:** Improve installation UX and CLI ergonomics before adding new features.
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
-| **P1** | UI Parity Gaps | ✅ Story 41.7 COMPLETE (CLI-Streamlit feature parity) |
-| **P1** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
+| **P0** | Installation UX | Epic 53 (PATH issues, `python -m` support, first-run experience) |
+| **P1** | CLI Modernization | Epic 50 (Typer migration, dependency prompting, --check-deps) |
 | **P1** | Format Testing | Epic 42 (comprehensive conversion testing) |
-| **P2** | LLM Support | Epic 24 (GGUF UI: context slider, quant charts) |
-| **P2** | CLI UX | Epic 50 (dependency prompting, --check-deps) |
+| **P2** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
 
-**Quick Wins (< 1 hour each):** ✅ **ALL COMPLETE (Dec 11, 2025)**
-- ~~Add `.gguf` to Streamlit uploader (Task 24.2.1)~~ ✅
-- ~~Add `.tflite` to Streamlit uploader (Task 21.2.5)~~ ✅
-- ~~Add `.mlmodel` to Streamlit uploader (Task 20.2.5)~~ ✅
-- ~~Add `.xml` to Streamlit uploader (Task 23.2.5)~~ ✅
-- Updated format capabilities matrix with tier system
-
-**Recent Release:** v0.9.3 (Dec 12, 2025) — CI test fixes, Streamlit tab refactoring, improved import structure.
+**Recent Release:** v0.9.3 (Dec 12, 2025)
 
 ---
 
 ## Progress Summary
 
-| Epic | Status | Stories | Tasks Complete | Priority |
-|------|--------|---------|----------------|----------|
-| **Current Priority Focus** ||||
-| Epic 41: Standardized Reporting | **COMPLETE** | 7 | 50/50 | Complete |
+| Epic | Status | Stories | Tasks | Priority |
+|------|--------|---------|-------|----------|
+| **HIGH PRIORITY - DO NEXT** |||||
+| Epic 53: Installation UX | **NEW** | 3 | 0/15 | **P0** |
+| Epic 50: CLI Modernization | Not Started | 3 | 0/18 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
-| Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | **P1** ← format UX |
-| **Active Development** ||||
-| Epic 19: SafeTensors | In Progress | 2 | 6/10 | P2 (Story 19.1 complete) |
-| Epic 20: CoreML | In Progress | 3 | 8/19 | P2 (Story 20.1 complete) |
-| Epic 21: TFLite | In Progress | 3 | 4/18 | P2 (ONNX→TFLite blocked) |
-| Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 (Story 23.1: 5/6) |
-| Epic 24: GGUF | In Progress | 2 | 7/13 | **P2** ← LLM parity (Story 24.1 complete) |
-| Epic 31: Quantization Service | Not Started | 6 | 0/32 | **P2** |
-| Epic 36: Layer Visualization | In Progress | 5 | 4/25 | **P2** *(4 tasks via Epic 22)* |
-| Epic 38: Docker Distribution | In Progress | 1 | 1/5 | P3 |
-| Epic 50: CLI Modernization (Typer) | Not Started | 3 | 0/18 | **P2** ← dep prompts |
-| Epic 52: TensorRT 1.0 Documentation & Testing | Not Started | 5 | 0/24 | **P2** |
-| **Future Work** ||||
+| **ACTIVE DEVELOPMENT** |||||
+| Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | P2 |
+| Epic 24: GGUF LLM Support | In Progress | 2 | 7/13 | P2 |
+| Epic 52: TensorRT Documentation | Not Started | 5 | 0/24 | P2 |
+| **FORMAT READERS (Partial)** |||||
+| Epic 19: SafeTensors | Story 19.1 ✅ | 2 | 6/10 | P3 |
+| Epic 20: CoreML | Story 20.1 ✅ | 3 | 8/19 | P3 |
+| Epic 21: TFLite | Blocked | 3 | 4/18 | P3 |
+| Epic 23: OpenVINO | In Progress | 3 | 6/16 | P3 |
+| **OPTIMIZATION & ANALYSIS** |||||
+| Epic 31: Quantization Service | Not Started | 6 | 0/32 | P3 |
+| Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | P3 |
+| Epic 36: Layer Visualization | In Progress | 5 | 4/25 | P3 |
+| **FUTURE** |||||
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
-| Epic 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
-| **LLM-SCALE ANALYSIS** ||||
-| Epic 26: Advanced Quantization | Not Started | 3 | 0/16 | P3 |
-| Epic 27: Attention Variants | Not Started | 4 | 0/19 | P3 |
-| Epic 28: Memory Patterns | Not Started | 4 | 0/18 | P3 |
-| Epic 29: Sparse/Efficient | Not Started | 4 | 0/16 | P3 |
-| Epic 30: LLM Deployment | Not Started | 4 | 0/19 | P3 |
-| **OPTIMIZATION** ||||
-| Epic 32: Model Optimization | Not Started | 3 | 0/14 | P3 |
-| Epic 33: QAT Linters | **COMPLETE** | 5 | 41/41 | **P1** |
-| Epic 34: Activation Visualization | Not Started | 5 | 0/25 | P2/P3 |
-| Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | **P2** |
-| Epic 37: Hardware Recommender | Not Started | 2 | 0/10 | P3 |
-| Epic 39: Pydantic Schema Migration | **COMPLETE** | 3 | 12/12 | Done |
-| Epic 40: Full Pydantic Dataclass Migration | **COMPLETE** | 6 | 64/64 | Done ✓ v0.8.4 |
-| Epic 51: AWS GPU Deployment | Not Started | 5 | 0/26 | P3 |
-| **DEEP RESEARCH SUGGESTIONS** | | | | *Dec 2025* |
-| Epic 43: Performance & Scalability | Not Started | 3 | 0/14 | P3 |
-| Epic 44: Expanded Op Type Support | Not Started | 3 | 0/14 | P3 |
-| ~~Epic 45: UI Demo Polish~~ | *Merged* | - | - | *→ Epic 11* |
-| ~~Epic 46: Enhanced Model Diff~~ | *Merged* | - | - | *→ Epic 18* |
-| Epic 47: Model Card & Standards | Not Started | 2 | 0/10 | P4 |
-| ~~Epic 48: Quantization Efficiency~~ | *Merged* | - | - | *→ Epic 33* |
+| Epic 47: Model Card Standards | Not Started | 2 | 0/10 | P4 |
+| Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P4 |
+| Epics 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
+
+**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 25, 33, 39, 40, 41 *(archived in PRDBacklogArchive.md)*
 
 ---
 
-## Completed Epics (Core Foundation)
+## Epic 53: Installation UX (P0) - **NEW**
 
-*Detailed task lists archived in [PRDBacklogArchive.md](PRDBacklogArchive.md)*
+*Fix first-run experience issues. Users encounter PATH problems when pip installs scripts to user directories.*
 
-*All core foundation epics (1-9, 4B, 4C) completed and archived.*
+**Problem:** When pip installs to user site-packages (common on Windows, restricted Linux), scripts like `haoline.exe` go to directories not on PATH. Users see "command not found" even after successful install.
 
----
+### Story 53.1: Module Invocation Support
+*Enable `python -m haoline` as primary/fallback invocation method.*
 
-## Epic 10: SaaS Web Application (P4)
+- [ ] **Task 53.1.1**: Add `__main__.py` to haoline package for `python -m haoline` support
+- [ ] **Task 53.1.2**: Ensure all CLI entry points work via module invocation
+- [ ] **Task 53.1.3**: Update README with `python -m haoline` as primary installation method
+- [ ] **Task 53.1.4**: Add `python -m haoline.web` for Streamlit launch
+- [ ] **Task 53.1.5**: Add `python -m haoline.compare` for comparison CLI
 
-*W&B-style hosted service. Requires Epic 25 (Privacy/Trust) first.*
+### Story 53.2: Installation Diagnostics
+*Help users diagnose and fix installation issues.*
 
-### Story 10.1: Web Backend API
-- [ ] **Task 10.1.1-10.1.6**: FastAPI backend (6 tasks)
+- [ ] **Task 53.2.1**: Add `python -m haoline --check-install` command
+- [ ] **Task 53.2.2**: Check if haoline scripts are on PATH, report if not
+- [ ] **Task 53.2.3**: Detect user vs system install and explain implications
+- [ ] **Task 53.2.4**: Show which optional extras are installed
+- [ ] **Task 53.2.5**: Suggest PATH fix commands for Windows/Linux/macOS
 
-### Story 10.2: Frontend MVP
-- [ ] **Task 10.2.1-10.2.6**: React/Next.js frontend (6 tasks)
+### Story 53.3: Documentation & First-Run
+*Improve first-run experience in documentation.*
 
-### Story 10.3: Authentication and Users
-- [ ] **Task 10.3.1-10.3.5**: Auth integration (5 tasks)
-
-### Story 10.4: Cloud Infrastructure
-- [ ] **Task 10.4.1-10.4.6**: Deployment setup (6 tasks)
-
-### Story 10.5: Model History and Comparison
-- [ ] **Task 10.5.1-10.5.5**: Versioning features (5 tasks)
-
-
-
-**Story 41.7 (in Epic 41):** Output Parity Gap Closure ✅ **COMPLETE** (6/6)
-*Address remaining gaps between CLI and Streamlit capabilities.*
-
-- [x] **Task 41.7.1**: Document PyTorch upload limitation in Streamlit (needs local torch install) ✅ **COMPLETE**
-- [x] **Task 41.7.2**: Fix PDF export in Streamlit (playwright issues on HF Spaces) ✅ **COMPLETE** (gracefully shows "CLI Only" badge when unavailable)
-- [x] **Task 41.7.3**: Add "CLI Only" badges to Streamlit for features requiring local install ✅ **COMPLETE**
-- [x] **Task 41.7.4**: Add "Export as CLI command" button (generate equivalent haoline CLI command) ✅ **COMPLETE**
-- [x] **Task 41.7.5**: Ensure JSON report schema identical between CLI and Streamlit ✅ **COMPLETE** (both use `report.to_dict()`)
-- [x] **Task 41.7.6**: Add format support comparison table to docs (what works where) ✅ **COMPLETE**
+- [ ] **Task 53.3.1**: Add "Troubleshooting Installation" section to README
+- [ ] **Task 53.3.2**: Document Windows PATH fix (add Scripts to PATH)
+- [ ] **Task 53.3.3**: Document Linux/macOS PATH fix (~/.local/bin)
+- [ ] **Task 53.3.4**: Add installation verification command to Quick Start
+- [ ] **Task 53.3.5**: Update `generate_cli_command()` to use `python -m haoline` format
 
 ---
 
-## Future Epics (Not Started)
+## Epic 50: CLI Modernization (P1)
 
-### MLOps Platform Vision (P5) - Epics 13-17
-*High-level placeholder. Do not implement until there's demand.*
-- Epic 13: Cloud Provider Integration
-- Epic 14: GPU Orchestration
-- Epic 15: Training Estimation
-- Epic 16: Model Inventory Management
-- Epic 17: Billing and Usage
+*Migrate from argparse to Typer. Add dependency prompting and better error messages.*
+
+### Story 50.1: Typer Migration
+- [ ] **Task 50.1.1**: Add typer dependency
+- [ ] **Task 50.1.2**: Convert main CLI to Typer app
+- [ ] **Task 50.1.3**: Convert subcommands (compare, web, import-eval)
+- [ ] **Task 50.1.4**: Add rich formatting for help text
+- [ ] **Task 50.1.5**: Add shell completion support
+- [ ] **Task 50.1.6**: Preserve backwards compatibility for existing scripts
+
+### Story 50.2: Dependency Prompting
+- [ ] **Task 50.2.1**: Detect missing optional dependencies at runtime
+- [ ] **Task 50.2.2**: Show friendly "pip install haoline[extra]" suggestions
+- [ ] **Task 50.2.3**: Add `--check-deps` flag to list missing features
+- [ ] **Task 50.2.4**: Group dependencies by feature (formats, llm, viz)
+- [ ] **Task 50.2.5**: Add confirmation prompts for auto-install (optional)
+- [ ] **Task 50.2.6**: Cache dependency check results
+
+### Story 50.3: Error Messages
+- [ ] **Task 50.3.1**: Replace tracebacks with user-friendly messages
+- [ ] **Task 50.3.2**: Add `--verbose` flag for full tracebacks
+- [ ] **Task 50.3.3**: Suggest fixes for common errors
+- [ ] **Task 50.3.4**: Add progress bars for long operations
+- [ ] **Task 50.3.5**: Color-code warnings vs errors
+- [ ] **Task 50.3.6**: Add `--quiet` flag for scripting
 
 ---
 
-## Epic 19: SafeTensors Format (P2)
+## Epic 19: SafeTensors Format (P3)
 
 *HuggingFace ecosystem, widely used for LLM weights. Easy win.*
 
@@ -1137,70 +1124,32 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 
 ---
 
-## ~~Epic 45: UI Demo Polish~~ → MERGED INTO EPIC 11
-
-*Sample model preloading merged into Epic 11 (Streamlit Web UI). Visual risk indicators and comparison polish already covered by Epic 41. Story 11.4 archived to PRDBacklogArchive.md.*
-
----
-
-## ~~Epic 46: Enhanced Model Diff~~ → MERGED INTO EPIC 18
-
-*Layer-level diff and visual diff merged into Epic 18 (Universal IR). Structural comparison tools (`diff()`, `is_structurally_equal()`) already exist in `universal_ir.py`.*
-
-**New Story 18.7 (in Epic 18):** Enhanced Diff Visualization (PARTIAL)
-- [x] Basic `diff()` exists (op counts, param diffs, missing nodes)
-- [x] `is_structurally_equal()` implemented
-- [ ] Layer-level alignment by name (not yet)
-- [ ] added/removed/modified layer categorization (partial)
-- [ ] Visualize diff in graph view (green=added, red=removed, yellow=modified)
-- [ ] Generate "what changed" summary paragraph
-
-**New Story 18.8 (in Epic 18):** Universal IR Documentation & Honest Assessment
-*Document what the Universal IR can and cannot do for transparency.*
-
-- [ ] **Task 18.8.1**: Add Universal IR capabilities section to Architecture.md
-- [ ] **Task 18.8.2**: Document fidelity rating per format (High/Medium/Low with explanation)
-- [ ] **Task 18.8.3**: Document limitations: no semantic equivalence, static-only, no fusion awareness
-- [ ] **Task 18.8.4**: Add "Format Fidelity" table to README.md (ONNX=High, SafeTensors=Low, etc.)
-- [ ] **Task 18.8.5**: Add limitations disclaimer to Streamlit UI ("Static analysis only")
-- [ ] **Task 18.8.6**: Document what each format CAN provide (graph vs params vs metadata only)
-
----
-
 ## Epic 47: Model Card & Standards Compliance (P4)
 
-*Align output with industry standards. Report navigation already covered by Epic 41.*
+*Align output with industry standards.*
 
 ### Story 47.1: Model Card Toolkit Compliance
-*Align output with Google's Model Card Toolkit schema for interoperability.*
-
 - [ ] **Task 47.1.1**: Research Model Card Toolkit JSON schema
 - [ ] **Task 47.1.2**: Map HaoLine fields to Model Card fields
 - [ ] **Task 47.1.3**: Add `--model-card-format` CLI flag for MCT-compliant output
-- [ ] **Task 47.1.4**: Include MCT required fields (intended use, limitations, ethical considerations)
+- [ ] **Task 47.1.4**: Include MCT required fields (intended use, limitations)
 - [ ] **Task 47.1.5**: Generate Model Card Toolkit-compatible JSON export
 
 ### Story 47.2: Industry Standard Metrics
-*Add metrics used by model benchmarking leaderboards.*
-
 - [ ] **Task 47.2.1**: Add Params/FLOP efficiency ratio
 - [ ] **Task 47.2.2**: Add memory efficiency score (params per MB)
 - [ ] **Task 47.2.3**: Add compute density metric (FLOPs per parameter)
-- [ ] **Task 47.2.4**: Compare against reference architectures (vs ResNet50, vs BERT-base)
+- [ ] **Task 47.2.4**: Compare against reference architectures
 - [ ] **Task 47.2.5**: Add efficiency percentile ranking
 
 ---
 
-## ~~Epic 48: Quantization Efficiency~~ → MERGED INTO EPIC 33
+## Archived Merged Epics
 
-*Quantization efficiency scoring merged into Epic 33 (QAT Linters). Readiness scoring and recommendations already exist. Efficiency metrics extend that work.*
+*The following epics were merged into existing epics. Any remaining tasks are tracked in their parent epics.*
 
-**New Story 33.6 (in Epic 33):** Quantization Efficiency Scoring
-*Note: We have quantization DETECTION + LINTING done (is_quantized, quantized_ops, lint warnings). This story is about EFFICIENCY metrics.*
-- [ ] Calculate compression ratio (original size / quantized size)
-- [ ] Estimate theoretical speedup from precision reduction
-- [ ] Add quantization-specific "efficiency score" (0-100)
-- [ ] Detect over-quantization (INT4 on accuracy-sensitive layers)
-- [ ] Generate quantization efficiency report
+- **Epic 45** → Merged into Epic 11 (Streamlit UI)
+- **Epic 46** → Merged into Epic 18 (Universal IR) - Stories 18.7, 18.8 remain
+- **Epic 48** → Merged into Epic 33 (QAT Linters) - Story 33.6 remains
 
 ---
