@@ -14,7 +14,7 @@
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
-| **P1** | CI/CD Integration | Epic 54 (`--fail-on` flags, GitHub Actions, Decision Reports) |
+| ✅ | CI/CD Integration | Epic 54 COMPLETE (`--fail-on` flags, GitHub Actions, Decision Reports) |
 | **P1** | Format Testing | Epic 42 (comprehensive conversion testing) |
 | **P2** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
 
@@ -29,7 +29,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **NEXT UP** |||||
-| Epic 54: CI/CD Integration | **COMPLETE** | 3 | 23/23 | **P1** |
+| Epic 54: CI/CD Integration | ✅ COMPLETE | 3 | 23/23 | P1 |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
 | Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | P2 |
@@ -50,7 +50,7 @@
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P4 |
 | Epics 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 
-**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 25, 33, 39, 40, 41, 50, 53 *(archived in PRDBacklogArchive.md)*
+**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 25, 33, 39, 40, 41, 50, 53, 54 *(archived in PRDBacklogArchive.md)*
 
 ---
 
@@ -79,118 +79,11 @@
 
 ---
 
-## Epic 54: CI/CD Integration (P1) - **NEW**
+## Epic 54: CI/CD Integration - **COMPLETE**
 
-*Make HaoLine a gatekeeper in ML pipelines, not just an analyzer. Enable "fail fast" on model regressions.*
+*Completed: December 23, 2025. Archived to PRDBacklogArchive.md - 23/23 tasks.*
 
-**Why this matters:** The README now positions HaoLine as "The Model Decision Layer." To back that up, we need:
-1. Threshold-based failure for CI/CD pipelines
-2. Ready-to-use GitHub Actions workflow
-3. Audit trail for model decisions
-
-**Depends on:** Epic 50.1 (Typer CLI) ✅ Complete, Epic 18 (Universal IR) ✅ Complete
-
-### Story 54.1: Threshold-Based Failure (`--fail-on`) ✅ **COMPLETE**
-*Add flags that cause non-zero exit when thresholds are exceeded.*
-
-**Use case:** CI pipeline that rejects model PRs if latency increases >10% or memory increases >20%.
-
-- [x] **Task 54.1.1**: Add `--fail-on` flag to `compare` command (accepts key=threshold pairs) ✅
-- [x] **Task 54.1.2**: Implement threshold parsing (e.g., `latency_increase=10%`, `memory_increase=20%`) ✅
-- [x] **Task 54.1.3**: Add `latency_increase` threshold check (compare estimated latency) ✅
-- [x] **Task 54.1.4**: Add `memory_increase` threshold check (compare peak activation memory) ✅
-- [x] **Task 54.1.5**: Add `param_increase` threshold check (compare total parameters) ✅
-- [x] **Task 54.1.6**: Add `new_risk_signals` threshold check (fail if new high-severity risks appear) ✅
-- [x] **Task 54.1.7**: Exit with code 1 if any threshold violated, 0 otherwise ✅
-- [x] **Task 54.1.8**: Print clear failure message with what threshold was violated ✅
-- [x] **Task 54.1.9**: Add `--fail-on` tests to test_cli_typer.py ✅ (6 tests)
-
-**Example usage:**
-```bash
-python -m haoline compare --models base.onnx candidate.onnx \
-  --fail-on latency_increase=10% \
-  --fail-on memory_increase=20% \
-  --fail-on new_risk_signals
-# Exit code 1 if any threshold violated
-```
-
-### Story 54.2: GitHub Actions Workflow ✅ **COMPLETE**
-*Provide a ready-to-use workflow for model validation in PRs.*
-
-**Use case:** Teams add one YAML file and get automatic model checks on every PR.
-
-- [x] **Task 54.2.1**: Create `.github/examples/model-check.yml` workflow template ✅
-- [x] **Task 54.2.2**: Workflow: checkout, install haoline, run compare with --fail-on ✅
-- [x] **Task 54.2.3**: Workflow: post comparison summary as PR comment ✅
-- [x] **Task 54.2.4**: Add workflow documentation to README ✅
-- [x] **Task 54.2.5**: Test workflow in a sample repo ✅ (tested via HaoLine's own CI)
-
-**Example workflow:**
-```yaml
-name: Model Check
-on: [pull_request]
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: pip install haoline
-      - run: |
-          python -m haoline compare \
-            --models models/baseline.onnx models/candidate.onnx \
-            --fail-on latency_increase=10% \
-            --fail-on memory_increase=20% \
-            --out-md comparison.md
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const body = fs.readFileSync('comparison.md', 'utf8');
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: body
-            });
-```
-
-### Story 54.3: Decision Report Format ✅ **COMPLETE**
-*Create an audit-trail format that captures what was compared, what constraints were applied, and what was decided.*
-
-**Use case:** Compliance, governance, and "who approved this model?" questions.
-
-- [x] **Task 54.3.1**: Define `DecisionReport` schema (models compared, constraints, recommendations) ✅
-- [x] **Task 54.3.2**: Add `--decision-report PATH` flag to compare command ✅
-- [x] **Task 54.3.3**: Capture: models compared (paths, hashes, timestamps) ✅
-- [x] **Task 54.3.4**: Capture: constraints applied (thresholds, hardware profile, precision) ✅
-- [x] **Task 54.3.5**: Capture: results (pass/fail for each constraint, risk signals) ✅
-- [x] **Task 54.3.6**: Capture: recommendations (from quantization advisor, hardware estimator) ✅
-- [x] **Task 54.3.7**: Output as JSON (machine-readable audit trail) ✅
-- [x] **Task 54.3.8**: Output as Markdown (human-readable summary) ✅
-- [x] **Task 54.3.9**: Add timestamp and HaoLine version to report ✅
-
-**Example output:**
-```json
-{
-  "decision_report": {
-    "timestamp": "2025-12-23T10:30:00Z",
-    "haoline_version": "0.9.5",
-    "models_compared": [
-      {"path": "base.onnx", "hash": "abc123", "params": 25000000},
-      {"path": "candidate.onnx", "hash": "def456", "params": 25500000}
-    ],
-    "constraints": {
-      "latency_increase": {"threshold": "10%", "actual": "5.2%", "passed": true},
-      "memory_increase": {"threshold": "20%", "actual": "2.1%", "passed": true},
-      "new_risk_signals": {"threshold": 0, "actual": 0, "passed": true}
-    },
-    "decision": "APPROVED",
-    "recommendations": [
-      "Consider INT8 quantization for 2.5x speedup with <1% accuracy loss"
-    ]
-  }
-}
-```
+Made HaoLine a gatekeeper in ML pipelines with `--fail-on` threshold flags, GitHub Actions workflow template, and Decision Report format for audit trails.
 
 ---
 

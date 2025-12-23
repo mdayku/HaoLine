@@ -45,7 +45,7 @@ CoreML   ─┘          ▼
 - **Format-agnostic analysis**: Same metrics, same visualization, regardless of source format
 - **Structural diff**: See which ops were fused, which precision changed, which layers were rewritten
 
-Without a universal IR, you're comparing format-specific graphs that lie about what's actually inside.
+Without a universal IR, format-specific graphs can obscure what's actually happening inside your model.
 
 ---
 

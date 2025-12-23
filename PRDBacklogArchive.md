@@ -796,6 +796,54 @@ Fixed first-run experience issues with PATH problems on user-level pip installs.
 
 ---
 
+## Epic 54: CI/CD Integration (COMPLETE - 23/23)
+
+*Completed: December 23, 2025 (v0.9.7+)*
+
+Made HaoLine a gatekeeper in ML pipelines with threshold-based failure, GitHub Actions workflow, and Decision Report audit trails.
+
+### Story 54.1: Threshold-Based Failure (`--fail-on`) - COMPLETE (9/9)
+*Add flags that cause non-zero exit when thresholds are exceeded.*
+
+- [x] Add `--fail-on` flag to `compare` command (accepts key=threshold pairs)
+- [x] Implement threshold parsing (e.g., `latency_increase=10%`, `memory_increase=20%`)
+- [x] Add `latency_increase` threshold check (compare estimated latency)
+- [x] Add `memory_increase` threshold check (compare peak activation memory)
+- [x] Add `param_increase` threshold check (compare total parameters)
+- [x] Add `new_risk_signals` threshold check (fail if new high-severity risks appear)
+- [x] Exit with code 1 if any threshold violated, 0 otherwise
+- [x] Print clear failure message with what threshold was violated
+- [x] Add `--fail-on` tests to test_cli_typer.py (6 tests)
+
+### Story 54.2: GitHub Actions Workflow - COMPLETE (5/5)
+*Provide a ready-to-use workflow for model validation in PRs.*
+
+- [x] Create `.github/examples/model-check.yml` workflow template
+- [x] Workflow: checkout, install haoline, run compare with --fail-on
+- [x] Workflow: post comparison summary as PR comment
+- [x] Add workflow documentation to README (CI/CD Integration section)
+- [x] Test workflow in a sample repo (tested via HaoLine's own CI)
+
+### Story 54.3: Decision Report Format - COMPLETE (9/9)
+*Create an audit-trail format that captures what was compared, what constraints were applied, and what was decided.*
+
+- [x] Define `DecisionReport` schema (models compared, constraints, recommendations)
+- [x] Add `--decision-report PATH` flag to compare command
+- [x] Capture: models compared (paths, MD5 hashes, timestamps, file sizes)
+- [x] Capture: constraints applied (thresholds, hardware profile, precision)
+- [x] Capture: results (pass/fail for each constraint, risk signals)
+- [x] Capture: recommendations (from quantization advisor, hardware estimator)
+- [x] Output as JSON (machine-readable audit trail)
+- [x] Output as Markdown (human-readable summary)
+- [x] Add timestamp and HaoLine version to report
+
+**Key Files Created:**
+- `.github/examples/model-check.yml` - Full-featured GitHub Actions workflow template
+- `src/haoline/cli_typer.py` - `_build_decision_report()`, `_decision_report_to_markdown()`
+- `src/haoline/tests/test_cli_typer.py` - 10 new tests for --fail-on and decision reports
+
+---
+
 # PRD Delta Log Archive
 
 *Historical changelog entries moved from PRD.md. These document the evolution of the project.*
