@@ -15,7 +15,7 @@
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
 | **P0** | Installation UX | Epic 53 ✅ COMPLETE |
-| **P1** | CLI Modernization | Epic 50 (Typer migration, Story 50.1 ✅) |
+| **P1** | CLI Modernization | Epic 50 ✅ **COMPLETE** (Typer, check-deps, error handling) |
 | **P1** | CI/CD Integration | Epic 54 **NEW** (`--fail-on` flags, GitHub Actions, Decision Reports) |
 | **P1** | Format Testing | Epic 42 (comprehensive conversion testing) |
 | **P2** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
@@ -477,52 +477,6 @@ jobs:
 - [ ] **Task 49.5.2**: Map CoreML layer types to FLOP formulas
 - [ ] **Task 49.5.3**: Map OpenVINO op types to FLOP formulas
 - [ ] **Task 49.5.4**: Add FLOPs to format reader return types
-
----
-
-## Epic 50: CLI Modernization with Typer (P1) - In Progress
-
-*Modernize CLI experience with better UX, dependency prompting, and shell completion.*
-
-**Why Typer:**
-- Built on Click, modern Pythonic API
-- Automatic help generation from type hints
-- Shell completion out of the box
-- Better error messages
-- Cleaner code than argparse
-
-### Story 50.1: Migrate to Typer ✅ **COMPLETE**
-*Replace argparse with Typer for main CLI.*
-
-- [x] **Task 50.1.1**: Add `typer` and `rich` dependencies to pyproject.toml ✅
-- [x] **Task 50.1.2**: Create `cli_typer.py` with Typer app (renamed `cli.py` → `_cli_legacy.py`) ✅
-- [x] **Task 50.1.3**: Migrate subcommands (inspect, web, compare, check-install, list-hardware, list-formats) ✅
-- [x] **Task 50.1.4**: Add shell completion support (via Typer built-in) ✅
-- [x] **Task 50.1.5**: Add rich formatting for help text and tables ✅
-- [x] **Task 50.1.6**: Update cursor rules to document `cli_typer.py` as main CLI ✅
-
-### Story 50.2: Graceful Dependency Prompting
-*When a feature requires missing dependencies, show helpful install commands.*
-
-- [ ] **Task 50.2.1**: Create `check_dependency()` helper that returns install command
-- [ ] **Task 50.2.2**: Add dependency checks for TensorRT features (`pip install haoline[tensorrt]`)
-- [ ] **Task 50.2.3**: Add dependency checks for runtime profiling (`pip install haoline[runtime]`)
-- [ ] **Task 50.2.4**: Add dependency checks for LLM features (`pip install haoline[llm]`)
-- [ ] **Task 50.2.5**: Add dependency checks for format readers (safetensors, coreml, openvino)
-- [ ] **Task 50.2.6**: Show clear error with install command, not cryptic ImportError
-- [x] **Task 50.2.7**: Add Streamlit UI feature availability matrix (show which features need GPU/deps) ✅
-- [x] **Task 50.2.8**: Add "Requires: TensorRT" / "Requires: GPU" badges to blocked features in UI ✅
-- [ ] **Task 50.2.9**: Add `--check-deps` CLI flag to audit installed vs available features
-- [x] **Task 50.2.10**: Update `list-formats` to show "Available" vs "Needs: pip install haoline[X]" ✅
-- [ ] **Task 50.2.11**: Add PDF export dependency check (playwright + chromium install)
-
-### Story 50.3: CLI UX Improvements
-*Better progress, feedback, and interactive features.*
-
-- [ ] **Task 50.3.1**: Add progress bars for long operations (analysis, conversion)
-- [ ] **Task 50.3.2**: Add `--quiet` and `--verbose` flags consistently
-- [x] **Task 50.3.3**: Add colored output for warnings/errors (via Rich) ✅
-- [ ] **Task 50.3.4**: Add `haoline doctor` command to check system setup (GPU, deps, versions)
 
 ---
 
