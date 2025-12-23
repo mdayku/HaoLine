@@ -1,13 +1,68 @@
 # HaoLine (皓线)
 
-**Universal Model Inspector — See what's really inside your neural networks.**
+**The Model Decision Layer — Prevent teams from shipping the wrong model.**
 
 [![PyPI version](https://badge.fury.io/py/haoline.svg)](https://badge.fury.io/py/haoline)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-317%20passed-brightgreen.svg)]()
 
-HaoLine analyzes neural network architectures and generates comprehensive reports with metrics, visualizations, and AI-powered summaries. Works with ONNX, PyTorch, and TensorFlow models.
+HaoLine is a universal model inspector that makes neural network internals **legible** across formats — so you can make informed decisions about what to deploy.
+
+### The Problem
+
+ML teams inherit models they didn't train. They ship quantized variants without understanding the tradeoffs. They deploy to hardware that doesn't match their model's needs. The result: **silent regressions, cost overruns, and production failures.**
+
+### The Solution
+
+HaoLine provides a **single source of truth** for model decisions:
+
+| What You're Doing | What HaoLine Prevents |
+|-------------------|----------------------|
+| Comparing model variants | Deploying a regression |
+| Quantizing to INT8 | Shipping broken quantization |
+| Choosing deployment hardware | Paying for the wrong GPU tier |
+| Reviewing inherited models | Making decisions based on guesswork |
+
+Works with **ONNX, PyTorch, TensorFlow, TensorRT, CoreML, TFLite, OpenVINO, GGUF, and SafeTensors**.
+
+---
+
+## Why Universal IR?
+
+HaoLine is powered by a **Universal Internal Representation (IR)** — a format-agnostic graph representation that enables true cross-format comparison.
+
+```
+PyTorch  ─┐
+ONNX     ─┼──▶  Universal IR  ──▶  Compare  ──▶  Decide
+TensorRT ─┤          │
+CoreML   ─┘          ▼
+              Single source of truth
+```
+
+**Why this matters:**
+- **Apples-to-apples comparison**: Compare a PyTorch model to its TensorRT-compiled version and see exactly what changed
+- **Format-agnostic analysis**: Same metrics, same visualization, regardless of source format
+- **Structural diff**: See which ops were fused, which precision changed, which layers were rewritten
+
+Without a universal IR, you're comparing format-specific graphs that lie about what's actually inside.
+
+---
+
+## Quick Start
+
+**Try it now:** [huggingface.co/spaces/mdayku/haoline](https://huggingface.co/spaces/mdayku/haoline) — no installation required!
+
+```bash
+# Install
+pip install haoline
+
+# Analyze a model
+python -m haoline model.onnx --out-html report.html --hardware auto
+
+# Compare two variants
+python -m haoline compare --models v1.onnx v2.onnx --out-html comparison.html
+```
 
 ---
 

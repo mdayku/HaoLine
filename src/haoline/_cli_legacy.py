@@ -1045,10 +1045,9 @@ def _convert_tensorflow_to_onnx(
         Tuple of (onnx_path, temp_file_handle_or_None)
     """
     # Check if tf2onnx is available
-    try:
-        import tf2onnx
-        from tf2onnx import tf_loader
-    except ImportError:
+    import importlib.util
+
+    if importlib.util.find_spec("tf2onnx") is None:
         logger.error("tf2onnx not installed. Install with: pip install tf2onnx tensorflow")
         return None, None
 
@@ -1155,9 +1154,9 @@ def _convert_keras_to_onnx(
         Tuple of (onnx_path, temp_file_handle_or_None)
     """
     # Check if tf2onnx is available
-    try:
-        import tf2onnx
-    except ImportError:
+    import importlib.util
+
+    if importlib.util.find_spec("tf2onnx") is None:
         logger.error("tf2onnx not installed. Install with: pip install tf2onnx tensorflow")
         return None, None
 
@@ -1384,9 +1383,9 @@ def _convert_frozen_graph_to_onnx(
         Tuple of (onnx_path, temp_file_handle_or_None)
     """
     # Check if tf2onnx is available
-    try:
-        import tf2onnx
-    except ImportError:
+    import importlib.util
+
+    if importlib.util.find_spec("tf2onnx") is None:
         logger.error("tf2onnx not installed. Install with: pip install tf2onnx tensorflow")
         return None, None
 
@@ -1516,16 +1515,13 @@ def _convert_jax_to_onnx(
         Tuple of (onnx_path, temp_file_handle_or_None)
     """
     # Check dependencies
-    try:
-        import jax
-        import jax.numpy as jnp
-    except ImportError:
+    import importlib.util
+
+    if importlib.util.find_spec("jax") is None:
         logger.error("JAX not installed. Install with: pip install jax jaxlib")
         return None, None
 
-    try:
-        import tf2onnx
-    except ImportError:
+    if importlib.util.find_spec("tf2onnx") is None:
         logger.error("tf2onnx not installed. Install with: pip install tf2onnx tensorflow")
         return None, None
 
@@ -1631,6 +1627,7 @@ def _convert_jax_to_onnx(
 
         # Convert via jax2tf (JAX -> TF -> ONNX)
         try:
+            import jax.numpy as jnp
             import tensorflow as tf
             from jax.experimental import jax2tf
         except ImportError:
@@ -1718,7 +1715,7 @@ def _convert_jax_to_onnx(
 
 def _generate_quant_report_markdown(result: QuantizationLintResult, model_name: str) -> str:
     """Generate a Markdown report for quantization linting results."""
-    from .quantization_linter import QuantizationLintResult, QuantWarning, Severity
+    from .quantization_linter import Severity
 
     lines = [
         f"# Quantization Readiness Report: {model_name}",
@@ -3003,7 +3000,6 @@ def run_inspect() -> None:
     progress.start(total_steps, f"Analyzing {model_path.name}")
 
     # Check format capabilities and warn about limitations
-    from typing import Optional
 
     from .format_adapters import get_format_capabilities
     from .universal_ir import SourceFormat
