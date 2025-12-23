@@ -28,7 +28,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **HIGH PRIORITY - DO NEXT** |||||
-| Epic 53: Installation UX | **NEW** | 3 | 0/15 | **P0** |
+| Epic 53: Installation UX | In Progress | 3 | 8/15 | **P0** |
 | Epic 50: CLI Modernization | Not Started | 3 | 0/18 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
@@ -63,9 +63,9 @@
 ### Story 53.1: Module Invocation Support
 *Enable `python -m haoline` as primary/fallback invocation method.*
 
-- [ ] **Task 53.1.1**: Add `__main__.py` to haoline package for `python -m haoline` support
-- [ ] **Task 53.1.2**: Ensure all CLI entry points work via module invocation
-- [ ] **Task 53.1.3**: Update README with `python -m haoline` as primary installation method
+- [x] **Task 53.1.1**: Add `__main__.py` to haoline package for `python -m haoline` support ✅
+- [x] **Task 53.1.2**: Ensure all CLI entry points work via module invocation ✅ (main CLI works)
+- [x] **Task 53.1.3**: Update README with `python -m haoline` as primary installation method ✅
 - [ ] **Task 53.1.4**: Add `python -m haoline.web` for Streamlit launch
 - [ ] **Task 53.1.5**: Add `python -m haoline.compare` for comparison CLI
 
@@ -81,11 +81,11 @@
 ### Story 53.3: Documentation & First-Run
 *Improve first-run experience in documentation.*
 
-- [ ] **Task 53.3.1**: Add "Troubleshooting Installation" section to README
-- [ ] **Task 53.3.2**: Document Windows PATH fix (add Scripts to PATH)
-- [ ] **Task 53.3.3**: Document Linux/macOS PATH fix (~/.local/bin)
-- [ ] **Task 53.3.4**: Add installation verification command to Quick Start
-- [ ] **Task 53.3.5**: Update `generate_cli_command()` to use `python -m haoline` format
+- [x] **Task 53.3.1**: Add "Troubleshooting Installation" section to README ✅
+- [x] **Task 53.3.2**: Document Windows PATH fix (add Scripts to PATH) ✅
+- [x] **Task 53.3.3**: Document Linux/macOS PATH fix (~/.local/bin) ✅
+- [x] **Task 53.3.4**: Add installation verification command to Quick Start ✅
+- [x] **Task 53.3.5**: Update `generate_cli_command()` to use `python -m haoline` format ✅
 
 ---
 

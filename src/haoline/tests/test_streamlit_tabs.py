@@ -478,7 +478,7 @@ class TestGenerateCliCommand:
 
     def test_basic_command(self):
         cmd = generate_cli_command("model.onnx")
-        assert "haoline" in cmd
+        assert "python -m haoline" in cmd
         assert "model.onnx" in cmd
 
     def test_with_hardware(self):
@@ -528,7 +528,7 @@ class TestGenerateCliCommand:
             include_graph=True,
             output_format="html",
         )
-        assert "haoline" in cmd
+        assert "python -m haoline" in cmd
         assert "resnet50.onnx" in cmd
         assert "--hardware a100" in cmd
         assert "--batch-size 16" in cmd

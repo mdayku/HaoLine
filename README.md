@@ -23,6 +23,13 @@ pip install haoline[llm]
 
 This installs HaoLine with chart generation and AI summary support.
 
+**Verify installation:**
+```bash
+python -m haoline --help
+```
+
+> **Troubleshooting:** If `haoline` command is not found after install, use `python -m haoline` instead. This happens when pip installs to a directory not on your PATH (common on Windows and user-level installs). See [Troubleshooting Installation](#troubleshooting-installation) below.
+
 ### Step 2: Get a Model to Analyze
 
 **Option A: Download a pre-trained model from Hugging Face**
@@ -155,6 +162,53 @@ Install only what you need:
 | `pdf` | `pip install haoline[pdf]` | PDF report generation |
 | `gpu` | `pip install haoline[gpu]` | NVIDIA GPU metrics via pynvml |
 | `runtime` | `pip install haoline[runtime]` | ONNX Runtime for benchmarking |
+
+---
+
+## Troubleshooting Installation
+
+### "haoline: command not found"
+
+This happens when pip installs scripts to a directory not on your PATH (common on Windows and user-level installs).
+
+**Solution 1: Use module invocation (recommended)**
+```bash
+# Works on all platforms, no PATH changes needed
+python -m haoline model.onnx --out-html report.html
+
+# For the web interface
+python -c "from haoline.web import main; main()"
+
+# For model comparison
+python -c "from haoline.compare import main; main()"
+```
+
+**Solution 2: Add pip scripts to PATH**
+
+*Windows (PowerShell):*
+```powershell
+# Find where pip installed the scripts
+python -c "import site; print(site.USER_SITE.replace('site-packages', 'Scripts'))"
+
+# Add that path to your PATH environment variable
+# Example: C:\Users\YourName\AppData\Roaming\Python\Python311\Scripts
+```
+
+*Linux/macOS:*
+```bash
+# Add to your ~/.bashrc or ~/.zshrc
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+### Verify Installation
+
+```bash
+# Check if haoline is installed and working
+python -m haoline --help
+
+# Check which extras are installed
+python -c "import haoline; print(haoline.__version__)"
+```
 
 ---
 

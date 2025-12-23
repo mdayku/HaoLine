@@ -61,7 +61,8 @@ def generate_cli_command(
     Returns:
         CLI command string that would replicate the web analysis.
     """
-    parts = ["haoline", model_name]
+    # Use python -m haoline to avoid PATH issues on Windows/user installs
+    parts = ["python -m haoline", model_name]
 
     # Hardware profile
     if hardware and hardware != "auto":
