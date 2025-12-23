@@ -42,6 +42,51 @@ def format_bytes(b: float) -> str:
     return f"{int(b)} B"
 
 
+def generate_cli_command(
+    model_name: str,
+    hardware: str | None = None,
+    batch_size: int | None = None,
+    include_graph: bool = True,
+    output_format: str = "html",
+) -> str:
+    """Generate equivalent CLI command for current analysis settings.
+
+    Args:
+        model_name: Name of the model file.
+        hardware: Hardware profile name (e.g., 'rtx4090', 'auto').
+        batch_size: Batch size for hardware estimates.
+        include_graph: Whether to include interactive graph.
+        output_format: Output format ('html', 'json', 'md').
+
+    Returns:
+        CLI command string that would replicate the web analysis.
+    """
+    parts = ["haoline", model_name]
+
+    # Hardware profile
+    if hardware and hardware != "auto":
+        parts.append(f"--hardware {hardware}")
+    elif hardware == "auto":
+        parts.append("--hardware auto")
+
+    # Batch size (only if non-default)
+    if batch_size and batch_size != 1:
+        parts.append(f"--batch-size {batch_size}")
+
+    # Output format
+    output_name = model_name.replace(".onnx", "").replace(".pt", "").replace(".pth", "")
+    if output_format == "html":
+        parts.append(f"--out-html {output_name}_report.html")
+        if include_graph:
+            parts.append("--include-graph")
+    elif output_format == "json":
+        parts.append(f"--out-json {output_name}_report.json")
+    elif output_format == "md":
+        parts.append(f"--out-md {output_name}_report.md")
+
+    return " \\\n  ".join(parts)
+
+
 # =============================================================================
 # Data preparation functions (testable, no Streamlit dependency)
 # =============================================================================
@@ -544,8 +589,18 @@ def render_export_tab(
     report: InspectionReport,
     model_name: str,
     tmp_path: str | None = None,
+    hardware: str | None = None,
+    batch_size: int | None = None,
 ) -> None:
-    """Render the Export tab content."""
+    """Render the Export tab content.
+
+    Args:
+        report: The inspection report to export.
+        model_name: Name of the model file.
+        tmp_path: Path to temp model file (for advanced exports).
+        hardware: Hardware profile used for analysis.
+        batch_size: Batch size used for hardware estimates.
+    """
     import streamlit as st
 
     st.markdown(
@@ -767,3 +822,38 @@ def render_export_tab(
                     disabled=True,
                     width="stretch",
                 )
+
+    # CLI Command section (Task 41.7.4)
+    st.markdown("---")
+    st.markdown("### CLI Command")
+    st.markdown(
+        """
+        <p style="color: #737373; font-size: 0.9rem; margin-bottom: 0.75rem;">
+            Run this command locally to replicate the analysis with full features
+        </p>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Generate CLI command for different output formats
+    model_filename = f"{model_name}.onnx" if not model_name.endswith(".onnx") else model_name
+    cli_html = generate_cli_command(
+        model_filename,
+        hardware=hardware,
+        batch_size=batch_size,
+        include_graph=True,
+        output_format="html",
+    )
+
+    st.code(cli_html, language="bash")
+
+    # Copy hint
+    st.markdown(
+        """
+        <p style="color: #525252; font-size: 0.75rem; margin-top: 0.5rem;">
+            Install HaoLine: <code>pip install haoline</code> &nbsp;|&nbsp;
+            Full features: <code>pip install haoline[full]</code>
+        </p>
+        """,
+        unsafe_allow_html=True,
+    )

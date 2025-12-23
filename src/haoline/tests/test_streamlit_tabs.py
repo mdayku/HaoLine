@@ -6,6 +6,7 @@ Tests the data preparation functions (not the Streamlit rendering).
 from haoline.streamlit_tabs import (
     format_bytes,
     format_number,
+    generate_cli_command,
     prepare_details_data,
     prepare_layer_table,
     prepare_model_info_table,
@@ -470,3 +471,66 @@ class TestPrepareDetailsData:
         data = prepare_details_data(report)
 
         assert len(data["blocks"]) == 15  # Max 15
+
+
+class TestGenerateCliCommand:
+    """Tests for generate_cli_command() - Task 41.7.4."""
+
+    def test_basic_command(self):
+        cmd = generate_cli_command("model.onnx")
+        assert "haoline" in cmd
+        assert "model.onnx" in cmd
+
+    def test_with_hardware(self):
+        cmd = generate_cli_command("model.onnx", hardware="rtx4090")
+        assert "--hardware rtx4090" in cmd
+
+    def test_with_auto_hardware(self):
+        cmd = generate_cli_command("model.onnx", hardware="auto")
+        assert "--hardware auto" in cmd
+
+    def test_with_batch_size(self):
+        cmd = generate_cli_command("model.onnx", batch_size=8)
+        assert "--batch-size 8" in cmd
+
+    def test_default_batch_size_not_included(self):
+        cmd = generate_cli_command("model.onnx", batch_size=1)
+        assert "--batch-size" not in cmd
+
+    def test_html_output(self):
+        cmd = generate_cli_command("model.onnx", output_format="html")
+        assert "--out-html" in cmd
+        assert "model_report.html" in cmd
+
+    def test_json_output(self):
+        cmd = generate_cli_command("model.onnx", output_format="json")
+        assert "--out-json" in cmd
+        assert "model_report.json" in cmd
+
+    def test_md_output(self):
+        cmd = generate_cli_command("model.onnx", output_format="md")
+        assert "--out-md" in cmd
+        assert "model_report.md" in cmd
+
+    def test_include_graph(self):
+        cmd = generate_cli_command("model.onnx", include_graph=True, output_format="html")
+        assert "--include-graph" in cmd
+
+    def test_no_include_graph(self):
+        cmd = generate_cli_command("model.onnx", include_graph=False, output_format="html")
+        assert "--include-graph" not in cmd
+
+    def test_full_command(self):
+        cmd = generate_cli_command(
+            "resnet50.onnx",
+            hardware="a100",
+            batch_size=16,
+            include_graph=True,
+            output_format="html",
+        )
+        assert "haoline" in cmd
+        assert "resnet50.onnx" in cmd
+        assert "--hardware a100" in cmd
+        assert "--batch-size 16" in cmd
+        assert "--include-graph" in cmd
+        assert "--out-html resnet50_report.html" in cmd

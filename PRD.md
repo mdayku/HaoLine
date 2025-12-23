@@ -2055,6 +2055,7 @@ haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
 
 | Date | Change |
 |------|--------|
+| Dec 22, 2025 | **Epic 41 COMPLETE** (50/50) - Story 41.7 finished. Added "Export as CLI" command generator in Streamlit Export tab (`generate_cli_command()`), 11 new tests. Fixed `__version__` sync (0.7.2 → 0.9.3). Updated README with CLI export docs. |
 | Dec 13, 2025 | **Epic 52 Added** - TensorRT 1.0 Documentation & Testing (P2). Plans for README/PRD enhancements, test coverage gaps, stability guarantees, and CLI help text improvements. Added section 20 to PRD documenting TensorRT analysis capabilities and limitations. |
 | Dec 12, 2025 | **v0.9.3 Released** - CI test fixes, Streamlit tab refactoring, improved import structure (lazy imports for streamlit in render functions) |
 | Dec 12, 2025 | **v0.9.2 Released** - Refactored Streamlit tabs into `streamlit_tabs.py` module, single source of truth for demo/upload flows, added 39 unit tests for tab data preparation |

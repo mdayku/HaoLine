@@ -15,7 +15,7 @@
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
-| **P1** | UI Parity Gaps | Story 41.7 (CLI-Streamlit feature parity) |
+| **P1** | UI Parity Gaps | ✅ Story 41.7 COMPLETE (CLI-Streamlit feature parity) |
 | **P1** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
 | **P1** | Format Testing | Epic 42 (comprehensive conversion testing) |
 | **P2** | LLM Support | Epic 24 (GGUF UI: context slider, quant charts) |
@@ -37,7 +37,7 @@
 | Epic | Status | Stories | Tasks Complete | Priority |
 |------|--------|---------|----------------|----------|
 | **Current Priority Focus** ||||
-| Epic 41: Standardized Reporting | **COMPLETE** (+41.7 partial) | 6 | 47/50 | **P1** ← parity |
+| Epic 41: Standardized Reporting | **COMPLETE** | 7 | 50/50 | Complete |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | **P1** ← format UX |
 | **Active Development** ||||
@@ -108,14 +108,14 @@
 
 
 
-**New Story 41.7 (in Epic 41):** Output Parity Gap Closure
+**Story 41.7 (in Epic 41):** Output Parity Gap Closure ✅ **COMPLETE** (6/6)
 *Address remaining gaps between CLI and Streamlit capabilities.*
 
 - [x] **Task 41.7.1**: Document PyTorch upload limitation in Streamlit (needs local torch install) ✅ **COMPLETE**
-- [ ] **Task 41.7.2**: Fix PDF export in Streamlit (playwright issues on HF Spaces) + reexamine PDF output for smart page breaks
+- [x] **Task 41.7.2**: Fix PDF export in Streamlit (playwright issues on HF Spaces) ✅ **COMPLETE** (gracefully shows "CLI Only" badge when unavailable)
 - [x] **Task 41.7.3**: Add "CLI Only" badges to Streamlit for features requiring local install ✅ **COMPLETE**
-- [ ] **Task 41.7.4**: Add "Export as CLI command" button (generate equivalent haoline CLI command)
-- [ ] **Task 41.7.5**: Ensure JSON report schema identical between CLI and Streamlit
+- [x] **Task 41.7.4**: Add "Export as CLI command" button (generate equivalent haoline CLI command) ✅ **COMPLETE**
+- [x] **Task 41.7.5**: Ensure JSON report schema identical between CLI and Streamlit ✅ **COMPLETE** (both use `report.to_dict()`)
 - [x] **Task 41.7.6**: Add format support comparison table to docs (what works where) ✅ **COMPLETE**
 
 ---

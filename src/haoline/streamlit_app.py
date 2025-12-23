@@ -1836,7 +1836,13 @@ def main():
             render_quantization_tab(report, graph_info)
 
         with tab6:
-            render_export_tab(report, model_name.replace(".onnx", ""), result.model_path)
+            render_export_tab(
+                report,
+                model_name.replace(".onnx", ""),
+                result.model_path,
+                hardware=selected_hardware,
+                batch_size=batch_size,
+            )
 
     # Analysis (file upload)
     elif uploaded_file is not None:
@@ -3092,7 +3098,13 @@ def main():
                 with tab6:
                     # Export tab
                     model_name = uploaded_file.name.replace(".onnx", "")
-                    render_export_tab(report, model_name, tmp_path)
+                    render_export_tab(
+                        report,
+                        model_name,
+                        tmp_path,
+                        hardware=selected_hardware,
+                        batch_size=batch_size,
+                    )
 
         except Exception as e:
             st.error(f"Error analyzing model: {e}")

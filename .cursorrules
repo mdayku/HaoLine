@@ -121,6 +121,21 @@ This keeps format testing consolidated and prevents script sprawl.
 - [ ] Updated README.md extras table
 - [ ] Updated test script (if format reader)
 
+## CLI Command Documentation (IMPORTANT)
+
+**When adding a new CLI flag or command:**
+
+1. Add the flag to `src/haoline/cli.py` (argparse)
+2. **Update README.md** - add to the appropriate table in "CLI Reference" section
+3. Update the `generate_cli_command()` function in `streamlit_tabs.py` if the flag is relevant to web UI exports
+4. Add help text to the argparse argument
+
+**Checklist when adding CLI flags:**
+- [ ] Added to `cli.py` argparse
+- [ ] Added to README.md CLI Reference table
+- [ ] Updated `generate_cli_command()` (if web-relevant)
+- [ ] Help text is descriptive
+
 ## Version Compatibility (IMPORTANT)
 
 **HuggingFace Spaces Deployment:**

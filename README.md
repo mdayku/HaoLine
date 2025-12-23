@@ -115,6 +115,7 @@ This opens an interactive dashboard at `http://localhost:8501` with:
 - **NEW:** Quantization tab (readiness score, warnings, recommendations, layer sensitivity)
 - AI-powered summaries (bring your own API key)
 - Export to PDF, HTML, JSON, Markdown, **Universal IR**, **DOT graph**
+- **NEW:** "Export as CLI" command generator (copy-paste equivalent `haoline` command)
 
 > **Want to deploy your own?** See [DEPLOYMENT.md](DEPLOYMENT.md) for HuggingFace Spaces, Docker, and self-hosted options.
 
@@ -208,6 +209,8 @@ Or use the web UI's comparison mode for an interactive experience.
 ---
 
 ## CLI Reference
+
+> **Tip:** The web interface includes an "Export as CLI" feature in the Export tab. After analyzing a model, you can copy the equivalent `haoline` command to replicate the analysis locally with full features.
 
 ### Output Options
 
