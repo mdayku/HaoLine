@@ -30,7 +30,7 @@
 |------|--------|---------|-------|----------|
 | **HIGH PRIORITY - DO NEXT** |||||
 | Epic 53: Installation UX | **COMPLETE** | 3 | 15/15 | Done |
-| Epic 50: CLI Modernization | In Progress | 3 | 6/18 | **P1** |
+| Epic 50: CLI Modernization | In Progress | 3 | 10/18 | **P1** |
 | Epic 54: CI/CD Integration | **NEW** | 3 | 0/15 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
@@ -104,10 +104,10 @@
 - [x] **Task 50.1.6**: Preserve backwards compatibility ✅ (legacy `cli.py` kept)
 
 ### Story 50.2: Dependency Prompting
-- [ ] **Task 50.2.1**: Detect missing optional dependencies at runtime
-- [ ] **Task 50.2.2**: Show friendly "pip install haoline[extra]" suggestions
-- [ ] **Task 50.2.3**: Add `--check-deps` flag to list missing features
-- [ ] **Task 50.2.4**: Group dependencies by feature (formats, llm, viz)
+- [x] **Task 50.2.1**: Detect missing optional dependencies at runtime ✅ (`_check_module()` in cli_typer.py)
+- [x] **Task 50.2.2**: Show friendly "pip install haoline[extra]" suggestions ✅
+- [x] **Task 50.2.3**: Add `check-deps` command to list missing features ✅
+- [x] **Task 50.2.4**: Group dependencies by feature (formats, llm, viz, gpu) ✅ (`DEPENDENCY_CATEGORIES`)
 - [ ] **Task 50.2.5**: Add confirmation prompts for auto-install (optional)
 - [ ] **Task 50.2.6**: Cache dependency check results
 

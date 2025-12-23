@@ -84,7 +84,17 @@ class TestCheckInstall:
         assert "Installation Check" in result.output
         assert "Version" in result.output
         assert "CLI Commands" in result.output
-        assert "Optional Dependencies" in result.output
+        assert "Optional Features" in result.output
+
+    def test_check_deps(self):
+        """Test check-deps command."""
+        result = runner.invoke(app, ["check-deps"])
+        assert result.exit_code == 0
+        assert "Dependency Check" in result.output
+        assert "Format Converters" in result.output
+        assert "Format Readers" in result.output
+        assert "Features" in result.output
+        assert "Summary" in result.output
 
 
 class TestSubcommands:

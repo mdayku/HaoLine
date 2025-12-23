@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ..cli import (
+from .._cli_legacy import (
     _convert_frozen_graph_to_onnx,
     _convert_jax_to_onnx,
     _convert_keras_to_onnx,

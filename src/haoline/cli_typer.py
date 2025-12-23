@@ -590,27 +590,122 @@ def check_install_cmd() -> None:
         else:
             console.print(f"  [yellow]{cmd}[/yellow]: NOT ON PATH (use: {alt})")
 
-    # Optional dependencies
-    console.print("\n[bold]Optional Dependencies:[/bold]")
-    extras = {
-        "streamlit": ("web", "Web UI"),
-        "torch": ("pytorch", "PyTorch conversion"),
-        "tensorflow": ("tensorflow", "TensorFlow conversion"),
-        "openai": ("llm", "LLM summaries"),
-        "playwright": ("pdf", "PDF export"),
-        "onnxruntime": ("runtime", "Benchmarking"),
-        "tensorrt": ("tensorrt", "TensorRT analysis"),
-    }
-
-    for module, (extra, desc) in extras.items():
-        try:
-            __import__(module)
-            console.print(f"  [green]{module}[/green]: installed")
-        except ImportError:
-            console.print(f"  [dim]{module}[/dim]: not installed (haoline[{extra}] - {desc})")
+    # Quick dependency summary
+    console.print("\n[bold]Optional Features:[/bold]")
+    console.print("  Run [cyan]python -m haoline check-deps[/cyan] for detailed dependency info")
 
     console.print(f"\n[bold]Python:[/bold] {sys.version.split()[0]}")
     console.print(f"[bold]Executable:[/bold] {sys.executable}")
+
+
+# Dependency categories for check-deps
+DEPENDENCY_CATEGORIES: dict[str, dict[str, tuple[str, str, str]]] = {
+    "Format Converters": {
+        "torch": ("pytorch", "PyTorch → ONNX conversion", "--from-pytorch"),
+        "tensorflow": ("tensorflow", "TensorFlow → ONNX conversion", "--from-tensorflow"),
+        "tf2onnx": ("tensorflow", "TF/Keras to ONNX", "--from-keras"),
+        "jax": ("jax", "JAX → ONNX conversion", "--from-jax"),
+    },
+    "Format Readers": {
+        "tensorrt": ("tensorrt", "TensorRT .engine analysis", "model.engine"),
+        "safetensors": ("safetensors", "SafeTensors .safetensors", "model.safetensors"),
+        "coremltools": ("coreml", "CoreML .mlmodel/.mlpackage", "model.mlmodel"),
+        "openvino": ("openvino", "OpenVINO .xml/.bin", "model.xml"),
+        "tflite_runtime": ("tflite", "TFLite .tflite", "model.tflite"),
+    },
+    "Features": {
+        "streamlit": ("web", "Web UI (Streamlit)", "python -m haoline web"),
+        "openai": ("llm", "AI summaries (OpenAI)", "--llm-summary"),
+        "anthropic": ("llm", "AI summaries (Claude)", "--llm-provider anthropic"),
+        "playwright": ("pdf", "PDF export", "--out-pdf report.pdf"),
+        "onnxruntime": ("runtime", "Actual benchmarking", "--sweep-batch-sizes"),
+    },
+    "GPU & Optimization": {
+        "onnxruntime-gpu": ("gpu", "GPU acceleration", "CUDA provider"),
+        "pynvml": ("gpu", "GPU memory monitoring", "VRAM tracking"),
+    },
+}
+
+
+def _check_module(module: str) -> bool:
+    """Check if a module is importable."""
+    import importlib.util
+
+    # Handle special case for onnxruntime-gpu (same module name)
+    if module == "onnxruntime-gpu":
+        try:
+            import onnxruntime
+
+            providers = onnxruntime.get_available_providers()
+            return "CUDAExecutionProvider" in providers
+        except Exception:
+            return False
+    return importlib.util.find_spec(module.replace("-", "_")) is not None
+
+
+@app.command("check-deps")
+def check_deps_cmd() -> None:
+    """Check optional dependencies and show what features are available.
+
+    Groups dependencies by feature category and shows install commands
+    for missing ones.
+    """
+    from haoline import __version__
+
+    console.print(
+        Panel(
+            f"[bold]HaoLine Dependency Check[/bold]\nVersion {__version__}",
+            style="cyan",
+        )
+    )
+
+    installed_count = 0
+    missing_count = 0
+    missing_by_extra: dict[str, list[str]] = {}
+
+    for category, deps in DEPENDENCY_CATEGORIES.items():
+        console.print(f"\n[bold]{category}[/bold]")
+
+        table = Table(show_header=True, header_style="bold", box=None, padding=(0, 2))
+        table.add_column("Module", style="dim")
+        table.add_column("Status")
+        table.add_column("Feature")
+        table.add_column("Usage Example", style="dim")
+
+        for module, (extra, feature, usage) in deps.items():
+            available = _check_module(module)
+            if available:
+                status = "[green]✓ Installed[/green]"
+                installed_count += 1
+            else:
+                status = "[yellow]✗ Missing[/yellow]"
+                missing_count += 1
+                if extra not in missing_by_extra:
+                    missing_by_extra[extra] = []
+                missing_by_extra[extra].append(feature)
+
+            table.add_row(module, status, feature, usage)
+
+        console.print(table)
+
+    # Summary
+    console.print("\n" + "─" * 60)
+    console.print(
+        f"\n[bold]Summary:[/bold] {installed_count} installed, {missing_count} missing"
+    )
+
+    if missing_by_extra:
+        console.print("\n[bold]Install missing features:[/bold]")
+        for extra, features in sorted(missing_by_extra.items()):
+            console.print(f"  [cyan]pip install haoline[{extra}][/cyan]")
+            for f in features:
+                console.print(f"    → {f}")
+
+        # Full install hint
+        console.print("\n  [dim]Or install everything:[/dim]")
+        console.print("  [cyan]pip install haoline[full][/cyan]")
+    else:
+        console.print("\n[green]All optional dependencies are installed![/green]")
 
 
 # =============================================================================

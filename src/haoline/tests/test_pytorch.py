@@ -17,7 +17,7 @@ import pytest
 # Add parent path for test imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from ..cli import (
+from .._cli_legacy import (
     _convert_pytorch_to_onnx,
     _extract_ultralytics_metadata,
 )
