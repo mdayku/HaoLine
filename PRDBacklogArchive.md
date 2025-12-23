@@ -693,6 +693,72 @@ Complete migration from Python dataclasses to Pydantic BaseModel across the enti
 
 ---
 
+## Epic 50: CLI Modernization (COMPLETE - 18/18)
+
+*Completed: December 23, 2025 (v0.9.4-v0.9.7)*
+
+Migrated CLI from argparse to Typer. Added dependency prompting and user-friendly error messages.
+
+### Story 50.1: Typer Migration - COMPLETE (6/6)
+- [x] Add typer dependency
+- [x] Convert main CLI to Typer app (`cli_typer.py`)
+- [x] Convert subcommands (compare, web, check-install)
+- [x] Add rich formatting for help text
+- [x] Add shell completion support (via Typer)
+- [x] Preserve backwards compatibility (legacy `_cli_legacy.py` kept)
+
+### Story 50.2: Dependency Prompting - COMPLETE (6/6)
+- [x] Detect missing optional dependencies at runtime (`_check_module()`)
+- [x] Show friendly "pip install haoline[extra]" suggestions
+- [x] Add `check-deps` command to list missing features
+- [x] Group dependencies by feature (formats, llm, viz, gpu)
+- [x] Add confirmation prompts for auto-install (`check-deps --install`)
+- [x] Cache dependency check results (N/A - check is fast enough)
+
+### Story 50.3: Error Messages - COMPLETE (6/6)
+- [x] Replace tracebacks with user-friendly messages
+- [x] Add `--verbose` flag for full tracebacks
+- [x] Suggest fixes for common errors (`_get_error_suggestion()`)
+- [x] Add progress bars for long operations (`console.status()` spinners)
+- [x] Color-code warnings vs errors
+- [x] Add `--quiet` flag for scripting
+
+**Key Files Created:**
+- `src/haoline/cli_typer.py` - New Typer-based CLI
+- `src/haoline/_cli_legacy.py` - Renamed from `cli.py`, deprecated
+- `src/haoline/tests/test_cli_typer.py` - 16 CLI tests
+
+---
+
+## Epic 53: Installation UX (COMPLETE - 15/15)
+
+*Completed: December 22, 2025 (v0.9.4)*
+
+Fixed first-run experience issues with PATH problems on user-level pip installs.
+
+### Story 53.1: Module Invocation Support - COMPLETE (5/5)
+- [x] Add `__main__.py` for `python -m haoline` support
+- [x] Ensure all CLI entry points work via module invocation
+- [x] Update README with `python -m haoline` as primary method
+- [x] Add `python -m haoline web` subcommand
+- [x] Add `python -m haoline compare` subcommand
+
+### Story 53.2: Installation Diagnostics - COMPLETE (5/5)
+- [x] Add `python -m haoline check-install` command
+- [x] Check if haoline scripts are on PATH, report if not
+- [x] Detect user vs system install and explain implications
+- [x] Show which optional extras are installed
+- [x] Suggest PATH fix commands for Windows/Linux/macOS
+
+### Story 53.3: Documentation & First-Run - COMPLETE (5/5)
+- [x] Add "Troubleshooting Installation" section to README
+- [x] Document Windows PATH fix
+- [x] Document Linux/macOS PATH fix
+- [x] Add installation verification command to Quick Start
+- [x] Update `generate_cli_command()` to use `python -m haoline` format
+
+---
+
 # PRD Delta Log Archive
 
 *Historical changelog entries moved from PRD.md. These document the evolution of the project.*

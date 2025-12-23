@@ -1,6 +1,6 @@
 # HaoLine (皓线) - Project Backlog
 
-*Universal model analysis and inspection platform. See what's really inside your models.*
+*The Model Decision Layer — Prevent teams from shipping the wrong model.*
 
 **Related Documents:**
 - [PRD.md](PRD.md) - Product requirements and specifications
@@ -14,13 +14,13 @@
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
-| **P0** | Installation UX | Epic 53 ✅ COMPLETE |
-| **P0** | CLI Modernization | Epic 50 ✅ COMPLETE (Typer, check-deps, error handling) |
 | **P1** | CI/CD Integration | Epic 54 (`--fail-on` flags, GitHub Actions, Decision Reports) |
 | **P1** | Format Testing | Epic 42 (comprehensive conversion testing) |
 | **P2** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
 
-**Recent Release:** v0.9.4 (Dec 23, 2025) — Epic 50 complete, Typer CLI migration, check-deps command, user-friendly error handling
+**Recent Release:** v0.9.7 (Dec 23, 2025) — CLI bug fixes, `--list-hardware`/`--list-formats` flags, comprehensive CI testing
+
+**Quality Gate:** `python scripts/check.py` (fast) or `python scripts/check.py --all` (full)
 
 ---
 
@@ -28,9 +28,7 @@
 
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
-| **HIGH PRIORITY - DO NEXT** |||||
-| Epic 53: Installation UX | ✅ Complete | 3 | 15/15 | Done |
-| Epic 50: CLI Modernization | ✅ Complete | 3 | 18/18 | Done |
+| **NEXT UP** |||||
 | Epic 54: CI/CD Integration | Not Started | 3 | 0/23 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
@@ -52,7 +50,7 @@
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P4 |
 | Epics 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 
-**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 25, 33, 39, 40, 41 *(archived in PRDBacklogArchive.md)*
+**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 25, 33, 39, 40, 41, 50, 53 *(archived in PRDBacklogArchive.md)*
 
 ---
 
