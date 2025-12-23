@@ -495,12 +495,15 @@ def display_report_summary(report) -> None:
         hw_table.add_column("Metric", style="dim")
         hw_table.add_column("Value", justify="right")
 
-        hw_table.add_row(
-            "VRAM Required", format_size(report.hardware_estimates.vram_required_bytes)
-        )
-        hw_table.add_row("Est. Latency", f"{report.hardware_estimates.estimated_latency_ms:.1f} ms")
-        hw_table.add_row("Est. Throughput", f"{report.hardware_estimates.throughput_fps:.1f} FPS")
-        hw_table.add_row("Bottleneck", report.hardware_estimates.bottleneck)
+        hw = report.hardware_estimates
+        hw_table.add_row("VRAM Required", format_size(hw.vram_required_bytes))
+        hw_table.add_row("Est. Latency", f"{hw.theoretical_latency_ms:.2f} ms")
+        # Calculate throughput from latency (inferences per second)
+        if hw.theoretical_latency_ms > 0:
+            throughput = (hw.batch_size * 1000.0) / hw.theoretical_latency_ms
+            hw_table.add_row("Est. Throughput", f"{throughput:.1f} inf/s")
+        hw_table.add_row("GPU Utilization", f"{hw.compute_utilization_estimate * 100:.0f}%")
+        hw_table.add_row("Bottleneck", hw.bottleneck)
 
         console.print()
         console.print(hw_table)
