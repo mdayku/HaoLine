@@ -1,0 +1,627 @@
+#!/usr/bin/env python
+# Copyright (c) 2025 HaoLine Contributors
+# SPDX-License-Identifier: MIT
+
+"""
+HaoLine CLI - Universal Model Inspector (Typer version).
+
+Modern CLI built with Typer for better UX, shell completion, and rich output.
+"""
+
+from __future__ import annotations
+
+import sys
+from enum import Enum
+from pathlib import Path
+from typing import Annotated
+
+import typer
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+# Rich console for output
+console = Console()
+err_console = Console(stderr=True)
+
+# Initialize Typer app with rich markup
+app = typer.Typer(
+    name="haoline",
+    help="HaoLine - Universal Model Inspector. See what's really inside your models.",
+    add_completion=True,
+    rich_markup_mode="rich",
+    no_args_is_help=True,
+    invoke_without_command=True,
+)
+
+
+@app.callback(invoke_without_command=True)
+def callback(
+    ctx: typer.Context,
+    version: Annotated[
+        bool | None,
+        typer.Option("--version", "-V", help="Show version and exit", is_eager=True),
+    ] = None,
+) -> None:
+    """HaoLine - Universal Model Inspector."""
+    if version:
+        from haoline import __version__
+
+        console.print(f"[bold]HaoLine[/bold] version [cyan]{__version__}[/cyan]")
+        raise typer.Exit()
+
+    # If no subcommand given but args look like a model path, run inspect
+    if ctx.invoked_subcommand is None:
+        # Check if there are remaining args that look like a file
+        if ctx.args and Path(ctx.args[0]).exists():
+            # Re-invoke with inspect command
+            ctx.invoke(inspect)
+
+
+# Enums for choices
+class Precision(str, Enum):
+    fp32 = "fp32"
+    fp16 = "fp16"
+    bf16 = "bf16"
+    int8 = "int8"
+
+
+class LogLevel(str, Enum):
+    debug = "debug"
+    info = "info"
+    warning = "warning"
+    error = "error"
+
+
+class DeploymentTarget(str, Enum):
+    edge = "edge"
+    local = "local"
+    cloud = "cloud"
+
+
+# =============================================================================
+# Helper functions
+# =============================================================================
+
+
+def check_dependency(module: str, extra: str, feature: str) -> bool:
+    """Check if a dependency is available, show install hint if not."""
+    try:
+        __import__(module)
+        return True
+    except ImportError:
+        err_console.print(
+            f"[yellow]Warning:[/yellow] {feature} requires [cyan]{module}[/cyan]\n"
+            f"  Install with: [bold]pip install haoline[{extra}][/bold]"
+        )
+        return False
+
+
+def format_size(bytes_val: int | float) -> str:
+    """Format bytes as human-readable size."""
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if abs(bytes_val) < 1024:
+            return f"{bytes_val:.1f} {unit}"
+        bytes_val /= 1024
+    return f"{bytes_val:.1f} PB"
+
+
+def format_number(n: int | float) -> str:
+    """Format large numbers with K/M/B suffixes."""
+    if n >= 1e12:
+        return f"{n / 1e12:.2f}T"
+    if n >= 1e9:
+        return f"{n / 1e9:.2f}B"
+    if n >= 1e6:
+        return f"{n / 1e6:.2f}M"
+    if n >= 1e3:
+        return f"{n / 1e3:.2f}K"
+    return str(int(n))
+
+
+# =============================================================================
+# Main inspect command
+# =============================================================================
+
+
+@app.command()
+def inspect(
+    model_path: Annotated[
+        Path | None,
+        typer.Argument(
+            help="Path to model file (ONNX, TensorRT, PyTorch, etc.)",
+            exists=True,
+            dir_okay=False,
+        ),
+    ] = None,
+    # Output options
+    out_json: Annotated[
+        Path | None,
+        typer.Option("--out-json", "-j", help="Output path for JSON report"),
+    ] = None,
+    out_md: Annotated[
+        Path | None,
+        typer.Option("--out-md", "-m", help="Output path for Markdown model card"),
+    ] = None,
+    out_html: Annotated[
+        Path | None,
+        typer.Option("--out-html", help="Output path for HTML report"),
+    ] = None,
+    out_pdf: Annotated[
+        Path | None,
+        typer.Option("--out-pdf", help="Output path for PDF report (requires playwright)"),
+    ] = None,
+    include_graph: Annotated[
+        bool,
+        typer.Option("--include-graph", help="Include interactive D3.js graph in HTML"),
+    ] = False,
+    # Hardware options
+    hardware: Annotated[
+        str | None,
+        typer.Option("--hardware", "-H", help="Hardware profile (auto, rtx4090, a100, etc.)"),
+    ] = None,
+    precision: Annotated[
+        Precision,
+        typer.Option("--precision", "-p", help="Precision for estimates"),
+    ] = Precision.fp32,
+    batch_size: Annotated[
+        int,
+        typer.Option("--batch-size", "-b", help="Batch size for estimates"),
+    ] = 1,
+    gpu_count: Annotated[
+        int,
+        typer.Option("--gpu-count", help="Number of GPUs for multi-GPU estimates"),
+    ] = 1,
+    # Conversion options
+    from_pytorch: Annotated[
+        Path | None,
+        typer.Option("--from-pytorch", help="Convert PyTorch model to ONNX first"),
+    ] = None,
+    input_shape: Annotated[
+        str | None,
+        typer.Option("--input-shape", help="Input shape for conversion (e.g., 1,3,224,224)"),
+    ] = None,
+    # LLM options
+    llm_summary: Annotated[
+        bool,
+        typer.Option("--llm-summary", help="Generate AI-powered summary (requires API key)"),
+    ] = False,
+    llm_model: Annotated[
+        str,
+        typer.Option("--llm-model", help="LLM model for summaries"),
+    ] = "gpt-4o-mini",
+    # Quantization options
+    lint_quant: Annotated[
+        bool,
+        typer.Option("--lint-quant/--no-lint-quant", help="Analyze quantization readiness"),
+    ] = False,
+    # Visualization options
+    with_plots: Annotated[
+        bool,
+        typer.Option("--with-plots", help="Generate visualization charts"),
+    ] = False,
+    # General options
+    quiet: Annotated[
+        bool,
+        typer.Option("--quiet", "-q", help="Suppress console output"),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Show detailed output"),
+    ] = False,
+) -> None:
+    """
+    Analyze a neural network model and generate comprehensive reports.
+
+    [bold]Examples:[/bold]
+
+        haoline model.onnx
+        haoline model.onnx --out-html report.html --include-graph
+        haoline model.onnx --hardware rtx4090 --out-json report.json
+        haoline --from-pytorch model.pt --input-shape 1,3,224,224
+    """
+    # Handle no model path
+    if model_path is None and from_pytorch is None:
+        console.print("[red]Error:[/red] No model path provided")
+        console.print("Run [bold]haoline --help[/bold] for usage")
+        raise typer.Exit(1)
+
+    # Import the analysis engine
+    from haoline import ModelInspector
+    from haoline.hardware import HardwareEstimator, detect_local_hardware, get_profile
+
+    # Determine model to analyze
+    if from_pytorch:
+        if not check_dependency("torch", "pytorch", "PyTorch conversion"):
+            raise typer.Exit(1)
+        if not input_shape:
+            err_console.print("[red]Error:[/red] --input-shape required with --from-pytorch")
+            raise typer.Exit(1)
+
+        # Convert PyTorch to ONNX
+        with console.status("[bold blue]Converting PyTorch model to ONNX...[/bold blue]"):
+            from haoline._cli_legacy import convert_pytorch_to_onnx
+
+            shape = [int(x) for x in input_shape.split(",")]
+            onnx_path = convert_pytorch_to_onnx(str(from_pytorch), shape)
+            if not onnx_path:
+                err_console.print("[red]Error:[/red] PyTorch conversion failed")
+                raise typer.Exit(1)
+            analysis_path = onnx_path
+    else:
+        analysis_path = str(model_path)
+
+    # Run analysis
+    if not quiet:
+        console.print(f"\n[bold]Analyzing:[/bold] {analysis_path}")
+
+    with (
+        console.status("[bold blue]Running analysis...[/bold blue]") if not quiet else nullcontext()
+    ):
+        inspector = ModelInspector()
+        report = inspector.inspect(analysis_path)
+
+    # Apply hardware estimates
+    if hardware:
+        if hardware == "auto":
+            profile = detect_local_hardware()
+        else:
+            profile = get_profile(hardware)
+
+        if profile and report.param_counts and report.flop_counts and report.memory_estimates:
+            estimator = HardwareEstimator()
+            report.hardware_profile = profile
+            report.hardware_estimates = estimator.estimate(
+                model_params=report.param_counts.total,
+                model_flops=report.flop_counts.total,
+                peak_activation_bytes=report.memory_estimates.peak_activation_bytes,
+                hardware=profile,
+            )
+
+    # Quantization linting
+    if lint_quant:
+        from haoline.quantization_linter import QuantizationLinter
+
+        linter = QuantizationLinter()
+        # Load graph for linting
+        from haoline.analyzer import ONNXGraphLoader
+
+        loader = ONNXGraphLoader()
+        _, graph_info = loader.load(analysis_path)
+        report.quantization_lint = linter.lint(graph_info)
+
+    # LLM summary
+    if llm_summary:
+        if not check_dependency("openai", "llm", "LLM summaries"):
+            err_console.print("[yellow]Skipping LLM summary[/yellow]")
+        else:
+            from haoline.llm_summarizer import LLMSummarizer, has_api_key
+
+            if has_api_key():
+                with console.status("[bold blue]Generating AI summary...[/bold blue]"):
+                    summarizer = LLMSummarizer(model=llm_model)
+                    report.llm_summary = summarizer.summarize(report)
+            else:
+                err_console.print(
+                    "[yellow]Warning:[/yellow] No API key found. "
+                    "Set OPENAI_API_KEY environment variable."
+                )
+
+    # Output results
+    if not quiet:
+        display_report_summary(report)
+
+    # Write outputs
+    if out_json:
+        out_json.write_text(report.to_json())
+        console.print(f"[green]Wrote:[/green] {out_json}")
+
+    if out_md:
+        from haoline._cli_legacy import generate_markdown
+
+        md_content = generate_markdown(report, str(model_path or from_pytorch))
+        out_md.write_text(md_content)
+        console.print(f"[green]Wrote:[/green] {out_md}")
+
+    if out_html:
+        from haoline.html_export import HTMLExporter
+
+        exporter = HTMLExporter()
+        html_content = exporter.generate(report, include_graph=include_graph)
+        out_html.write_text(html_content)
+        console.print(f"[green]Wrote:[/green] {out_html}")
+
+    if out_pdf:
+        if not check_dependency("playwright", "pdf", "PDF export"):
+            err_console.print("[yellow]Skipping PDF export[/yellow]")
+        else:
+            from haoline.pdf_generator import PDFGenerator
+
+            gen = PDFGenerator()
+            gen.generate(report, str(out_pdf))
+            console.print(f"[green]Wrote:[/green] {out_pdf}")
+
+
+def display_report_summary(report) -> None:
+    """Display a rich summary of the analysis."""
+
+    # Create summary table
+    table = Table(title="Model Analysis Summary", show_header=True, header_style="bold cyan")
+    table.add_column("Metric", style="dim")
+    table.add_column("Value", justify="right")
+
+    if report.param_counts:
+        table.add_row("Parameters", format_number(report.param_counts.total))
+    if report.flop_counts:
+        table.add_row("FLOPs", format_number(report.flop_counts.total))
+    if report.memory_estimates:
+        table.add_row("Peak Memory", format_size(report.memory_estimates.peak_activation_bytes))
+        table.add_row("Model Size", format_size(report.memory_estimates.model_size_bytes))
+    if report.graph_summary:
+        table.add_row("Operators", str(report.graph_summary.num_nodes))
+        table.add_row("Inputs", str(len(report.graph_summary.input_names)))
+        table.add_row("Outputs", str(len(report.graph_summary.output_names)))
+
+    console.print()
+    console.print(table)
+
+    # Show hardware estimates if available
+    if report.hardware_estimates:
+        hw_table = Table(title="Hardware Estimates", show_header=True, header_style="bold green")
+        hw_table.add_column("Metric", style="dim")
+        hw_table.add_column("Value", justify="right")
+
+        hw_table.add_row(
+            "VRAM Required", format_size(report.hardware_estimates.vram_required_bytes)
+        )
+        hw_table.add_row("Est. Latency", f"{report.hardware_estimates.estimated_latency_ms:.1f} ms")
+        hw_table.add_row("Est. Throughput", f"{report.hardware_estimates.throughput_fps:.1f} FPS")
+        hw_table.add_row("Bottleneck", report.hardware_estimates.bottleneck)
+
+        console.print()
+        console.print(hw_table)
+
+    # Show detected patterns
+    if report.detected_blocks:
+        console.print(f"\n[bold]Detected Patterns:[/bold] {len(report.detected_blocks)}")
+        for block in report.detected_blocks[:5]:
+            console.print(f"  - {block.name} ({block.block_type})")
+        if len(report.detected_blocks) > 5:
+            console.print(f"  ... and {len(report.detected_blocks) - 5} more")
+
+    # Show risk signals
+    if report.risk_signals:
+        console.print(f"\n[bold yellow]Risk Signals:[/bold yellow] {len(report.risk_signals)}")
+        for risk in report.risk_signals[:3]:
+            console.print(f"  [yellow]![/yellow] {risk.message}")
+        if len(report.risk_signals) > 3:
+            console.print(f"  ... and {len(report.risk_signals) - 3} more")
+
+    console.print()
+
+
+# Context manager for optional status
+class nullcontext:
+    """Null context manager for Python < 3.10 compatibility."""
+
+    def __enter__(self):
+        return None
+
+    def __exit__(self, *args):
+        pass
+
+
+# =============================================================================
+# List commands
+# =============================================================================
+
+
+@app.command("list-hardware")
+def list_hardware() -> None:
+    """List all available hardware profiles."""
+    from haoline.hardware import HARDWARE_PROFILES
+
+    table = Table(title="Available Hardware Profiles", show_header=True, header_style="bold cyan")
+    table.add_column("Key", style="dim")
+    table.add_column("Name")
+    table.add_column("VRAM", justify="right")
+    table.add_column("FP16 TFLOPS", justify="right")
+
+    # Group by category
+    categories = {
+        "H100": ["h100-sxm", "h100-pcie", "h100-nvl"],
+        "A100": ["a100-80gb-sxm", "a100-80gb-pcie", "a100-40gb-sxm", "a100-40gb-pcie"],
+        "RTX 40": ["rtx4090", "rtx4080", "rtx4070", "rtx4060"],
+        "RTX 30": ["rtx3090", "rtx3080", "rtx3070", "rtx3060"],
+        "Cloud": ["t4", "a10", "l4", "l40s"],
+    }
+
+    for category, keys in categories.items():
+        table.add_row(f"[bold]{category}[/bold]", "", "", "", style="bold")
+        for key in keys:
+            if key in HARDWARE_PROFILES:
+                p = HARDWARE_PROFILES[key]
+                table.add_row(
+                    f"  {key}",
+                    p.name,
+                    f"{p.vram_bytes // (1024**3)} GB",
+                    f"{p.peak_fp16_tflops:.1f}",
+                )
+
+    console.print(table)
+    console.print("\n[dim]Use --hardware <key> to select a profile[/dim]")
+
+
+@app.command("list-formats")
+def list_formats() -> None:
+    """List all supported model formats."""
+    table = Table(title="Supported Model Formats", show_header=True, header_style="bold cyan")
+    table.add_column("Format", style="bold")
+    table.add_column("Extensions")
+    table.add_column("Status")
+    table.add_column("Install With")
+
+    formats = [
+        ("ONNX", ".onnx", "[green]Built-in[/green]", "-"),
+        ("PyTorch", ".pt, .pth", check_format("torch"), r"pip install haoline\[pytorch]"),
+        (
+            "TensorFlow",
+            "SavedModel, .h5",
+            check_format("tensorflow"),
+            r"pip install haoline\[tensorflow]",
+        ),
+        ("TensorRT", ".engine, .plan", check_format("tensorrt"), r"pip install haoline\[tensorrt]"),
+        ("TFLite", ".tflite", check_format("tflite_runtime"), r"pip install haoline\[tflite]"),
+        (
+            "CoreML",
+            ".mlmodel, .mlpackage",
+            check_format("coremltools"),
+            r"pip install haoline\[coreml]",
+        ),
+        ("OpenVINO", ".xml + .bin", check_format("openvino"), r"pip install haoline\[openvino]"),
+        ("GGUF", ".gguf", "[green]Built-in[/green]", "-"),
+        (
+            "SafeTensors",
+            ".safetensors",
+            check_format("safetensors"),
+            r"pip install haoline\[safetensors]",
+        ),
+    ]
+
+    for name, ext, status, install in formats:
+        table.add_row(name, ext, status, install)
+
+    console.print(table)
+
+
+def check_format(module: str) -> str:
+    """Check if format module is available."""
+    try:
+        __import__(module)
+        return "[green]Available[/green]"
+    except ImportError:
+        return "[yellow]Not installed[/yellow]"
+
+
+# =============================================================================
+# Subcommands
+# =============================================================================
+
+
+@app.command()
+def web(
+    port: Annotated[int, typer.Option("--port", "-p", help="Port to run on")] = 8501,
+    host: Annotated[str, typer.Option("--host", help="Host to bind to")] = "localhost",
+) -> None:
+    """Launch the HaoLine web interface (Streamlit)."""
+    if not check_dependency("streamlit", "web", "Web interface"):
+        raise typer.Exit(1)
+
+    from haoline.web import main as web_main
+
+    sys.argv = ["haoline-web", "--port", str(port), "--host", host]
+    web_main()
+
+
+@app.command()
+def compare(
+    models: Annotated[
+        list[Path],
+        typer.Option("--models", "-m", help="Model files to compare"),
+    ],
+    eval_metrics: Annotated[
+        list[Path],
+        typer.Option("--eval-metrics", "-e", help="Eval metrics JSON files"),
+    ],
+    out_json: Annotated[
+        Path | None,
+        typer.Option("--out-json", help="Output comparison JSON"),
+    ] = None,
+    out_md: Annotated[
+        Path | None,
+        typer.Option("--out-md", help="Output comparison Markdown"),
+    ] = None,
+    out_html: Annotated[
+        Path | None,
+        typer.Option("--out-html", help="Output comparison HTML"),
+    ] = None,
+) -> None:
+    """Compare multiple model variants (quantization, architecture)."""
+    from haoline.compare import main as compare_main
+
+    # Build args for legacy compare CLI
+    args = ["--models"] + [str(m) for m in models]
+    args += ["--eval-metrics"] + [str(e) for e in eval_metrics]
+    if out_json:
+        args += ["--out-json", str(out_json)]
+    if out_md:
+        args += ["--out-md", str(out_md)]
+    if out_html:
+        args += ["--out-html", str(out_html)]
+
+    sys.argv = ["haoline-compare"] + args
+    compare_main()
+
+
+@app.command("check-install")
+def check_install_cmd() -> None:
+    """Check installation status and report issues."""
+    import shutil
+
+    console.print(Panel("[bold]HaoLine Installation Check[/bold]", style="cyan"))
+
+    # Version
+    from haoline import __version__
+
+    console.print(f"\n[bold]Version:[/bold] {__version__}")
+
+    # CLI commands
+    console.print("\n[bold]CLI Commands:[/bold]")
+    cli_commands = {
+        "haoline": "python -m haoline",
+        "haoline-compare": "python -m haoline compare",
+        "haoline-web": "python -m haoline web",
+    }
+
+    for cmd, alt in cli_commands.items():
+        path = shutil.which(cmd)
+        if path:
+            console.print(f"  [green]{cmd}[/green]: {path}")
+        else:
+            console.print(f"  [yellow]{cmd}[/yellow]: NOT ON PATH (use: {alt})")
+
+    # Optional dependencies
+    console.print("\n[bold]Optional Dependencies:[/bold]")
+    extras = {
+        "streamlit": ("web", "Web UI"),
+        "torch": ("pytorch", "PyTorch conversion"),
+        "tensorflow": ("tensorflow", "TensorFlow conversion"),
+        "openai": ("llm", "LLM summaries"),
+        "playwright": ("pdf", "PDF export"),
+        "onnxruntime": ("runtime", "Benchmarking"),
+        "tensorrt": ("tensorrt", "TensorRT analysis"),
+    }
+
+    for module, (extra, desc) in extras.items():
+        try:
+            __import__(module)
+            console.print(f"  [green]{module}[/green]: installed")
+        except ImportError:
+            console.print(f"  [dim]{module}[/dim]: not installed (haoline[{extra}] - {desc})")
+
+    console.print(f"\n[bold]Python:[/bold] {sys.version.split()[0]}")
+    console.print(f"[bold]Executable:[/bold] {sys.executable}")
+
+
+# =============================================================================
+# Entry point
+# =============================================================================
+
+
+def main() -> None:
+    """Main entry point."""
+    app()
+
+
+if __name__ == "__main__":
+    main()

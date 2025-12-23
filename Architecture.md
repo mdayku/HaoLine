@@ -627,7 +627,8 @@ HaoLine/
 |
 +-- src/haoline/             # Main package
 |   +-- __init__.py          # Public API exports, version
-|   +-- cli.py               # Main CLI entrypoint (haoline command)
+|   +-- cli_typer.py         # Main CLI entrypoint (Typer-based, haoline command)
+|   +-- _cli_legacy.py       # DEPRECATED: Legacy argparse CLI (kept for helper functions)
 |   +-- compare.py           # Compare mode CLI
 |   +-- analyzer.py          # ONNX graph analysis, FLOPs, params, memory
 |   +-- patterns.py          # Architecture pattern detection
@@ -990,6 +991,8 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | `privacy.py` | Redaction rules, summary filters |
 | `eval/schemas.py` | Task-specific evaluation schemas, CombinedReport |
 | `eval/adapters.py` | Import adapters (Ultralytics YOLO, generic CSV/JSON) |
+| `cli_typer.py` | Main CLI entry point (Typer-based) |
+| `_cli_legacy.py` | DEPRECATED: Legacy argparse CLI, kept for helper functions |
 | `eval/cli.py` | CLI entry point for `haoline-import-eval` |
 | `universal_ir.py` | UniversalGraph, UniversalNode, FormatAdapter protocol |
 | `format_adapters.py` | OnnxAdapter, PyTorchAdapter, conversion matrix |

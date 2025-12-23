@@ -2,9 +2,16 @@
 # SPDX-License-Identifier: MIT
 
 """
-HaoLine CLI - Universal Model Inspector.
+DEPRECATED: Legacy argparse-based CLI.
 
-Entry point for the `haoline` command-line tool.
+This module is kept for backwards compatibility and helper functions.
+The main CLI has been migrated to Typer in `cli_typer.py`.
+
+DO NOT add new features to this file. Use cli_typer.py instead.
+
+Helper functions still used by cli_typer.py:
+- convert_pytorch_to_onnx()
+- generate_markdown()
 """
 
 from __future__ import annotations

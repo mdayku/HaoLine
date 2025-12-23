@@ -121,20 +121,24 @@ This keeps format testing consolidated and prevents script sprawl.
 - [ ] Updated README.md extras table
 - [ ] Updated test script (if format reader)
 
-## CLI Command Documentation (IMPORTANT)
+## CLI Architecture (IMPORTANT)
+
+**CLI Files:**
+- `src/haoline/cli_typer.py` - **MAIN CLI** (Typer-based, add new features here)
+- `src/haoline/_cli_legacy.py` - **DEPRECATED** (legacy argparse, kept for helper functions only)
 
 **When adding a new CLI flag or command:**
 
-1. Add the flag to `src/haoline/cli.py` (argparse)
+1. Add to `src/haoline/cli_typer.py` (Typer)
 2. **Update README.md** - add to the appropriate table in "CLI Reference" section
 3. Update the `generate_cli_command()` function in `streamlit_tabs.py` if the flag is relevant to web UI exports
-4. Add help text to the argparse argument
+4. Add tests to `src/haoline/tests/test_cli_typer.py`
 
 **Checklist when adding CLI flags:**
-- [ ] Added to `cli.py` argparse
+- [ ] Added to `cli_typer.py` (NOT _cli_legacy.py)
 - [ ] Added to README.md CLI Reference table
 - [ ] Updated `generate_cli_command()` (if web-relevant)
-- [ ] Help text is descriptive
+- [ ] Added test in test_cli_typer.py
 
 ## Version Compatibility (IMPORTANT)
 
