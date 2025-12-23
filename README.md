@@ -484,6 +484,25 @@ python -m haoline compare \
 | `param_increase` | `param_increase=5%` | Fail if parameter count increases >5% |
 | `new_risk_signals` | `new_risk_signals` | Fail if new high-severity risks appear |
 
+### Decision Reports (Audit Trail)
+
+Generate a decision report for compliance and governance:
+
+```bash
+python -m haoline compare \
+  --models baseline.onnx candidate.onnx \
+  --eval-metrics baseline.json candidate.json \
+  --decision-report decision.json  # or decision.md for Markdown
+```
+
+The decision report captures:
+- **Models compared**: paths, MD5 hashes, file sizes, timestamps
+- **Constraints applied**: all `--fail-on` thresholds
+- **Results**: pass/fail status for each constraint
+- **Decision**: APPROVED or REJECTED
+- **Recommendations**: from quantization advisor and hardware estimator
+- **Metadata**: timestamp, HaoLine version
+
 ### GitHub Actions
 
 Copy the example workflow to your repository:

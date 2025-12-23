@@ -281,3 +281,126 @@ class TestFailOnThresholds:
         assert result.exit_code == 0
         output = strip_ansi(result.output)
         assert "--fail-on" in output
+
+    def test_compare_help_shows_decision_report(self):
+        """Test that compare --help mentions --decision-report."""
+        result = runner.invoke(app, ["compare", "--help"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.output)
+        assert "--decision-report" in output
+
+
+class TestDecisionReport:
+    """Test decision report generation."""
+
+    def test_build_decision_report_structure(self):
+        """Test that decision report has correct structure."""
+        from pathlib import Path
+
+        from haoline.cli_typer import _build_decision_report
+
+        compare_json = {
+            "baseline_precision": "fp32",
+            "architecture_compatible": True,
+            "compatibility_warnings": [],
+            "variants": [
+                {
+                    "precision": "fp32",
+                    "total_params": 1000000,
+                    "memory_bytes": 4000000,
+                    "deltas_vs_baseline": None,
+                },
+                {
+                    "precision": "int8",
+                    "total_params": 1000000,
+                    "memory_bytes": 2000000,
+                    "deltas_vs_baseline": {"memory_bytes": -2000000},
+                },
+            ],
+        }
+
+        threshold_results = [
+            ("memory_increase", "Memory decreased by 50%", True),
+        ]
+
+        # Create mock paths
+        models = [Path("baseline.onnx"), Path("candidate.onnx")]
+
+        report = _build_decision_report(
+            compare_json,
+            ["memory_increase=20%"],
+            threshold_results,
+            models,
+        )
+
+        assert "decision_report" in report
+        dr = report["decision_report"]
+        assert "timestamp" in dr
+        assert "haoline_version" in dr
+        assert "models_compared" in dr
+        assert "constraints" in dr
+        assert "decision" in dr
+        assert dr["decision"] == "APPROVED"
+
+    def test_build_decision_report_rejected(self):
+        """Test that decision report shows REJECTED when thresholds fail."""
+        from pathlib import Path
+
+        from haoline.cli_typer import _build_decision_report
+
+        compare_json = {
+            "baseline_precision": "fp32",
+            "architecture_compatible": True,
+            "variants": [],
+        }
+
+        threshold_results = [
+            ("latency_increase", "Latency increased by 15%", False),  # Failed
+        ]
+
+        models = [Path("model.onnx")]
+
+        report = _build_decision_report(
+            compare_json,
+            ["latency_increase=10%"],
+            threshold_results,
+            models,
+        )
+
+        assert report["decision_report"]["decision"] == "REJECTED"
+
+    def test_decision_report_to_markdown(self):
+        """Test markdown conversion of decision report."""
+        from haoline.cli_typer import _decision_report_to_markdown
+
+        report = {
+            "decision_report": {
+                "timestamp": "2024-01-01T00:00:00Z",
+                "haoline_version": "0.9.7",
+                "models_compared": [
+                    {"path": "baseline.onnx", "hash_md5": "abc123", "size_bytes": 1000000},
+                    {"path": "candidate.onnx", "hash_md5": "def456", "size_bytes": 500000},
+                ],
+                "baseline": "fp32",
+                "constraints": {
+                    "memory_increase": {
+                        "threshold": "20%",
+                        "results": [{"message": "Memory decreased", "passed": True}],
+                    }
+                },
+                "decision": "APPROVED",
+                "architecture_compatible": True,
+                "compatibility_warnings": [],
+                "recommendations": ["Consider INT8 quantization"],
+            }
+        }
+
+        md = _decision_report_to_markdown(report)
+
+        assert "# Model Decision Report" in md
+        assert "0.9.7" in md
+        assert "baseline.onnx" in md
+        assert "candidate.onnx" in md
+        assert "APPROVED" in md
+        assert "memory_increase" in md
+        assert "Consider INT8 quantization" in md

@@ -29,7 +29,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **NEXT UP** |||||
-| Epic 54: CI/CD Integration | In Progress | 3 | 14/23 | **P1** |
+| Epic 54: CI/CD Integration | **COMPLETE** | 3 | 23/23 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
 | Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | P2 |
@@ -154,20 +154,20 @@ jobs:
             });
 ```
 
-### Story 54.3: Decision Report Format
+### Story 54.3: Decision Report Format ✅ **COMPLETE**
 *Create an audit-trail format that captures what was compared, what constraints were applied, and what was decided.*
 
 **Use case:** Compliance, governance, and "who approved this model?" questions.
 
-- [ ] **Task 54.3.1**: Define `DecisionReport` schema (models compared, constraints, recommendations)
-- [ ] **Task 54.3.2**: Add `--decision-report PATH` flag to compare command
-- [ ] **Task 54.3.3**: Capture: models compared (paths, hashes, timestamps)
-- [ ] **Task 54.3.4**: Capture: constraints applied (thresholds, hardware profile, precision)
-- [ ] **Task 54.3.5**: Capture: results (pass/fail for each constraint, risk signals)
-- [ ] **Task 54.3.6**: Capture: recommendations (from quantization advisor, hardware estimator)
-- [ ] **Task 54.3.7**: Output as JSON (machine-readable audit trail)
-- [ ] **Task 54.3.8**: Output as Markdown (human-readable summary)
-- [ ] **Task 54.3.9**: Add timestamp and HaoLine version to report
+- [x] **Task 54.3.1**: Define `DecisionReport` schema (models compared, constraints, recommendations) ✅
+- [x] **Task 54.3.2**: Add `--decision-report PATH` flag to compare command ✅
+- [x] **Task 54.3.3**: Capture: models compared (paths, hashes, timestamps) ✅
+- [x] **Task 54.3.4**: Capture: constraints applied (thresholds, hardware profile, precision) ✅
+- [x] **Task 54.3.5**: Capture: results (pass/fail for each constraint, risk signals) ✅
+- [x] **Task 54.3.6**: Capture: recommendations (from quantization advisor, hardware estimator) ✅
+- [x] **Task 54.3.7**: Output as JSON (machine-readable audit trail) ✅
+- [x] **Task 54.3.8**: Output as Markdown (human-readable summary) ✅
+- [x] **Task 54.3.9**: Add timestamp and HaoLine version to report ✅
 
 **Example output:**
 ```json

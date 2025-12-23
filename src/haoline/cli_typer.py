@@ -893,6 +893,181 @@ def _get_baseline_params(compare_json: dict) -> int | None:
     return None
 
 
+def _build_decision_report(
+    compare_json: dict,
+    fail_on_specs: list[str] | None,
+    threshold_results: list[tuple[str, str, bool]],
+    models: list[Path],
+) -> dict:
+    """Build a decision report for audit/compliance purposes.
+
+    The decision report captures:
+    - What models were compared
+    - What constraints were applied
+    - What the results were
+    - What the overall decision was
+    """
+    import hashlib
+    from datetime import datetime, timezone
+
+    from haoline import __version__
+
+    # Compute file hashes
+    models_info = []
+    for model_path in models:
+        model_info: dict = {
+            "path": str(model_path),
+            "exists": model_path.exists(),
+        }
+        if model_path.exists():
+            model_info["size_bytes"] = model_path.stat().st_size
+            model_info["modified"] = datetime.fromtimestamp(
+                model_path.stat().st_mtime, tz=timezone.utc
+            ).isoformat()
+            # Compute MD5 hash (fast enough for audit purposes)
+            with open(model_path, "rb") as f:
+                model_info["hash_md5"] = hashlib.md5(f.read()).hexdigest()
+        models_info.append(model_info)
+
+    # Build constraints section from threshold results
+    constraints: dict = {}
+    for metric, message, passed in threshold_results:
+        if metric not in constraints:
+            constraints[metric] = {
+                "threshold": None,
+                "results": [],
+            }
+        # Parse threshold from fail_on_specs
+        if fail_on_specs:
+            for spec in fail_on_specs:
+                parsed_metric, threshold, is_pct = _parse_threshold(spec)
+                if parsed_metric == metric:
+                    if threshold is not None:
+                        constraints[metric]["threshold"] = (
+                            f"{threshold}%" if is_pct else str(threshold)
+                        )
+                    break
+        constraints[metric]["results"].append(
+            {
+                "message": message,
+                "passed": passed,
+            }
+        )
+
+    # Determine overall decision
+    all_passed = all(passed for _, _, passed in threshold_results) if threshold_results else True
+    decision = "APPROVED" if all_passed else "REJECTED"
+
+    # Extract recommendations if available
+    recommendations: list[str] = []
+    for variant in compare_json.get("variants", []):
+        quant_advice = variant.get("quantization_advice")
+        if quant_advice:
+            recs = quant_advice.get("recommendations", [])
+            recommendations.extend(recs[:2])  # Take top 2 from each variant
+
+    # Build the report
+    report = {
+        "decision_report": {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "haoline_version": __version__,
+            "models_compared": models_info,
+            "baseline": compare_json.get("baseline_precision", "unknown"),
+            "constraints": constraints,
+            "decision": decision,
+            "architecture_compatible": compare_json.get("architecture_compatible", True),
+            "compatibility_warnings": compare_json.get("compatibility_warnings", []),
+            "recommendations": recommendations[:5],  # Limit to 5
+        }
+    }
+
+    return report
+
+
+def _decision_report_to_markdown(report: dict) -> str:
+    """Convert decision report to Markdown format."""
+    dr = report.get("decision_report", {})
+
+    lines = [
+        "# Model Decision Report",
+        "",
+        f"**Generated:** {dr.get('timestamp', 'unknown')}",
+        f"**HaoLine Version:** {dr.get('haoline_version', 'unknown')}",
+        "",
+        "## Models Compared",
+        "",
+    ]
+
+    for model in dr.get("models_compared", []):
+        lines.append(f"- **{model.get('path', 'unknown')}**")
+        if model.get("hash_md5"):
+            lines.append(f"  - Hash (MD5): `{model['hash_md5'][:12]}...`")
+        if model.get("size_bytes"):
+            size_mb = model["size_bytes"] / (1024 * 1024)
+            lines.append(f"  - Size: {size_mb:.2f} MB")
+
+    lines.extend(
+        [
+            "",
+            f"**Baseline:** {dr.get('baseline', 'unknown')}",
+            "",
+            "## Constraints",
+            "",
+        ]
+    )
+
+    constraints = dr.get("constraints", {})
+    if constraints:
+        for metric, data in constraints.items():
+            threshold = data.get("threshold", "N/A")
+            lines.append(f"### {metric} (threshold: {threshold})")
+            for result in data.get("results", []):
+                status = "PASS" if result.get("passed") else "**FAIL**"
+                lines.append(f"- {status}: {result.get('message', '')}")
+            lines.append("")
+    else:
+        lines.append("*No constraints specified*")
+        lines.append("")
+
+    decision = dr.get("decision", "UNKNOWN")
+    decision_emoji = "APPROVED" if decision == "APPROVED" else "REJECTED"
+    lines.extend(
+        [
+            "## Decision",
+            "",
+            f"**{decision_emoji}**",
+            "",
+        ]
+    )
+
+    if not dr.get("architecture_compatible", True):
+        lines.append("**Warning:** Models have architecture differences")
+        for warning in dr.get("compatibility_warnings", []):
+            lines.append(f"- {warning}")
+        lines.append("")
+
+    recommendations = dr.get("recommendations", [])
+    if recommendations:
+        lines.extend(
+            [
+                "## Recommendations",
+                "",
+            ]
+        )
+        for rec in recommendations:
+            lines.append(f"- {rec}")
+        lines.append("")
+
+    lines.extend(
+        [
+            "---",
+            "*Generated by HaoLine*",
+        ]
+    )
+
+    return "\n".join(lines)
+
+
 @app.command()
 def compare(
     models: Annotated[
@@ -922,24 +1097,35 @@ def compare(
             help="Threshold to fail on (e.g., latency_increase=10%, memory_increase=20%, new_risk_signals). Can be used multiple times.",
         ),
     ] = None,
+    decision_report: Annotated[
+        Path | None,
+        typer.Option(
+            "--decision-report",
+            help="Output path for decision report (JSON audit trail). Use .json or .md extension.",
+        ),
+    ] = None,
 ) -> None:
     """Compare multiple model variants (quantization, architecture).
 
     Use --fail-on for CI/CD pipelines to exit with code 1 if thresholds are exceeded.
+    Use --decision-report for compliance/audit trails.
 
     Examples:
         python -m haoline compare --models base.onnx candidate.onnx \\
             --eval-metrics base_eval.json candidate_eval.json \\
             --fail-on latency_increase=10% \\
-            --fail-on memory_increase=20%
+            --fail-on memory_increase=20% \\
+            --decision-report decision.json
     """
     import json
     import tempfile
 
     from haoline.compare import main as compare_main
 
-    # If --fail-on is specified, we need to capture the JSON output
-    if fail_on:
+    # Determine if we need to capture JSON (for --fail-on or --decision-report)
+    need_json = fail_on or decision_report
+
+    if need_json:
         # Create temp file for JSON output
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
             tmp_path = Path(tmp.name)
@@ -947,9 +1133,7 @@ def compare(
         # Build args for legacy compare CLI
         args = ["--models"] + [str(m) for m in models]
         args += ["--eval-metrics"] + [str(e) for e in eval_metrics]
-        args += ["--out-json", str(tmp_path)]  # Always capture JSON for threshold check
-        if out_json:
-            pass  # We'll copy later
+        args += ["--out-json", str(tmp_path)]  # Always capture JSON
         if out_md:
             args += ["--out-md", str(out_md)]
         if out_html:
@@ -972,27 +1156,49 @@ def compare(
             out_json.write_text(json.dumps(compare_json, indent=2))
             console.print(f"[green]Wrote:[/green] {out_json}")
 
-        # Check thresholds
-        results = _check_thresholds(compare_json, fail_on)
-
-        # Display results
+        # Check thresholds if specified
+        threshold_results: list[tuple[str, str, bool]] = []
         any_failed = False
-        console.print("\n[bold]Threshold Checks:[/bold]")
-        for _metric, message, passed in results:
-            if passed:
-                console.print(f"  [green]PASS[/green] {message}")
-            else:
-                console.print(f"  [red]FAIL[/red] {message}")
-                any_failed = True
 
+        if fail_on:
+            threshold_results = _check_thresholds(compare_json, fail_on)
+
+            # Display results
+            console.print("\n[bold]Threshold Checks:[/bold]")
+            for _metric, message, passed in threshold_results:
+                if passed:
+                    console.print(f"  [green]PASS[/green] {message}")
+                else:
+                    console.print(f"  [red]FAIL[/red] {message}")
+                    any_failed = True
+
+        # Generate decision report if requested
+        if decision_report:
+            dr = _build_decision_report(
+                compare_json,
+                fail_on,
+                threshold_results,
+                models,
+            )
+
+            # Determine output format based on extension
+            if decision_report.suffix.lower() == ".md":
+                md_content = _decision_report_to_markdown(dr)
+                decision_report.write_text(md_content)
+            else:
+                decision_report.write_text(json.dumps(dr, indent=2))
+
+            console.print(f"[green]Wrote decision report:[/green] {decision_report}")
+
+        # Exit with appropriate code
         if any_failed:
             err_console.print("\n[red bold]Threshold violation(s) detected. Failing.[/red bold]")
             raise typer.Exit(1)
-        else:
+        elif fail_on:
             console.print("\n[green bold]All thresholds passed.[/green bold]")
 
     else:
-        # No --fail-on, just run the comparison normally
+        # No --fail-on or --decision-report, just run the comparison normally
         args = ["--models"] + [str(m) for m in models]
         args += ["--eval-metrics"] + [str(e) for e in eval_metrics]
         if out_json:
