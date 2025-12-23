@@ -29,7 +29,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **NEXT UP** |||||
-| Epic 54: CI/CD Integration | In Progress | 3 | 9/23 | **P1** |
+| Epic 54: CI/CD Integration | In Progress | 3 | 14/23 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
 | Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | P2 |
@@ -114,16 +114,16 @@ python -m haoline compare --models base.onnx candidate.onnx \
 # Exit code 1 if any threshold violated
 ```
 
-### Story 54.2: GitHub Actions Workflow
+### Story 54.2: GitHub Actions Workflow ✅ **COMPLETE**
 *Provide a ready-to-use workflow for model validation in PRs.*
 
 **Use case:** Teams add one YAML file and get automatic model checks on every PR.
 
-- [ ] **Task 54.2.1**: Create `.github/examples/model-check.yml` workflow template
-- [ ] **Task 54.2.2**: Workflow: checkout, install haoline, run compare with --fail-on
-- [ ] **Task 54.2.3**: Workflow: post comparison summary as PR comment
-- [ ] **Task 54.2.4**: Add workflow documentation to README
-- [ ] **Task 54.2.5**: Test workflow in a sample repo
+- [x] **Task 54.2.1**: Create `.github/examples/model-check.yml` workflow template ✅
+- [x] **Task 54.2.2**: Workflow: checkout, install haoline, run compare with --fail-on ✅
+- [x] **Task 54.2.3**: Workflow: post comparison summary as PR comment ✅
+- [x] **Task 54.2.4**: Add workflow documentation to README ✅
+- [x] **Task 54.2.5**: Test workflow in a sample repo ✅ (tested via HaoLine's own CI)
 
 **Example workflow:**
 ```yaml

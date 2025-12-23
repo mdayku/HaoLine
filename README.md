@@ -459,6 +459,80 @@ report.to_html("report.html")
 
 ---
 
+## CI/CD Integration
+
+HaoLine can act as a **gatekeeper** in your ML pipelines, failing builds when model quality regresses.
+
+### Threshold-Based Failure
+
+Use `--fail-on` flags to set thresholds that cause non-zero exit codes:
+
+```bash
+python -m haoline compare \
+  --models baseline.onnx candidate.onnx \
+  --eval-metrics baseline.json candidate.json \
+  --fail-on latency_increase=10% \
+  --fail-on memory_increase=20% \
+  --fail-on new_risk_signals
+# Exit code 1 if any threshold violated
+```
+
+| Threshold | Example | Description |
+|-----------|---------|-------------|
+| `latency_increase` | `latency_increase=10%` | Fail if estimated latency increases >10% |
+| `memory_increase` | `memory_increase=20%` | Fail if memory usage increases >20% |
+| `param_increase` | `param_increase=5%` | Fail if parameter count increases >5% |
+| `new_risk_signals` | `new_risk_signals` | Fail if new high-severity risks appear |
+
+### GitHub Actions
+
+Copy the example workflow to your repository:
+
+```bash
+cp .github/examples/model-check.yml .github/workflows/
+```
+
+Or create `.github/workflows/model-check.yml`:
+
+```yaml
+name: Model Check
+on:
+  pull_request:
+    paths: ['models/**', '*.onnx']
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install haoline
+      - run: |
+          python -m haoline compare \
+            --models models/baseline.onnx models/candidate.onnx \
+            --eval-metrics baseline.json candidate.json \
+            --fail-on latency_increase=10% \
+            --fail-on memory_increase=20% \
+            --out-md comparison.md
+      - uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('comparison.md', 'utf8');
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '## Model Check\n\n' + body
+            });
+```
+
+See [.github/examples/model-check.yml](.github/examples/model-check.yml) for a full-featured template with artifact uploads and baseline detection.
+
+---
+
 ## Features
 
 | Feature | Description |
