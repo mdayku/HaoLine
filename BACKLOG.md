@@ -30,7 +30,7 @@
 |------|--------|---------|-------|----------|
 | **HIGH PRIORITY - DO NEXT** |||||
 | Epic 53: Installation UX | **COMPLETE** | 3 | 15/15 | Done |
-| Epic 50: CLI Modernization | In Progress | 3 | 10/18 | **P1** |
+| Epic 50: CLI Modernization | In Progress | 3 | 15/18 | **P1** |
 | Epic 54: CI/CD Integration | **NEW** | 3 | 0/15 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
@@ -111,13 +111,13 @@
 - [ ] **Task 50.2.5**: Add confirmation prompts for auto-install (optional)
 - [ ] **Task 50.2.6**: Cache dependency check results
 
-### Story 50.3: Error Messages
-- [ ] **Task 50.3.1**: Replace tracebacks with user-friendly messages
-- [ ] **Task 50.3.2**: Add `--verbose` flag for full tracebacks
-- [ ] **Task 50.3.3**: Suggest fixes for common errors
-- [ ] **Task 50.3.4**: Add progress bars for long operations
-- [ ] **Task 50.3.5**: Color-code warnings vs errors
-- [ ] **Task 50.3.6**: Add `--quiet` flag for scripting
+### Story 50.3: Error Messages ✅ **COMPLETE**
+- [x] **Task 50.3.1**: Replace tracebacks with user-friendly messages ✅
+- [x] **Task 50.3.2**: Add `--verbose` flag for full tracebacks ✅ (uses `console.print_exception(show_locals=True)`)
+- [ ] **Task 50.3.3**: Suggest fixes for common errors (deferred - low priority)
+- [x] **Task 50.3.4**: Add progress bars for long operations ✅ (`console.status()` spinners)
+- [x] **Task 50.3.5**: Color-code warnings vs errors ✅ (`[red]Error:[/red]`, `[yellow]Warning:[/yellow]`)
+- [x] **Task 50.3.6**: Add `--quiet` flag for scripting ✅ (already implemented)
 
 ---
 

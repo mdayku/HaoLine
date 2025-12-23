@@ -226,6 +226,62 @@ def inspect(
         console.print("Run [bold]haoline --help[/bold] for usage")
         raise typer.Exit(1)
 
+    # Wrap everything in error handler
+    try:
+        _run_inspect(
+            model_path=model_path,
+            from_pytorch=from_pytorch,
+            input_shape=input_shape,
+            out_json=out_json,
+            out_md=out_md,
+            out_html=out_html,
+            out_pdf=out_pdf,
+            include_graph=include_graph,
+            hardware=hardware,
+            precision=precision,
+            batch_size=batch_size,
+            gpu_count=gpu_count,
+            llm_summary=llm_summary,
+            llm_model=llm_model,
+            lint_quant=lint_quant,
+            with_plots=with_plots,
+            quiet=quiet,
+            verbose=verbose,
+        )
+    except Exception as e:
+        if verbose:
+            # Show full traceback
+            console.print_exception(show_locals=True)
+        else:
+            # User-friendly error
+            error_type = type(e).__name__
+            err_console.print(f"[red]Error:[/red] {error_type}: {e}")
+            err_console.print("[dim]Run with --verbose for full traceback[/dim]")
+        raise typer.Exit(1) from None
+
+
+def _run_inspect(
+    *,
+    model_path: Path | None,
+    from_pytorch: Path | None,
+    input_shape: str | None,
+    out_json: Path | None,
+    out_md: Path | None,
+    out_html: Path | None,
+    out_pdf: Path | None,
+    include_graph: bool,
+    hardware: str | None,
+    precision: Precision,
+    batch_size: int,
+    gpu_count: int,
+    llm_summary: bool,
+    llm_model: str,
+    lint_quant: bool,
+    with_plots: bool,
+    quiet: bool,
+    verbose: bool,
+) -> None:
+    """Internal implementation of inspect command."""
     # Import the analysis engine
     from haoline import ModelInspector
     from haoline.hardware import HardwareEstimator, detect_local_hardware, get_profile
@@ -690,9 +746,7 @@ def check_deps_cmd() -> None:
 
     # Summary
     console.print("\n" + "─" * 60)
-    console.print(
-        f"\n[bold]Summary:[/bold] {installed_count} installed, {missing_count} missing"
-    )
+    console.print(f"\n[bold]Summary:[/bold] {installed_count} installed, {missing_count} missing")
 
     if missing_by_extra:
         console.print("\n[bold]Install missing features:[/bold]")
