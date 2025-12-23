@@ -180,3 +180,104 @@ class TestDirectModelPath:
             assert sys.argv == ["haoline", "--help"]  # Unchanged
         finally:
             sys.argv = original_argv
+
+
+class TestFailOnThresholds:
+    """Test the --fail-on threshold functionality."""
+
+    def test_parse_threshold_percentage(self):
+        """Test parsing percentage thresholds."""
+        from haoline.cli_typer import _parse_threshold
+
+        metric, value, is_pct = _parse_threshold("latency_increase=10%")
+        assert metric == "latency_increase"
+        assert value == 10.0
+        assert is_pct is True
+
+    def test_parse_threshold_absolute(self):
+        """Test parsing absolute value thresholds."""
+        from haoline.cli_typer import _parse_threshold
+
+        metric, value, is_pct = _parse_threshold("memory_increase=1000")
+        assert metric == "memory_increase"
+        assert value == 1000.0
+        assert is_pct is False
+
+    def test_parse_threshold_boolean(self):
+        """Test parsing boolean thresholds."""
+        from haoline.cli_typer import _parse_threshold
+
+        metric, value, is_pct = _parse_threshold("new_risk_signals")
+        assert metric == "new_risk_signals"
+        assert value is None
+        assert is_pct is False
+
+    def test_check_thresholds_pass(self):
+        """Test threshold checking when all pass."""
+        from haoline.cli_typer import _check_thresholds
+
+        compare_json = {
+            "variants": [
+                {
+                    "precision": "fp32",
+                    "total_params": 1000000,
+                    "memory_bytes": 4000000,
+                    "deltas_vs_baseline": None,  # Baseline
+                    "hardware_estimates": {"theoretical_latency_ms": 10.0},
+                },
+                {
+                    "precision": "fp16",
+                    "total_params": 1000000,
+                    "memory_bytes": 2000000,
+                    "deltas_vs_baseline": {
+                        "total_params": 0,
+                        "memory_bytes": -2000000,
+                        "latency_ms": 0.5,  # 5% increase
+                    },
+                    "new_risk_signals": [],
+                },
+            ]
+        }
+
+        results = _check_thresholds(compare_json, ["latency_increase=10%"])
+        assert len(results) >= 1
+        # 5% < 10% threshold, should pass
+        assert all(passed for _, _, passed in results)
+
+    def test_check_thresholds_fail(self):
+        """Test threshold checking when threshold is violated."""
+        from haoline.cli_typer import _check_thresholds
+
+        compare_json = {
+            "variants": [
+                {
+                    "precision": "fp32",
+                    "total_params": 1000000,
+                    "memory_bytes": 4000000,
+                    "deltas_vs_baseline": None,  # Baseline
+                    "hardware_estimates": {"theoretical_latency_ms": 10.0},
+                },
+                {
+                    "precision": "int8",
+                    "total_params": 1000000,
+                    "memory_bytes": 5000000,
+                    "deltas_vs_baseline": {
+                        "total_params": 0,
+                        "memory_bytes": 1000000,  # 25% increase
+                    },
+                },
+            ]
+        }
+
+        results = _check_thresholds(compare_json, ["memory_increase=20%"])
+        assert len(results) >= 1
+        # 25% > 20% threshold, should fail
+        failed = [r for r in results if not r[2]]
+        assert len(failed) >= 1
+
+    def test_compare_help_shows_fail_on(self):
+        """Test that compare --help mentions --fail-on."""
+        result = runner.invoke(app, ["compare", "--help"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.output)
+        assert "--fail-on" in output

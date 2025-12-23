@@ -728,6 +728,171 @@ def web(
     web_main()
 
 
+def _parse_threshold(spec: str) -> tuple[str, float | None, bool]:
+    """Parse a threshold specification like 'latency_increase=10%' or 'new_risk_signals'.
+
+    Returns:
+        (metric_name, threshold_value, is_percentage)
+        For boolean thresholds like 'new_risk_signals', threshold_value is None.
+    """
+    if "=" not in spec:
+        # Boolean threshold (e.g., 'new_risk_signals')
+        return (spec.strip(), None, False)
+
+    key, value = spec.split("=", 1)
+    key = key.strip()
+    value = value.strip()
+
+    is_percentage = value.endswith("%")
+    if is_percentage:
+        value = value[:-1]
+
+    try:
+        threshold = float(value)
+    except ValueError:
+        raise typer.BadParameter(f"Invalid threshold value: {value}") from None
+
+    return (key, threshold, is_percentage)
+
+
+def _check_thresholds(
+    compare_json: dict,
+    fail_on_specs: list[str],
+) -> list[tuple[str, str, bool]]:
+    """Check thresholds against comparison results.
+
+    Returns:
+        List of (metric, message, passed) tuples.
+    """
+    results: list[tuple[str, str, bool]] = []
+
+    # Get variants and find non-baseline ones (those with deltas)
+    variants = compare_json.get("variants", [])
+
+    for spec in fail_on_specs:
+        metric, threshold, is_pct = _parse_threshold(spec)
+
+        # Check each non-baseline variant
+        for variant in variants:
+            deltas = variant.get("deltas_vs_baseline")
+            if deltas is None:
+                continue  # This is the baseline
+
+            precision = variant.get("precision", "unknown")
+
+            if metric == "latency_increase":
+                base_lat = _get_baseline_latency(compare_json)
+                delta_lat = deltas.get("latency_ms", 0)
+                if base_lat and base_lat > 0:
+                    pct_change = (delta_lat / base_lat) * 100
+                    if threshold is not None and pct_change > threshold:
+                        results.append(
+                            (
+                                metric,
+                                f"{precision}: latency increased {pct_change:.1f}% (threshold: {threshold}%)",
+                                False,
+                            )
+                        )
+                    else:
+                        results.append(
+                            (
+                                metric,
+                                f"{precision}: latency change {pct_change:.1f}% (within {threshold}%)",
+                                True,
+                            )
+                        )
+
+            elif metric == "memory_increase":
+                base_mem = _get_baseline_memory(compare_json)
+                delta_mem = deltas.get("peak_activation_bytes", 0) or deltas.get("memory_bytes", 0)
+                if base_mem and base_mem > 0:
+                    pct_change = (delta_mem / base_mem) * 100
+                    if threshold is not None and pct_change > threshold:
+                        results.append(
+                            (
+                                metric,
+                                f"{precision}: memory increased {pct_change:.1f}% (threshold: {threshold}%)",
+                                False,
+                            )
+                        )
+                    else:
+                        results.append(
+                            (
+                                metric,
+                                f"{precision}: memory change {pct_change:.1f}% (within {threshold}%)",
+                                True,
+                            )
+                        )
+
+            elif metric == "param_increase":
+                base_params = _get_baseline_params(compare_json)
+                delta_params = deltas.get("total_params", 0)
+                if base_params and base_params > 0:
+                    pct_change = (delta_params / base_params) * 100
+                    if threshold is not None and pct_change > threshold:
+                        results.append(
+                            (
+                                metric,
+                                f"{precision}: params increased {pct_change:.1f}% (threshold: {threshold}%)",
+                                False,
+                            )
+                        )
+                    else:
+                        results.append(
+                            (
+                                metric,
+                                f"{precision}: params change {pct_change:.1f}% (within {threshold}%)",
+                                True,
+                            )
+                        )
+
+            elif metric == "new_risk_signals":
+                # Check if variant has new high-severity risk signals
+                new_risks = variant.get("new_risk_signals", [])
+                high_severity = [r for r in new_risks if r.get("severity") == "high"]
+                if high_severity:
+                    results.append(
+                        (
+                            metric,
+                            f"{precision}: {len(high_severity)} new high-severity risk signals",
+                            False,
+                        )
+                    )
+                else:
+                    results.append((metric, f"{precision}: no new high-severity risks", True))
+
+    return results
+
+
+def _get_baseline_latency(compare_json: dict) -> float | None:
+    """Get baseline latency from comparison JSON."""
+    for v in compare_json.get("variants", []):
+        if v.get("deltas_vs_baseline") is None:  # This is baseline
+            hw = v.get("hardware_estimates", {})
+            if hw:
+                lat = hw.get("theoretical_latency_ms") or hw.get("estimated_latency_ms")
+                return float(lat) if lat is not None else None
+    return None
+
+
+def _get_baseline_memory(compare_json: dict) -> int | None:
+    """Get baseline memory from comparison JSON."""
+    for v in compare_json.get("variants", []):
+        if v.get("deltas_vs_baseline") is None:  # This is baseline
+            mem = v.get("memory_bytes")
+            return int(mem) if mem is not None else None
+    return None
+
+
+def _get_baseline_params(compare_json: dict) -> int | None:
+    """Get baseline params from comparison JSON."""
+    for v in compare_json.get("variants", []):
+        if v.get("deltas_vs_baseline") is None:  # This is baseline
+            params = v.get("total_params")
+            return int(params) if params is not None else None
+    return None
+
+
 @app.command()
 def compare(
     models: Annotated[
@@ -750,22 +915,95 @@ def compare(
         Path | None,
         typer.Option("--out-html", help="Output comparison HTML"),
     ] = None,
+    fail_on: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--fail-on",
+            help="Threshold to fail on (e.g., latency_increase=10%, memory_increase=20%, new_risk_signals). Can be used multiple times.",
+        ),
+    ] = None,
 ) -> None:
-    """Compare multiple model variants (quantization, architecture)."""
+    """Compare multiple model variants (quantization, architecture).
+
+    Use --fail-on for CI/CD pipelines to exit with code 1 if thresholds are exceeded.
+
+    Examples:
+        python -m haoline compare --models base.onnx candidate.onnx \\
+            --eval-metrics base_eval.json candidate_eval.json \\
+            --fail-on latency_increase=10% \\
+            --fail-on memory_increase=20%
+    """
+    import json
+    import tempfile
+
     from haoline.compare import main as compare_main
 
-    # Build args for legacy compare CLI
-    args = ["--models"] + [str(m) for m in models]
-    args += ["--eval-metrics"] + [str(e) for e in eval_metrics]
-    if out_json:
-        args += ["--out-json", str(out_json)]
-    if out_md:
-        args += ["--out-md", str(out_md)]
-    if out_html:
-        args += ["--out-html", str(out_html)]
+    # If --fail-on is specified, we need to capture the JSON output
+    if fail_on:
+        # Create temp file for JSON output
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
 
-    sys.argv = ["haoline-compare"] + args
-    compare_main()
+        # Build args for legacy compare CLI
+        args = ["--models"] + [str(m) for m in models]
+        args += ["--eval-metrics"] + [str(e) for e in eval_metrics]
+        args += ["--out-json", str(tmp_path)]  # Always capture JSON for threshold check
+        if out_json:
+            pass  # We'll copy later
+        if out_md:
+            args += ["--out-md", str(out_md)]
+        if out_html:
+            args += ["--out-html", str(out_html)]
+
+        sys.argv = ["haoline-compare"] + args
+        exit_code = compare_main()
+
+        if exit_code != 0:
+            raise typer.Exit(exit_code)
+
+        # Read the comparison JSON
+        try:
+            compare_json = json.loads(tmp_path.read_text())
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+        # Copy to user-specified path if requested
+        if out_json:
+            out_json.write_text(json.dumps(compare_json, indent=2))
+            console.print(f"[green]Wrote:[/green] {out_json}")
+
+        # Check thresholds
+        results = _check_thresholds(compare_json, fail_on)
+
+        # Display results
+        any_failed = False
+        console.print("\n[bold]Threshold Checks:[/bold]")
+        for _metric, message, passed in results:
+            if passed:
+                console.print(f"  [green]PASS[/green] {message}")
+            else:
+                console.print(f"  [red]FAIL[/red] {message}")
+                any_failed = True
+
+        if any_failed:
+            err_console.print("\n[red bold]Threshold violation(s) detected. Failing.[/red bold]")
+            raise typer.Exit(1)
+        else:
+            console.print("\n[green bold]All thresholds passed.[/green bold]")
+
+    else:
+        # No --fail-on, just run the comparison normally
+        args = ["--models"] + [str(m) for m in models]
+        args += ["--eval-metrics"] + [str(e) for e in eval_metrics]
+        if out_json:
+            args += ["--out-json", str(out_json)]
+        if out_md:
+            args += ["--out-md", str(out_md)]
+        if out_html:
+            args += ["--out-html", str(out_html)]
+
+        sys.argv = ["haoline-compare"] + args
+        compare_main()
 
 
 @app.command("check-install")
