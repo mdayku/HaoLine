@@ -335,7 +335,12 @@ def _run_inspect(
     """Internal implementation of inspect command."""
     # Import the analysis engine
     from haoline import ModelInspector
-    from haoline.hardware import HardwareEstimator, detect_local_hardware, get_profile
+    from haoline.hardware import (
+        HardwareEstimator,
+        HardwareProfile,
+        detect_local_hardware,
+        get_profile,
+    )
 
     # Determine model to analyze
     if from_pytorch:
@@ -347,14 +352,22 @@ def _run_inspect(
 
         # Convert PyTorch to ONNX
         with console.status("[bold blue]Converting PyTorch model to ONNX...[/bold blue]"):
-            from haoline._cli_legacy import convert_pytorch_to_onnx
+            import logging
 
-            shape = [int(x) for x in input_shape.split(",")]
-            onnx_path = convert_pytorch_to_onnx(str(from_pytorch), shape)
-            if not onnx_path:
+            from haoline._cli_legacy import _convert_pytorch_to_onnx
+
+            logger = logging.getLogger("haoline.cli")
+            result_path, _ = _convert_pytorch_to_onnx(
+                pytorch_path=from_pytorch,
+                input_shape_str=input_shape,
+                output_path=None,  # Use temp file
+                opset_version=17,
+                logger=logger,
+            )
+            if not result_path:
                 err_console.print("[red]Error:[/red] PyTorch conversion failed")
                 raise typer.Exit(1)
-            analysis_path = onnx_path
+            analysis_path = str(result_path)
     else:
         analysis_path = str(model_path)
 
@@ -369,20 +382,21 @@ def _run_inspect(
         report = inspector.inspect(analysis_path)
 
     # Apply hardware estimates
+    hw_profile: HardwareProfile | None = None
     if hardware:
         if hardware == "auto":
-            profile = detect_local_hardware()
+            hw_profile = detect_local_hardware()
         else:
-            profile = get_profile(hardware)
+            hw_profile = get_profile(hardware)
 
-        if profile and report.param_counts and report.flop_counts and report.memory_estimates:
+        if hw_profile and report.param_counts and report.flop_counts and report.memory_estimates:
             estimator = HardwareEstimator()
-            report.hardware_profile = profile
+            report.hardware_profile = hw_profile
             report.hardware_estimates = estimator.estimate(
                 model_params=report.param_counts.total,
                 model_flops=report.flop_counts.total,
                 peak_activation_bytes=report.memory_estimates.peak_activation_bytes,
-                hardware=profile,
+                hardware=hw_profile,
             )
 
     # Quantization linting
@@ -407,7 +421,9 @@ def _run_inspect(
             if has_api_key():
                 with console.status("[bold blue]Generating AI summary...[/bold blue]"):
                     summarizer = LLMSummarizer(model=llm_model)
-                    report.llm_summary = summarizer.summarize(report)
+                    summary_result = summarizer.summarize(report)
+                    # Convert Pydantic model to dict for report storage
+                    report.llm_summary = summary_result.model_dump()
             else:
                 err_console.print(
                     "[yellow]Warning:[/yellow] No API key found. "
@@ -424,17 +440,13 @@ def _run_inspect(
         console.print(f"[green]Wrote:[/green] {out_json}")
 
     if out_md:
-        from haoline._cli_legacy import generate_markdown
-
-        md_content = generate_markdown(report, str(model_path or from_pytorch))
+        md_content = report.to_markdown()
         out_md.write_text(md_content)
         console.print(f"[green]Wrote:[/green] {out_md}")
 
     if out_html:
-        from haoline.html_export import HTMLExporter
-
-        exporter = HTMLExporter()
-        html_content = exporter.generate(report, include_graph=include_graph)
+        # Generate HTML from report (include_graph would require HierarchicalGraph)
+        html_content = report.to_html()
         out_html.write_text(html_content)
         console.print(f"[green]Wrote:[/green] {out_html}")
 
@@ -442,11 +454,16 @@ def _run_inspect(
         if not check_dependency("playwright", "pdf", "PDF export"):
             err_console.print("[yellow]Skipping PDF export[/yellow]")
         else:
+            import pathlib
+
             from haoline.pdf_generator import PDFGenerator
 
             gen = PDFGenerator()
-            gen.generate(report, str(out_pdf))
-            console.print(f"[green]Wrote:[/green] {out_pdf}")
+            success = gen.generate_from_report(report, pathlib.Path(out_pdf))
+            if success:
+                console.print(f"[green]Wrote:[/green] {out_pdf}")
+            else:
+                err_console.print("[yellow]Warning:[/yellow] PDF generation failed")
 
 
 def display_report_summary(report) -> None:
