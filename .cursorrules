@@ -7,6 +7,8 @@ python scripts/check.py         # Format + lint (run before every commit)
 python scripts/check.py --all   # Format + lint + mypy + tests (before push/PR)
 ```
 
+`check.py` is the fast gate (always pass); `--all` is the full gate before push/PR.
+
 ## Code Style
 
 - **Ruff**: 100 char lines, double quotes, trailing commas in multi-line
@@ -32,6 +34,11 @@ def analyze_model(model_path: Path, hardware: str = "auto") -> InspectionReport:
 2. **No new dependencies** without updating `pyproject.toml` extras + README table
 3. **No changes to public dataclasses** (`InspectionReport`, `ModelMetadata`, `GraphSummary`, IR classes) without updating HF safe-access logic and tests
 4. **Always add/update tests** when touching IR, adapters, or CLI
+5. **Avoid new files** unless necessary; prefer extending existing modules
+
+**Public dataclass locations** (require HF safe-access if modified):
+- `src/haoline/report.py` — `InspectionReport`, `ModelMetadata`, `GraphSummary`
+- `src/haoline/universal_ir.py` — `UniversalGraph`, `UniversalNode`, `UniversalTensor`
 
 ## Where to Add Things
 
@@ -41,6 +48,8 @@ def analyze_model(model_path: Path, hardware: str = "auto") -> InspectionReport:
 | Format readers | `src/haoline/formats/<format>.py` |
 | Tests | `src/haoline/tests/` |
 | Format reader integration tests | `test_format_readers.py` (repo root) |
+
+> **Note:** `test_format_readers.py` is at repo root intentionally—it runs without optional extras and avoids pytest import-time failures from missing dependencies.
 
 ## CLI Changes Checklist
 
@@ -65,8 +74,10 @@ When adding optional dependencies:
 # BAD - crashes if attribute doesn't exist:
 if report.universal_graph: ...
 
-# GOOD - safe access:
-if hasattr(report, "universal_graph") and report.universal_graph: ...
+# GOOD - safe access with getattr:
+universal_graph = getattr(report, "universal_graph", None)
+if universal_graph:
+    ...
 ```
 
 ## Documentation
