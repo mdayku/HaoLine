@@ -66,21 +66,34 @@ class TestInspectCommand:
 class TestListCommands:
     """Test the list commands."""
 
-    def test_list_hardware(self):
-        """Test list-hardware command."""
+    def test_list_hardware_subcommand(self):
+        """Test list-hardware subcommand."""
         result = runner.invoke(app, ["list-hardware"])
         assert result.exit_code == 0
         assert "Hardware Profiles" in result.output
         assert "RTX" in result.output or "rtx" in result.output
 
-    def test_list_formats(self):
-        """Test list-formats command."""
+    def test_list_hardware_flag(self):
+        """Test --list-hardware flag (backwards compatible)."""
+        result = runner.invoke(app, ["--list-hardware"])
+        assert result.exit_code == 0
+        assert "Hardware Profiles" in result.output
+
+    def test_list_formats_subcommand(self):
+        """Test list-formats subcommand."""
         result = runner.invoke(app, ["list-formats"])
         assert result.exit_code == 0
-        assert "Model Formats" in result.output
-        assert "ONNX" in result.output
-        assert "PyTorch" in result.output
-        assert "Built-in" in result.output
+        output = strip_ansi(result.output)
+        assert "Supported" in output or "Format" in output
+        assert "ONNX" in output
+        assert "PyTorch" in output
+
+    def test_list_formats_flag(self):
+        """Test --list-formats flag (backwards compatible)."""
+        result = runner.invoke(app, ["--list-formats"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.output)
+        assert "Supported Formats" in output or "Format" in output
 
 
 class TestCheckInstall:

@@ -174,29 +174,45 @@ jobs:
 
       - name: Test CLI - Basic inspection
         run: |
-          haoline test_model.onnx
+          python -m haoline test_model.onnx
 
       - name: Test CLI - JSON output
         run: |
-          haoline test_model.onnx --out-json report.json
+          python -m haoline test_model.onnx --out-json report.json
           cat report.json | head -50
 
       - name: Test CLI - Markdown output
         run: |
-          haoline test_model.onnx --out-md model_card.md
+          python -m haoline test_model.onnx --out-md model_card.md
           cat model_card.md
 
       - name: Test CLI - Hardware estimates
         run: |
-          haoline test_model.onnx --hardware a100 --precision fp16 --batch-size 8
+          python -m haoline test_model.onnx --hardware a100 --precision fp16 --batch-size 8
 
-      - name: Test CLI - List hardware profiles
+      - name: Test CLI - List hardware (subcommand form)
         run: |
-          haoline --list-hardware
+          python -m haoline list-hardware
+
+      - name: Test CLI - List hardware (flag form)
+        run: |
+          python -m haoline --list-hardware
+
+      - name: Test CLI - List formats
+        run: |
+          python -m haoline list-formats
 
       - name: Test CLI - HTML report with plots
         run: |
-          haoline test_model.onnx --out-html report.html --with-plots
+          python -m haoline test_model.onnx --out-html report.html --with-plots
+
+      - name: Test CLI - Check install
+        run: |
+          python -m haoline check-install
+
+      - name: Test CLI - Check deps
+        run: |
+          python -m haoline check-deps
 
       - name: Verify outputs exist
         run: |

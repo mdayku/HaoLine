@@ -43,6 +43,8 @@ def _maybe_insert_inspect() -> None:
         "-h",
         "--version",
         "-V",
+        "--list-hardware",
+        "--list-formats",
     }
     if first_arg in known_commands or first_arg.startswith("-"):
         return
