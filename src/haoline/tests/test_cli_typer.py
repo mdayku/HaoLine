@@ -128,6 +128,7 @@ class TestDirectModelPath:
     def test_maybe_insert_inspect_with_onnx(self):
         """Test that .onnx files trigger inspect insertion."""
         import sys
+
         from haoline.__main__ import _maybe_insert_inspect
 
         # Save original argv
@@ -142,6 +143,7 @@ class TestDirectModelPath:
     def test_maybe_insert_inspect_with_subcommand(self):
         """Test that known subcommands are not modified."""
         import sys
+
         from haoline.__main__ import _maybe_insert_inspect
 
         original_argv = sys.argv.copy()
@@ -155,6 +157,7 @@ class TestDirectModelPath:
     def test_maybe_insert_inspect_with_flag(self):
         """Test that flags are not treated as model files."""
         import sys
+
         from haoline.__main__ import _maybe_insert_inspect
 
         original_argv = sys.argv.copy()
