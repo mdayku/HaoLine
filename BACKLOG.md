@@ -19,7 +19,7 @@
 | **P1** | Format Testing | Epic 42 (comprehensive conversion testing) |
 | **P2** | Format UX | Epic 49 (tier hints, disabled feature messaging) |
 
-**Recent Release:** v0.9.3 (Dec 12, 2025)
+**Recent Release:** v0.9.4 (Dec 22, 2025) — Epic 53 complete, `python -m haoline` support, `--check-install` diagnostics
 
 ---
 
@@ -28,7 +28,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **HIGH PRIORITY - DO NEXT** |||||
-| Epic 53: Installation UX | In Progress | 3 | 8/15 | **P0** |
+| Epic 53: Installation UX | **COMPLETE** | 3 | 15/15 | Done |
 | Epic 50: CLI Modernization | Not Started | 3 | 0/18 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
@@ -64,19 +64,19 @@
 *Enable `python -m haoline` as primary/fallback invocation method.*
 
 - [x] **Task 53.1.1**: Add `__main__.py` to haoline package for `python -m haoline` support ✅
-- [x] **Task 53.1.2**: Ensure all CLI entry points work via module invocation ✅ (main CLI works)
+- [x] **Task 53.1.2**: Ensure all CLI entry points work via module invocation ✅
 - [x] **Task 53.1.3**: Update README with `python -m haoline` as primary installation method ✅
-- [ ] **Task 53.1.4**: Add `python -m haoline.web` for Streamlit launch
-- [ ] **Task 53.1.5**: Add `python -m haoline.compare` for comparison CLI
+- [x] **Task 53.1.4**: Add `python -m haoline web` subcommand for Streamlit launch ✅
+- [x] **Task 53.1.5**: Add `python -m haoline compare` subcommand for comparison CLI ✅
 
-### Story 53.2: Installation Diagnostics
+### Story 53.2: Installation Diagnostics ✅ **COMPLETE**
 *Help users diagnose and fix installation issues.*
 
-- [ ] **Task 53.2.1**: Add `python -m haoline --check-install` command
-- [ ] **Task 53.2.2**: Check if haoline scripts are on PATH, report if not
-- [ ] **Task 53.2.3**: Detect user vs system install and explain implications
-- [ ] **Task 53.2.4**: Show which optional extras are installed
-- [ ] **Task 53.2.5**: Suggest PATH fix commands for Windows/Linux/macOS
+- [x] **Task 53.2.1**: Add `python -m haoline --check-install` command ✅
+- [x] **Task 53.2.2**: Check if haoline scripts are on PATH, report if not ✅
+- [x] **Task 53.2.3**: Detect user vs system install and explain implications ✅
+- [x] **Task 53.2.4**: Show which optional extras are installed ✅
+- [x] **Task 53.2.5**: Suggest PATH fix commands for Windows/Linux/macOS ✅
 
 ### Story 53.3: Documentation & First-Run
 *Improve first-run experience in documentation.*
