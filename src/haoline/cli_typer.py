@@ -24,6 +24,7 @@ from rich.table import Table
 console = Console()
 err_console = Console(stderr=True)
 
+
 def _version_callback(value: bool) -> None:
     """Print version and exit if --version is passed."""
     if value:
