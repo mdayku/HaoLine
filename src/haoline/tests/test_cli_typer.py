@@ -3,11 +3,19 @@
 Tests the new Typer-based CLI to ensure commands work correctly.
 """
 
+import re
+
 from typer.testing import CliRunner
 
 from haoline.cli_typer import app
 
 runner = CliRunner()
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from text."""
+    ansi_pattern = re.compile(r"\x1b\[[0-9;]*m")
+    return ansi_pattern.sub("", text)
 
 
 class TestCLIBasics:
@@ -42,10 +50,11 @@ class TestInspectCommand:
         """Test inspect --help."""
         result = runner.invoke(app, ["inspect", "--help"])
         assert result.exit_code == 0
-        assert "Analyze" in result.output
-        assert "--out-json" in result.output
-        assert "--out-html" in result.output
-        assert "--hardware" in result.output
+        output = strip_ansi(result.output)
+        assert "Analyze" in output
+        assert "--out-json" in output
+        assert "--out-html" in output
+        assert "--hardware" in output
 
     def test_inspect_no_model(self):
         """Test inspect with no model path gives error."""
