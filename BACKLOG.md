@@ -29,7 +29,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **NEXT UP** |||||
-| Epic 54: CI/CD Integration | Not Started | 3 | 0/23 | **P1** |
+| Epic 54: CI/CD Integration | In Progress | 3 | 9/23 | **P1** |
 | Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 | P1 |
 | **ACTIVE DEVELOPMENT** |||||
 | Epic 49: Format Tiers & HuggingFace | In Progress | 5 | 3/30 | P2 |
@@ -90,20 +90,20 @@
 
 **Depends on:** Epic 50.1 (Typer CLI) ✅ Complete, Epic 18 (Universal IR) ✅ Complete
 
-### Story 54.1: Threshold-Based Failure (`--fail-on`)
+### Story 54.1: Threshold-Based Failure (`--fail-on`) ✅ **COMPLETE**
 *Add flags that cause non-zero exit when thresholds are exceeded.*
 
 **Use case:** CI pipeline that rejects model PRs if latency increases >10% or memory increases >20%.
 
-- [ ] **Task 54.1.1**: Add `--fail-on` flag to `compare` command (accepts key=threshold pairs)
-- [ ] **Task 54.1.2**: Implement threshold parsing (e.g., `latency_increase=10%`, `memory_increase=20%`)
-- [ ] **Task 54.1.3**: Add `latency_increase` threshold check (compare estimated latency)
-- [ ] **Task 54.1.4**: Add `memory_increase` threshold check (compare peak activation memory)
-- [ ] **Task 54.1.5**: Add `param_increase` threshold check (compare total parameters)
-- [ ] **Task 54.1.6**: Add `new_risk_signals` threshold check (fail if new high-severity risks appear)
-- [ ] **Task 54.1.7**: Exit with code 1 if any threshold violated, 0 otherwise
-- [ ] **Task 54.1.8**: Print clear failure message with what threshold was violated
-- [ ] **Task 54.1.9**: Add `--fail-on` tests to test_cli_typer.py
+- [x] **Task 54.1.1**: Add `--fail-on` flag to `compare` command (accepts key=threshold pairs) ✅
+- [x] **Task 54.1.2**: Implement threshold parsing (e.g., `latency_increase=10%`, `memory_increase=20%`) ✅
+- [x] **Task 54.1.3**: Add `latency_increase` threshold check (compare estimated latency) ✅
+- [x] **Task 54.1.4**: Add `memory_increase` threshold check (compare peak activation memory) ✅
+- [x] **Task 54.1.5**: Add `param_increase` threshold check (compare total parameters) ✅
+- [x] **Task 54.1.6**: Add `new_risk_signals` threshold check (fail if new high-severity risks appear) ✅
+- [x] **Task 54.1.7**: Exit with code 1 if any threshold violated, 0 otherwise ✅
+- [x] **Task 54.1.8**: Print clear failure message with what threshold was violated ✅
+- [x] **Task 54.1.9**: Add `--fail-on` tests to test_cli_typer.py ✅ (6 tests)
 
 **Example usage:**
 ```bash
