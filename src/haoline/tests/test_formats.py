@@ -611,6 +611,35 @@ class TestTRTEngineReader:
         assert format_bytes(1024 * 1024) == "1.00 MB"
         assert format_bytes(1024 * 1024 * 1024) == "1.00 GB"
 
+    def test_graceful_degradation_when_trt_unavailable(self) -> None:
+        """Task 52.3.2: Graceful degradation when TensorRT not installed.
+
+        This test verifies that the TensorRT module can be imported and
+        queried for availability without crashing, even when TRT is not installed.
+        """
+        from haoline.formats.tensorrt import is_available, is_tensorrt_file
+
+        # These should never raise, even without TensorRT
+        availability = is_available()
+        assert isinstance(availability, bool)
+
+        # File detection should work without TRT installed
+        result = is_tensorrt_file(Path("test.engine"))
+        assert isinstance(result, bool)
+
+    def test_reader_import_without_tensorrt(self) -> None:
+        """Task 52.3.2: Reader should be importable without TensorRT.
+
+        The TRTEngineReader class should be importable even when TensorRT
+        is not installed. Actual reading would require TRT, but import should work.
+        """
+        # This import should not raise, even without TensorRT
+        from haoline.formats.tensorrt import TRTEngineInfo, TRTEngineReader
+
+        # Classes should be defined
+        assert TRTEngineReader is not None
+        assert TRTEngineInfo is not None
+
 
 class TestTRTComparison:
     """Tests for TRT comparison module."""

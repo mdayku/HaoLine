@@ -13,7 +13,101 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from haoline.format_adapters import FormatCapabilities
     from haoline.report import InspectionReport
+
+
+# =============================================================================
+# Format Capability Helpers (Tasks 49.2.4-7)
+# =============================================================================
+
+
+def get_capabilities_from_extension(file_ext: str) -> FormatCapabilities:
+    """Get format capabilities from file extension.
+
+    Args:
+        file_ext: File extension including dot (e.g., ".onnx", ".gguf")
+
+    Returns:
+        FormatCapabilities for the format, or default capabilities if unknown.
+    """
+    from haoline.format_adapters import (
+        FORMAT_CAPABILITIES,
+        FormatCapabilities,
+        SourceFormat,
+    )
+
+    ext_to_format = {
+        ".onnx": SourceFormat.ONNX,
+        ".pt": SourceFormat.PYTORCH,
+        ".pth": SourceFormat.PYTORCH,
+        ".pb": SourceFormat.TENSORFLOW,
+        ".tflite": SourceFormat.TFLITE,
+        ".mlmodel": SourceFormat.COREML,
+        ".mlpackage": SourceFormat.COREML,
+        ".engine": SourceFormat.TENSORRT,
+        ".plan": SourceFormat.TENSORRT,
+        ".gguf": SourceFormat.GGUF,
+        ".safetensors": SourceFormat.SAFETENSORS,
+        ".xml": SourceFormat.OPENVINO,
+    }
+
+    source_format = ext_to_format.get(file_ext.lower())
+    if source_format:
+        return FORMAT_CAPABILITIES.get(source_format, FormatCapabilities())
+    return FormatCapabilities()
+
+
+def render_format_tier_badge(capabilities: FormatCapabilities) -> str:
+    """Render a format tier badge as HTML.
+
+    Args:
+        capabilities: FormatCapabilities for the current format.
+
+    Returns:
+        HTML string for the badge.
+    """
+    tier = capabilities.tier
+    colors = {
+        "Full": ("#10b981", "#065f46"),  # Green
+        "Graph": ("#3b82f6", "#1e40af"),  # Blue
+        "Metadata": ("#f59e0b", "#92400e"),  # Amber
+        "Weights": ("#6b7280", "#374151"),  # Gray
+    }
+    bg, border = colors.get(tier, ("#6b7280", "#374151"))
+
+    return f"""
+    <span style="
+        background: {bg}20;
+        color: {bg};
+        border: 1px solid {border};
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    ">{tier}</span>
+    """
+
+
+def render_feature_unavailable(
+    feature_name: str,
+    reason: str,
+    upgrade_path: str | None = None,
+) -> None:
+    """Render a "Feature unavailable" message with optional upgrade path.
+
+    Args:
+        feature_name: Name of the unavailable feature.
+        reason: Why the feature is unavailable.
+        upgrade_path: Optional suggestion to enable the feature.
+    """
+    import streamlit as st
+
+    st.info(f"**{feature_name}** is not available for this format.")
+    st.caption(reason)
+    if upgrade_path:
+        st.markdown(f"💡 **Tip:** {upgrade_path}")
 
 
 def format_number(n: float) -> str:
@@ -278,12 +372,32 @@ def prepare_details_data(report: InspectionReport) -> dict[str, Any]:
 def render_overview_tab(
     report: InspectionReport,
     model_name: str,
+    capabilities: FormatCapabilities | None = None,
+    model_path: str | Path | None = None,
 ) -> None:
-    """Render the Overview tab content."""
+    """Render the Overview tab content.
+
+    Args:
+        report: The inspection report.
+        model_name: Display name for the model.
+        capabilities: Format capabilities (optional, will be inferred from path).
+        model_path: Path to the model file (used to infer capabilities).
+    """
     import pandas as pd
     import streamlit as st
 
-    st.markdown("### Model Information")
+    # Infer capabilities if not provided
+    if capabilities is None and model_path:
+        capabilities = get_capabilities_from_extension(Path(model_path).suffix)
+
+    # Task 49.2.6: Show format tier badge
+    header_html = "### Model Information"
+    if capabilities:
+        badge = render_format_tier_badge(capabilities)
+        header_html = f'<div style="display: flex; align-items: center; gap: 12px;"><h3 style="margin: 0;">Model Information</h3>{badge}</div>'
+        st.markdown(header_html, unsafe_allow_html=True)
+    else:
+        st.markdown(header_html)
 
     properties, metrics = prepare_model_info_table(model_name, report)
 
@@ -315,10 +429,35 @@ def render_graph_tab(
     model_name: str,
     file_size: int,
     graph_info: Any = None,
+    capabilities: FormatCapabilities | None = None,
 ) -> None:
-    """Render the Interactive Graph tab content."""
+    """Render the Interactive Graph tab content.
+
+    Args:
+        report: The inspection report.
+        model_path: Path to the model file.
+        model_name: Display name for the model.
+        file_size: Size of the model file in bytes.
+        graph_info: Pre-loaded graph info (optional).
+        capabilities: Format capabilities (optional, will be inferred from path).
+    """
     import streamlit as st
     import streamlit.components.v1 as components
+
+    # Infer capabilities if not provided
+    if capabilities is None and model_path:
+        capabilities = get_capabilities_from_extension(Path(model_path).suffix)
+
+    # Task 49.2.4: Check if graph is available for this format
+    if capabilities and not capabilities.has_graph:
+        render_feature_unavailable(
+            "Interactive Graph",
+            capabilities.description or "This format does not include a computational graph.",
+            "Convert to ONNX for full analysis with interactive graph visualization."
+            if capabilities.can_convert_to_onnx
+            else None,
+        )
+        return
 
     if not model_path or not Path(model_path).exists():
         st.info("Interactive graph not available - model file not cached.")
@@ -343,7 +482,13 @@ def render_graph_tab(
 
         if graph_info is None:
             if Path(model_path).suffix.lower() != ".onnx":
-                raise ValueError("Interactive graph available only for ONNX models.")
+                # Task 49.2.5: Show conversion prompt for non-ONNX formats
+                render_feature_unavailable(
+                    "Interactive Graph",
+                    "Interactive graph visualization requires ONNX format.",
+                    "Convert to ONNX for full analysis with graph visualization.",
+                )
+                return
             graph_loader = ONNXGraphLoader()
             _, graph_info = graph_loader.load(str(model_path))
 
@@ -528,12 +673,36 @@ def _render_aggregate_stats(report: InspectionReport) -> None:
 def render_quantization_tab(
     report: InspectionReport,
     graph_info: Any,
+    capabilities: FormatCapabilities | None = None,
+    model_path: str | Path | None = None,
 ) -> None:
-    """Render the Quantization tab content."""
+    """Render the Quantization tab content.
+
+    Args:
+        report: The inspection report.
+        graph_info: Pre-loaded graph info (optional).
+        capabilities: Format capabilities (optional, will be inferred from path).
+        model_path: Path to the model file (used to infer capabilities).
+    """
     import pandas as pd
     import streamlit as st
 
     st.markdown("### Quantization Readiness")
+
+    # Infer capabilities if not provided
+    if capabilities is None and model_path:
+        capabilities = get_capabilities_from_extension(Path(model_path).suffix)
+
+    # Task 49.2.7: Show unavailable message for formats without quantization lint
+    if capabilities and not capabilities.has_quantization_lint:
+        render_feature_unavailable(
+            "Quantization Analysis",
+            capabilities.description or "Quantization linting requires ONNX graph structure.",
+            "Convert to ONNX for quantization readiness analysis."
+            if capabilities.can_convert_to_onnx
+            else None,
+        )
+        return
 
     if graph_info is None:
         st.info("Quantization lint is available for ONNX models. Upload an ONNX model to view.")

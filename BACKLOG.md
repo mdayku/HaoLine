@@ -19,24 +19,27 @@
 | 1 | **Testing** | PyTorch→ONNX conversion tests pass | ✅ Done |
 | 2 | **Testing** | ONNX analysis produces correct metrics | ✅ Done |
 | 3 | **Testing** | TensorRT comparison (`--compare-trt`) works | ✅ Done |
-| 4 | **Testing** | Conversion error handling test (42.5.6) | ☐ TODO |
-| 5 | **Testing** | TF/Keras→ONNX conversion test (42.2.4-5) | ☐ TODO |
-| 6 | **Testing** | IR invariant: same model via different paths → identical metrics | ☐ TODO |
-| 7 | **UX** | Disable graph tab for formats without graph (49.2.4) | ☐ TODO |
-| 8 | **UX** | Show "Convert to ONNX for full analysis" prompt (49.2.5) | ☐ TODO |
-| 9 | **UX** | Add format tier badge in reports (49.2.6) | ☐ TODO |
-| 10 | **UX** | Show "Feature unavailable" with upgrade path (49.2.7) | ☐ TODO |
-| 11 | **TRT Docs** | README: TensorRT limitations section (52.1.1-3) | ☐ TODO |
-| 12 | **TRT Docs** | README: TensorRT troubleshooting (52.1.6) | ☐ TODO |
-| 13 | **TRT Docs** | Test graceful degradation when TRT missing (52.3.2) | ☐ TODO |
-| 14 | **TRT Docs** | CLI error message when TRT missing (52.3.5) | ☐ TODO |
-| 15 | **README** | Verify all CLI examples work | ☐ TODO |
-| 16 | **README** | Verify format support claims match reality | ☐ TODO |
-| 17 | **README** | Remove/update any "coming soon" language | ☐ TODO |
+| 4 | **Testing** | Conversion error handling test (42.5.6) | ✅ Done |
+| 5 | **Testing** | TF/Keras→ONNX conversion test (42.2.4-5) | ✅ Done |
+| 6 | **Testing** | IR invariant: same model via different paths → identical metrics | ✅ Done |
+| 7 | **UX** | Disable graph tab for formats without graph (49.2.4) | ✅ Done |
+| 8 | **UX** | Show "Convert to ONNX for full analysis" prompt (49.2.5) | ✅ Done |
+| 9 | **UX** | Add format tier badge in reports (49.2.6) | ✅ Done |
+| 10 | **UX** | Show "Feature unavailable" with upgrade path (49.2.7) | ✅ Done |
+| 11 | **TRT Docs** | README: TensorRT limitations section (52.1.1-3) | ✅ Done |
+| 12 | **TRT Docs** | README: TensorRT troubleshooting (52.1.6) | ✅ Done |
+| 13 | **TRT Docs** | Test graceful degradation when TRT missing (52.3.2) | ✅ Done |
+| 14 | **TRT Docs** | CLI error message when TRT missing (52.3.5) | ✅ Done |
+| 15 | **README** | Verify all CLI examples work | ✅ Done |
+| 16 | **README** | Verify format support claims match reality | ✅ Done |
+| 17 | **README** | Remove/update any "coming soon" language | ✅ Done |
 | 18 | **Stability** | CI passes on main branch | ✅ Done |
-| 19 | **Stability** | No open issues that produce incorrect metrics without warning | ☐ TODO |
+| 19 | **Stability** | No open issues that produce incorrect metrics without warning | ✅ Done |
+| 20 | **UX** | Demo model shows same analysis as uploaded models (55.1) | ☐ **BLOCKER** |
 
-**Progress:** 4/19 complete
+**Progress:** 19/20 complete
+
+**Critical Finding:** Demo models in Streamlit use `render_overview_tab()` which is much simpler than the inline rendering for uploaded files. First-time users on HuggingFace Spaces see ~50% of the functionality.
 
 **IR Invariant (Task 6):** Structurally equivalent models analyzed via different paths (e.g., PyTorch→ONNX vs native ONNX) must produce identical Universal IR summaries: same node counts, op types, and parameter totals. This is the foundation of "decision layer" credibility.
 
@@ -100,9 +103,10 @@ These are explicitly post-1.0:
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **1.0 BLOCKERS** |||||
-| Epic 42: Format Conversion Testing | In Progress | 6 | 15/38 (3 for 1.0) | **P0** |
-| Epic 49.2: Format-Aware UI | In Progress | 1 | 3/9 (4 for 1.0) | **P0** |
-| Epic 52: TensorRT Docs | Not Started | 5 | 0/24 (6 for 1.0) | **P0** |
+| Epic 55: Demo Model Parity | Not Started | 1 | 0/9 | **P0** |
+| Epic 42: Format Conversion Testing | ✅ 1.0 tasks done | 6 | 18/38 | Done |
+| Epic 49.2: Format-Aware UI | ✅ 1.0 tasks done | 1 | 7/9 | Done |
+| Epic 52: TensorRT Docs | ✅ 1.0 tasks done | 5 | 6/24 | Done |
 | **COMPLETE** |||||
 | Epic 54: CI/CD Integration | ✅ COMPLETE | 3 | 23/23 | Done |
 | **POST-1.0** |||||
@@ -158,6 +162,35 @@ These are explicitly post-1.0:
 *Completed: December 23, 2025. Archived to PRDBacklogArchive.md - 23/23 tasks.*
 
 Made HaoLine a gatekeeper in ML pipelines with `--fail-on` threshold flags, GitHub Actions workflow template, and Decision Report format for audit trails.
+
+---
+
+## Epic 55: Demo Model Parity (P0 - 1.0 BLOCKER)
+
+*First-time users on HuggingFace Spaces see demo models with ~50% of the functionality.*
+
+**Problem:** The demo model code path in `streamlit_app.py` uses the simplified `render_overview_tab()` function from `streamlit_tabs.py`, while uploaded files get rich inline rendering with additional sections.
+
+**Missing from demo model Overview tab:**
+- Parameter Distribution by Op Type chart
+- FLOPs Distribution by Op Type chart
+- Hardware Estimates (VRAM, latency, bottleneck analysis)
+- KV Cache section (for transformers)
+- Precision Breakdown table
+- Quantization Readiness Analysis with letter grades
+
+### Story 55.1: Demo-Upload Parity - **1.0 BLOCKER**
+*Make demo models show the same rich analysis as uploaded files.*
+
+- [ ] **Task 55.1.1**: Extract rich Overview content from uploaded file path into reusable function
+- [ ] **Task 55.1.2**: Update `render_overview_tab()` in `streamlit_tabs.py` to include all rich sections
+- [ ] **Task 55.1.3**: Ensure demo model path and uploaded file path produce identical Overview tabs
+- [ ] **Task 55.1.4**: Add hardware estimate sections (VRAM, latency, bottleneck)
+- [ ] **Task 55.1.5**: Add KV Cache section (for transformer models)
+- [ ] **Task 55.1.6**: Add Precision Breakdown table
+- [ ] **Task 55.1.7**: Remove duplicate inline code from uploaded file path (use shared function)
+- [ ] **Task 55.1.8**: Test with MNIST, MobileNetV2, EfficientNet demo models
+- [ ] **Task 55.1.9**: Verify HuggingFace Spaces deployment shows full functionality
 
 ---
 

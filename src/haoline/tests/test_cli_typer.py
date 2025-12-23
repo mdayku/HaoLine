@@ -404,3 +404,49 @@ class TestDecisionReport:
         assert "APPROVED" in md
         assert "memory_increase" in md
         assert "Consider INT8 quantization" in md
+
+
+class TestErrorSuggestions:
+    """Test CLI error message suggestions (Task 52.3.5)."""
+
+    def test_error_suggestion_for_missing_tensorrt(self):
+        """Task 52.3.5: CLI should suggest installation for missing tensorrt."""
+        from pathlib import Path
+
+        from haoline.cli_typer import _get_error_suggestion
+
+        # Simulate ModuleNotFoundError for tensorrt
+        error = ModuleNotFoundError("No module named 'tensorrt'")
+        suggestion = _get_error_suggestion(
+            error, model_path=Path("model.engine"), from_pytorch=False
+        )
+
+        # Should suggest installing the missing module
+        assert suggestion is not None
+        assert "tensorrt" in suggestion.lower()
+
+    def test_error_suggestion_for_engine_compatibility(self):
+        """Task 52.3.5: CLI should warn about engine compatibility issues."""
+        from pathlib import Path
+
+        from haoline.cli_typer import _get_error_suggestion
+
+        # Simulate TensorRT compatibility error
+        error = RuntimeError("tensorrt deserialization failed")
+        suggestion = _get_error_suggestion(
+            error, model_path=Path("model.engine"), from_pytorch=False
+        )
+
+        # Should mention that engines are GPU-specific
+        assert suggestion is not None
+        assert "GPU-specific" in suggestion or "incompatible" in suggestion.lower()
+
+    def test_error_suggestion_for_file_not_found(self):
+        """CLI should provide helpful message for missing files."""
+        from haoline.cli_typer import _get_error_suggestion
+
+        error = FileNotFoundError("No such file or directory: 'model.onnx'")
+        suggestion = _get_error_suggestion(error, model_path=None, from_pytorch=False)
+
+        assert suggestion is not None
+        assert "path" in suggestion.lower() or "exists" in suggestion.lower()

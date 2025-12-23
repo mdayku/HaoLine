@@ -402,23 +402,38 @@ Or use the web UI's comparison mode for an interactive experience.
 
 ```bash
 # Analyze TensorRT engine
-haoline model.engine --out-json report.json
+python -m haoline model.engine --out-json report.json
 
 # Compare ONNX source with TRT engine (shows fusions, precision changes)
-haoline model.onnx --compare-trt model.engine --out-html comparison.html
+python -m haoline model.onnx --compare-trt model.engine --out-html comparison.html
 ```
 
-Features include:
-- Layer-by-layer analysis with precision breakdown (INT8/FP16/FP32)
+**Guaranteed Features:**
+- Layer enumeration with names and types
+- Precision breakdown (INT8/FP16/FP32 distribution)
 - Fusion detection (Conv+BN+ReLU, LayerNorm, FlashAttention, etc.)
-- Layer rewrite visualization (attention optimizations, GELU, etc.)
-- Quantization bottleneck zones identification
 - Workspace and device memory allocation tracking
-- Compute vs memory bound layer classification
-- Per-layer timing breakdown charts (when profiling data available)
 - Interactive side-by-side ONNX vs TRT comparison HTML
 
-**Note:** Epic 52 (TensorRT 1.0 Documentation & Testing) is planned to enhance this section with detailed limitations, troubleshooting, and guaranteed vs best-effort feature documentation. See [BACKLOG.md](BACKLOG.md#epic-52-tensorrt-10-documentation--testing-p2) for details.
+**Best-Effort Features** (may vary by engine):
+- Layer rewrite visualization (attention optimizations, GELU, etc.)
+- Per-layer timing breakdown (requires profiling data)
+- Quantization bottleneck zone identification
+
+**Known Limitations:**
+- **Dynamic shapes**: HaoLine can detect when an engine was built with dynamic shapes, but cannot reconstruct the full optimization profile ranges
+- **Plugin layers**: Custom TensorRT plugins may show as opaque nodes without internal details
+- **Precision inference**: When explicit precision flags weren't set at build time, precision is inferred from layer names (heuristic)
+- **No ONNX→TRT conversion**: HaoLine reads existing engines but doesn't build them—use NVIDIA's `trtexec` to compile
+
+**Troubleshooting:**
+
+| Issue | Solution |
+|-------|----------|
+| `ModuleNotFoundError: tensorrt` | Install with `pip install haoline[tensorrt]` (NVIDIA GPU required) |
+| `Engine deserialization failed` | Engine was built for different GPU/TensorRT version—rebuild with `trtexec` |
+| `No layers found in engine` | Engine may be corrupt or built with incompatible TensorRT version |
+| `Cannot read .trt file` | Rename to `.engine` or use `--format tensorrt` flag |
 
 ### Universal IR Export
 
@@ -657,7 +672,7 @@ Not all formats support all features. Here's what you get with each:
 
 - **ONNX/PyTorch**: Full graph structure with UniversalGraph adapters → all features work
 - **TensorRT**: Optimized fused graph with layer info, precision breakdown, and ONNX comparison (requires NVIDIA GPU)
-- **TFLite/CoreML/OpenVINO**: Graph structure exists; convert to ONNX for full analysis (coming soon)
+- **TFLite/CoreML/OpenVINO**: Graph structure available; convert to ONNX externally for full FLOPs analysis
 - **GGUF**: LLM architecture metadata (layers, heads, quantization) but no computational graph - weights only
 - **SafeTensors**: Weights only - tensor shapes and dtypes, no graph structure
 
@@ -689,22 +704,18 @@ Streamlit renders graph-based views only when the format includes a graph; other
 
 If conversion dependencies are missing, the app falls back to native readers with limited features; provide input shapes for PyTorch or use the CLI for full control.
 
-**Full Analysis via ONNX Hub (Coming Soon):**
+**Want Full Analysis for TFLite/CoreML/OpenVINO?**
 
-For TFLite, CoreML, and OpenVINO models, you'll be able to convert to ONNX to unlock all analysis features:
+These formats have graph structure but limited FLOPs/memory analysis. Convert to ONNX externally for complete metrics:
 
 ```bash
-# Coming soon: auto-convert for full analysis
-haoline model.tflite --convert-to-onnx --out-html report.html
-haoline model.mlmodel --convert-to-onnx --out-html report.html
-haoline model.xml --convert-to-onnx --out-html report.html
+# Example: TFLite to ONNX (requires tflite2onnx)
+pip install tflite2onnx
+tflite2onnx model.tflite model.onnx
+python -m haoline model.onnx --out-html report.html
 ```
 
-**Tip:** For full analysis of HuggingFace models stored as SafeTensors, load the complete model:
-```bash
-# Coming soon: --from-huggingface flag
-haoline --from-huggingface meta-llama/Llama-2-7b --out-html report.html
-```
+**HuggingFace Models:** For models stored as SafeTensors, you need the original ONNX export or PyTorch weights. SafeTensors contains only weights, not computational graph.
 
 ---
 
