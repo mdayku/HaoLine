@@ -120,3 +120,47 @@ class TestSubcommands:
         result = runner.invoke(app, ["compare", "--help"])
         assert result.exit_code == 0
         assert "Compare" in result.output or "model" in result.output.lower()
+
+
+class TestDirectModelPath:
+    """Test the 'haoline model.onnx' shortcut (inserts 'inspect' automatically)."""
+
+    def test_maybe_insert_inspect_with_onnx(self):
+        """Test that .onnx files trigger inspect insertion."""
+        import sys
+        from haoline.__main__ import _maybe_insert_inspect
+
+        # Save original argv
+        original_argv = sys.argv.copy()
+        try:
+            sys.argv = ["haoline", "model.onnx"]
+            _maybe_insert_inspect()
+            assert sys.argv == ["haoline", "inspect", "model.onnx"]
+        finally:
+            sys.argv = original_argv
+
+    def test_maybe_insert_inspect_with_subcommand(self):
+        """Test that known subcommands are not modified."""
+        import sys
+        from haoline.__main__ import _maybe_insert_inspect
+
+        original_argv = sys.argv.copy()
+        try:
+            sys.argv = ["haoline", "web"]
+            _maybe_insert_inspect()
+            assert sys.argv == ["haoline", "web"]  # Unchanged
+        finally:
+            sys.argv = original_argv
+
+    def test_maybe_insert_inspect_with_flag(self):
+        """Test that flags are not treated as model files."""
+        import sys
+        from haoline.__main__ import _maybe_insert_inspect
+
+        original_argv = sys.argv.copy()
+        try:
+            sys.argv = ["haoline", "--help"]
+            _maybe_insert_inspect()
+            assert sys.argv == ["haoline", "--help"]  # Unchanged
+        finally:
+            sys.argv = original_argv

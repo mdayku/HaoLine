@@ -56,7 +56,32 @@
 
 ---
 
-## Epic 53: Installation UX (P0) - **NEW**
+## Ideas & Future Exploration
+
+*Concepts worth exploring that aren't yet fully scoped epics.*
+
+### Idea: Universal IR as Open Standard (Strategic)
+
+**Source:** External deep analysis suggested this as a differentiation strategy.
+
+**Concept:** Document and publish the `UniversalGraph` JSON schema as a "Universal Model IR" format that other tools could consume or produce. This would position HaoLine as the center of an ecosystem for model analysis interchange.
+
+**Potential benefits:**
+- Makes HaoLine a hub, not just a tool
+- Enables third-party integrations (visualization tools, other analyzers)
+- Strengthens the "format-agnostic" value proposition
+- Could become a de-facto standard for model metadata exchange
+
+**Questions to answer:**
+- Is the current schema stable enough?
+- Would anyone actually adopt it?
+- Does it dilute our competitive moat or strengthen it?
+
+**Status:** Idea only — needs validation before scoping
+
+---
+
+## Epic 53: Installation UX (P0) - **COMPLETE**
 
 *Fix first-run experience issues. Users encounter PATH problems when pip installs scripts to user directories.*
 

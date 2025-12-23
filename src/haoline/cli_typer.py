@@ -24,6 +24,15 @@ from rich.table import Table
 console = Console()
 err_console = Console(stderr=True)
 
+def _version_callback(value: bool) -> None:
+    """Print version and exit if --version is passed."""
+    if value:
+        from haoline import __version__
+
+        console.print(f"[bold]HaoLine[/bold] version [cyan]{__version__}[/cyan]")
+        raise typer.Exit()
+
+
 # Initialize Typer app with rich markup
 app = typer.Typer(
     name="haoline",
@@ -31,31 +40,24 @@ app = typer.Typer(
     add_completion=True,
     rich_markup_mode="rich",
     no_args_is_help=True,
-    invoke_without_command=True,
 )
 
 
-@app.callback(invoke_without_command=True)
+@app.callback()
 def callback(
-    ctx: typer.Context,
     version: Annotated[
         bool | None,
-        typer.Option("--version", "-V", help="Show version and exit", is_eager=True),
+        typer.Option(
+            "--version",
+            "-V",
+            help="Show version and exit",
+            callback=_version_callback,
+            is_eager=True,
+        ),
     ] = None,
 ) -> None:
     """HaoLine - Universal Model Inspector."""
-    if version:
-        from haoline import __version__
-
-        console.print(f"[bold]HaoLine[/bold] version [cyan]{__version__}[/cyan]")
-        raise typer.Exit()
-
-    # If no subcommand given but args look like a model path, run inspect
-    if ctx.invoked_subcommand is None:
-        # Check if there are remaining args that look like a file
-        if ctx.args and Path(ctx.args[0]).exists():
-            # Re-invoke with inspect command
-            ctx.invoke(inspect)
+    pass
 
 
 # Enums for choices

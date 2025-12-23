@@ -136,7 +136,7 @@ dev = [
 ]
 
 [project.scripts]
-haoline = "haoline.cli_typer:main"
+haoline = "haoline.__main__:main"
 haoline-compare = "haoline.compare:main"
 haoline-web = "haoline.web:main"
 haoline-import-eval = "haoline.eval.cli:main"
