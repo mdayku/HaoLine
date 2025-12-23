@@ -1577,6 +1577,10 @@ def main():
             help="Limit 500MB per file. PyTorch models (.pt/.pth) require local PyTorch installation for conversion.",
         )
 
+        # Use demo model if one was downloaded (same code path as uploaded files)
+        if uploaded_file is None and "demo_uploaded_file" in st.session_state:
+            uploaded_file = st.session_state.pop("demo_uploaded_file")
+
         if uploaded_file is None:
             # Show format capability matrix
             st.markdown(
@@ -1709,7 +1713,8 @@ def main():
                 if st.button("EfficientNet (50 MB)", width="stretch", help="Larger model"):
                     st.session_state["demo_model"] = "EfficientNet"
 
-    # Handle demo model download
+    # Handle demo model download - convert to fake "uploaded file" and rerun
+    # This ensures demo models use the SAME code path as uploaded files (no duplication)
     if "demo_model" in st.session_state and st.session_state["demo_model"]:
         demo_name = st.session_state["demo_model"]
         demo_info = DEMO_MODELS[demo_name]
@@ -1719,46 +1724,27 @@ def main():
             import urllib.request
 
             try:
-                # Download to temp file
-                with tempfile.NamedTemporaryFile(suffix=".onnx", delete=False) as tmp:
-                    urllib.request.urlretrieve(demo_info["url"], tmp.name)
-                    demo_path = tmp.name
+                # Download into memory
+                with urllib.request.urlopen(demo_info["url"]) as response:
+                    demo_bytes = response.read()
 
-                # Run analysis
-                inspector = ModelInspector()
-                report = inspector.inspect(demo_path)
+                # Create a simple object that mimics UploadedFile
+                class DemoUploadedFile:
+                    def __init__(self, name: str, data: bytes):
+                        self._name = name
+                        self._data = data
 
-                # Apply hardware estimates
-                if selected_hardware == "auto":
-                    profile = detect_local_hardware()
-                else:
-                    profile = get_profile(selected_hardware)
+                    @property
+                    def name(self) -> str:
+                        return self._name
 
-                if (
-                    profile
-                    and report.param_counts
-                    and report.flop_counts
-                    and report.memory_estimates
-                ):
-                    estimator = HardwareEstimator()
-                    report.hardware_profile = profile
-                    report.hardware_estimates = estimator.estimate(
-                        model_params=report.param_counts.total,
-                        model_flops=report.flop_counts.total,
-                        peak_activation_bytes=report.memory_estimates.peak_activation_bytes,
-                        hardware=profile,
-                    )
+                    def getvalue(self) -> bytes:
+                        return self._data
 
-                # Add to history and set as current (keep temp file for interactive graph)
-                import os
-
-                file_size = os.path.getsize(demo_path)
-                result = add_to_history(
-                    f"{demo_name}.onnx", report, file_size, model_path=demo_path
+                # Store as "uploaded file" so normal path handles it
+                st.session_state["demo_uploaded_file"] = DemoUploadedFile(
+                    f"{demo_name}.onnx", demo_bytes
                 )
-                st.session_state.current_result = result
-
-                st.success(f"Loaded {demo_name} - {demo_info['desc']}")
                 st.rerun()
 
             except Exception as e:
