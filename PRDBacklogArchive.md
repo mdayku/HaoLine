@@ -467,6 +467,43 @@
 
 ---
 
+## Format Reader Stories (COMPLETE)
+
+*These stories are complete and moved from BACKLOG.md.*
+
+### Story 20.1: CoreML Reader - COMPLETE (7/7)
+*Completed: December 2025*
+
+- [x] Add coremltools dependency (optional) - in `[coreml]` extra
+- [x] Implement CoreMLReader.read() - load .mlmodel/.mlpackage
+- [x] Map CoreML ops to layer info (op_type_counts, precision_breakdown)
+- [x] Extract CoreML-specific metadata (compute units, iOS version)
+- [x] Integrate with analysis pipeline
+- [x] Test with real CoreML model (in test_format_readers.py, CI on Linux)
+- [x] Write unit tests for CoreMLReader (6 tests in test_formats.py)
+
+### Story 23.1: OpenVINO Reader - COMPLETE (5/6)
+*Completed: December 2025 (1 real-model test pending)*
+
+- [x] Add openvino dependency (optional) - in `[openvino]` extra
+- [x] Implement OpenVINOReader.read() - load .xml/.bin
+- [x] Map OpenVINO ops to layer_type_counts
+- [x] Extract precision breakdown
+- [ ] Test with real OpenVINO model (.xml + .bin) - pending
+- [x] Write unit tests for OpenVINOReader (5 tests in test_formats.py)
+
+### Story 24.1: GGUF Reader - COMPLETE (6/6)
+*Completed: December 2025*
+
+- [x] Implement GGUF header parser (pure Python, no deps)
+- [x] Extract model metadata (arch, context_length, etc.)
+- [x] Extract quantization type per tensor
+- [x] Estimate memory footprint (VRAM estimation)
+- [x] Test with real GGUF model (TinyLlama-1.1B Q2_K, 1.1B params, 458MB)
+- [x] Write unit tests for GGUFReader (8 tests in test_formats.py)
+
+---
+
 ## Epic 25: Privacy and Trust Architecture (COMPLETE - 9/9)
 
 *Completed: December 2025*

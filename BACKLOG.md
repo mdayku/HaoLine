@@ -79,71 +79,6 @@
 
 ---
 
-## Epic 53: Installation UX (P0) - **COMPLETE**
-
-*Fix first-run experience issues. Users encounter PATH problems when pip installs scripts to user directories.*
-
-**Problem:** When pip installs to user site-packages (common on Windows, restricted Linux), scripts like `haoline.exe` go to directories not on PATH. Users see "command not found" even after successful install.
-
-### Story 53.1: Module Invocation Support
-*Enable `python -m haoline` as primary/fallback invocation method.*
-
-- [x] **Task 53.1.1**: Add `__main__.py` to haoline package for `python -m haoline` support ✅
-- [x] **Task 53.1.2**: Ensure all CLI entry points work via module invocation ✅
-- [x] **Task 53.1.3**: Update README with `python -m haoline` as primary installation method ✅
-- [x] **Task 53.1.4**: Add `python -m haoline web` subcommand for Streamlit launch ✅
-- [x] **Task 53.1.5**: Add `python -m haoline compare` subcommand for comparison CLI ✅
-
-### Story 53.2: Installation Diagnostics ✅ **COMPLETE**
-*Help users diagnose and fix installation issues.*
-
-- [x] **Task 53.2.1**: Add `python -m haoline --check-install` command ✅
-- [x] **Task 53.2.2**: Check if haoline scripts are on PATH, report if not ✅
-- [x] **Task 53.2.3**: Detect user vs system install and explain implications ✅
-- [x] **Task 53.2.4**: Show which optional extras are installed ✅
-- [x] **Task 53.2.5**: Suggest PATH fix commands for Windows/Linux/macOS ✅
-
-### Story 53.3: Documentation & First-Run
-*Improve first-run experience in documentation.*
-
-- [x] **Task 53.3.1**: Add "Troubleshooting Installation" section to README ✅
-- [x] **Task 53.3.2**: Document Windows PATH fix (add Scripts to PATH) ✅
-- [x] **Task 53.3.3**: Document Linux/macOS PATH fix (~/.local/bin) ✅
-- [x] **Task 53.3.4**: Add installation verification command to Quick Start ✅
-- [x] **Task 53.3.5**: Update `generate_cli_command()` to use `python -m haoline` format ✅
-
----
-
-## Epic 50: CLI Modernization (P1)
-
-*Migrate from argparse to Typer. Add dependency prompting and better error messages.*
-
-### Story 50.1: Typer Migration ✅ **COMPLETE**
-- [x] **Task 50.1.1**: Add typer dependency ✅
-- [x] **Task 50.1.2**: Convert main CLI to Typer app ✅ (`cli_typer.py`)
-- [x] **Task 50.1.3**: Convert subcommands (compare, web, check-install) ✅
-- [x] **Task 50.1.4**: Add rich formatting for help text ✅
-- [x] **Task 50.1.5**: Add shell completion support ✅ (via Typer)
-- [x] **Task 50.1.6**: Preserve backwards compatibility ✅ (legacy `cli.py` kept)
-
-### Story 50.2: Dependency Prompting ✅ **COMPLETE**
-- [x] **Task 50.2.1**: Detect missing optional dependencies at runtime ✅ (`_check_module()` in cli_typer.py)
-- [x] **Task 50.2.2**: Show friendly "pip install haoline[extra]" suggestions ✅
-- [x] **Task 50.2.3**: Add `check-deps` command to list missing features ✅
-- [x] **Task 50.2.4**: Group dependencies by feature (formats, llm, viz, gpu) ✅ (`DEPENDENCY_CATEGORIES`)
-- [x] **Task 50.2.5**: Add confirmation prompts for auto-install ✅ (`check-deps --install`)
-- [x] **Task 50.2.6**: Cache dependency check results ✅ (N/A - check is fast enough, no caching needed)
-
-### Story 50.3: Error Messages ✅ **COMPLETE**
-- [x] **Task 50.3.1**: Replace tracebacks with user-friendly messages ✅
-- [x] **Task 50.3.2**: Add `--verbose` flag for full tracebacks ✅ (uses `console.print_exception(show_locals=True)`)
-- [x] **Task 50.3.3**: Suggest fixes for common errors ✅ (`_get_error_suggestion()`)
-- [x] **Task 50.3.4**: Add progress bars for long operations ✅ (`console.status()` spinners)
-- [x] **Task 50.3.5**: Color-code warnings vs errors ✅ (`[red]Error:[/red]`, `[yellow]Warning:[/yellow]`)
-- [x] **Task 50.3.6**: Add `--quiet` flag for scripting ✅ (already implemented)
-
----
-
 ## Epic 54: CI/CD Integration (P1) - **NEW**
 
 *Make HaoLine a gatekeeper in ML pipelines, not just an analyzer. Enable "fail fast" on model regressions.*
@@ -281,13 +216,7 @@ jobs:
 *Apple's ML framework for iOS/macOS deployment.*
 
 ### Story 20.1: CoreML Reader - **COMPLETE**
-- [x] **Task 20.1.1**: Add coremltools dependency (optional) - in `[coreml]` extra
-- [x] **Task 20.1.2**: Implement CoreMLReader.read() - load .mlmodel/.mlpackage
-- [x] **Task 20.1.3**: Map CoreML ops to layer info (op_type_counts, precision_breakdown)
-- [x] **Task 20.1.4**: Extract CoreML-specific metadata (compute units, iOS version)
-- [x] **Task 20.1.5**: Integrate with analysis pipeline
-- [x] **Task 20.1.6**: Test with real CoreML model (in test_format_readers.py, CI on Linux)
-- [x] **Task 20.1.7**: Write unit tests for CoreMLReader (6 tests in test_formats.py)
+*Archived to PRDBacklogArchive.md - 7/7 tasks complete*
 
 ### Story 20.2: CoreML → UniversalGraph Adapter (Native Path) **← DEEP RESEARCH PRIORITY**
 *Enable interactive graph visualization and layer-by-layer analysis for CoreML models.*
@@ -355,12 +284,7 @@ jobs:
 *Intel's inference toolkit for CPU/GPU/VPU deployment.*
 
 ### Story 23.1: OpenVINO Reader - **COMPLETE**
-- [x] **Task 23.1.1**: Add openvino dependency (optional) - in `[openvino]` extra
-- [x] **Task 23.1.2**: Implement OpenVINOReader.read() - load .xml/.bin
-- [x] **Task 23.1.3**: Map OpenVINO ops to layer_type_counts
-- [x] **Task 23.1.4**: Extract precision breakdown
-- [ ] **Task 23.1.5**: Test with real OpenVINO model (.xml + .bin)
-- [x] **Task 23.1.6**: Write unit tests for OpenVINOReader (5 tests in test_formats.py)
+*Archived to PRDBacklogArchive.md - 5/6 tasks complete (1 test pending)*
 
 ### Story 23.2: OpenVINO → UniversalGraph Adapter (Native Path) **← DEEP RESEARCH PRIORITY**
 *Enable interactive graph visualization and layer-by-layer analysis for OpenVINO models.*
@@ -391,12 +315,7 @@ jobs:
 **Note:** GGUF is a weights-only format with architecture metadata. It does NOT contain a computational graph, so interactive graph visualization is not possible. However, we can display quantization breakdown, VRAM estimates, and architecture details.
 
 ### Story 24.1: GGUF Reader - **COMPLETE**
-- [x] **Task 24.1.1**: Implement GGUF header parser (pure Python, no deps)
-- [x] **Task 24.1.2**: Extract model metadata (arch, context_length, etc.)
-- [x] **Task 24.1.3**: Extract quantization type per tensor
-- [x] **Task 24.1.4**: Estimate memory footprint (VRAM estimation)
-- [x] **Task 24.1.5**: Test with real GGUF model (TinyLlama-1.1B Q2_K, 1.1B params, 458MB)
-- [x] **Task 24.1.6**: Write unit tests for GGUFReader (8 tests in test_formats.py)
+*Archived to PRDBacklogArchive.md - 6/6 tasks complete*
 
 ### Story 24.2: GGUF Streamlit UI & Analysis Features **← DEEP RESEARCH PRIORITY**
 **Gap Identified:** GGUF can be analyzed but `.gguf` not in Streamlit file picker. LLM-specific charts (quant-breakdown, context-slider) not implemented.
