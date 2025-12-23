@@ -2055,6 +2055,8 @@ haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
 
 | Date | Change |
 |------|--------|
+| Dec 23, 2025 | **Epic 54 Created** - CI/CD Integration (P1). Story 54.1: `--fail-on` threshold flags. Story 54.2: GitHub Actions workflow. Story 54.3: Decision Report format. Supports new "Model Decision Layer" positioning. |
+| Dec 23, 2025 | **README Reframe** - New tagline: "The Model Decision Layer". Added "Why Universal IR?" section. Lead with problem (bad decisions), not features. |
 | Dec 23, 2025 | **Story 50.1 COMPLETE** - Typer CLI migration. Created `cli_typer.py` with Typer/Rich, renamed `cli.py` → `_cli_legacy.py`. Subcommands: inspect, web, compare, check-install, list-hardware, list-formats. Added 10 CLI tests. Updated cursor rules. |
 | Dec 22, 2025 | **v0.9.4 Released** - Epic 53 COMPLETE. Added `python -m haoline` module invocation, subcommands (web, compare, import-eval), `--check-install` diagnostics. Updated Streamlit CLI command generator. |
 | Dec 22, 2025 | **Epic 53 Created** - Installation UX epic (P0) to fix PATH issues, add `python -m haoline` support, improve first-run experience. Cleaned up BACKLOG.md, archived merged epics, re-prioritized. |
