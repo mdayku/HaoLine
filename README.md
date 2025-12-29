@@ -5,7 +5,9 @@
 [![PyPI version](https://badge.fury.io/py/haoline.svg)](https://badge.fury.io/py/haoline)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-509%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-500%2B%20passed-brightgreen.svg)]()
+
+> **🎉 v1.0 Released!** Universal model analysis across 10 formats, CI/CD integration with threshold gates, quantization recommendations. [See what's new →](#features)
 
 HaoLine is a universal model inspector that makes neural network internals **legible** across formats — so you can make informed decisions about what to deploy.
 

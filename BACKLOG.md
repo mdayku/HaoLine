@@ -8,91 +8,30 @@
 
 ---
 
-## Version 1.0 Exit Criteria
+## 🎉 Version 1.0 Released (December 29, 2025)
 
-**Definition:** HaoLine 1.0 means *"a user can reliably analyze, compare, and make deployment decisions about real-world models across major formats, with predictable behavior and clear limitations."*
+HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
 
-### 1.0 Checklist (18 tasks)
+**What's in 1.0:**
+- Universal model analysis across 10 formats (ONNX, PyTorch, TensorFlow, TensorRT, CoreML, TFLite, OpenVINO, GGUF, SafeTensors)
+- Interactive web UI on HuggingFace Spaces
+- CI/CD integration with `--fail-on` thresholds and decision reports
+- Quantization analysis and LLM-powered recommendations
+- 50+ GPU hardware profiles
 
-| # | Category | Task | Status |
-|---|----------|------|--------|
-| 1 | **Testing** | PyTorch→ONNX conversion tests pass | ✅ Done |
-| 2 | **Testing** | ONNX analysis produces correct metrics | ✅ Done |
-| 3 | **Testing** | TensorRT comparison (`--compare-trt`) works | ✅ Done |
-| 4 | **Testing** | Conversion error handling test (42.5.6) | ✅ Done |
-| 5 | **Testing** | TF/Keras→ONNX conversion test (42.2.4-5) | ✅ Done |
-| 6 | **Testing** | IR invariant: same model via different paths → identical metrics | ✅ Done |
-| 7 | **UX** | Disable graph tab for formats without graph (49.2.4) | ✅ Done |
-| 8 | **UX** | Show "Convert to ONNX for full analysis" prompt (49.2.5) | ✅ Done |
-| 9 | **UX** | Add format tier badge in reports (49.2.6) | ✅ Done |
-| 10 | **UX** | Show "Feature unavailable" with upgrade path (49.2.7) | ✅ Done |
-| 11 | **TRT Docs** | README: TensorRT limitations section (52.1.1-3) | ✅ Done |
-| 12 | **TRT Docs** | README: TensorRT troubleshooting (52.1.6) | ✅ Done |
-| 13 | **TRT Docs** | Test graceful degradation when TRT missing (52.3.2) | ✅ Done |
-| 14 | **TRT Docs** | CLI error message when TRT missing (52.3.5) | ✅ Done |
-| 15 | **README** | Verify all CLI examples work | ✅ Done |
-| 16 | **README** | Verify format support claims match reality | ✅ Done |
-| 17 | **README** | Remove/update any "coming soon" language | ✅ Done |
-| 18 | **Stability** | CI passes on main branch | ✅ Done |
-| 19 | **Stability** | No open issues that produce incorrect metrics without warning | ✅ Done |
-| 20 | **UX** | Demo model shows same analysis as uploaded models (55.1) | ✅ Done |
-
-**Progress:** 20/20 complete 🎉
-
-**✅ All 1.0 Exit Criteria Complete** — Ready for v1.0 release after README accuracy checklist verification.
-
-**IR Invariant (Task 6):** Structurally equivalent models analyzed via different paths (e.g., PyTorch→ONNX vs native ONNX) must produce identical Universal IR summaries: same node counts, op types, and parameter totals. This is the foundation of "decision layer" credibility.
-
-**Stability Rule (Task 19):** "No known critical bugs" means: no open issues where HaoLine produces incorrect metrics (params, FLOPs, memory) without a warning. Correctness bugs with documented warnings are acceptable for 1.0.
-
-### README Accuracy Checklist
-
-Before 1.0, verify each claim in README.md is true:
-
-| Section | Claim | Verify |
-|---------|-------|--------|
-| Quick Start | `pip install haoline` works | ☐ |
-| Quick Start | `python -m haoline model.onnx --out-html report.html` works | ☐ |
-| Quick Start | `python -m haoline compare --models v1.onnx v2.onnx` works | ☐ |
-| Beginner Guide | HuggingFace model download example works | ☐ |
-| Beginner Guide | `--from-pytorch` with input-shape works | ☐ |
-| Web Interface | HF Spaces link is live and functional | ☐ |
-| Web Interface | `haoline-web` command works | ☐ |
-| Installation | All extras install correctly (`[llm]`, `[full]`, etc.) | ☐ |
-| Common Commands | `haoline --list-hardware` works | ☐ |
-| Common Commands | `--from-tensorflow` conversion works | ☐ |
-| CI/CD Section | `--fail-on` example works | ☐ |
-| CI/CD Section | `--decision-report` example works | ☐ |
-| Format Support | All listed formats actually load | ☐ |
-
-### What's NOT Required for 1.0
-
-These are explicitly post-1.0:
-- AWS GPU deployment (Epic 51)
-- SaaS web app (Epic 10)
-- LLM-scale analysis (Epics 26-30)
-- Native FLOPs for non-ONNX formats (Epic 49.5)
-- Model optimization service (Epics 31-32)
-- Model card standards (Epic 47)
-- JAX conversion tests (42.2.7-8, 42.3.8-9)
-- SafeTensors writer tests (42.6.x)
-- GGUF advanced UI (Epic 24.2)
+*See [PRDBacklogArchive.md](PRDBacklogArchive.md) for the complete 1.0 exit criteria and verification checklist.*
 
 ---
 
-## Current Priority Focus (Dec 2025)
-
-**Goal:** Ship HaoLine 1.0 — trustworthy, not just impressive.
-
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
-| ✅ | CI/CD Integration | Epic 54 COMPLETE |
-| **P0** | 1.0 Blockers | Tasks 4-16 from 1.0 Checklist above |
-| **P1** | Format Testing | Epic 42 (1.0-critical subset only) |
-| **P1** | Format UX | Epic 49.2 (core tasks only) |
-| **P1** | TRT Docs | Epic 52 (README + graceful degradation) |
+| **P1** | LLM-Scale Analysis | Epics 26-30 (70B+ param models, MoE, KV cache) |
+| **P1** | GGUF Advanced UI | Epic 24.2 (quantization breakdown, VRAM calculator) |
+| **P2** | AWS GPU Deployment | Epic 51 (TensorRT, runtime benchmarking) |
+| **P2** | HuggingFace Integration | Epic 49.1 (`--from-huggingface` CLI flag) |
+| **P3** | Model Optimization Service | Epics 31-32 (automated quantization) |
 
-**Recent Release:** v0.9.7 (Dec 23, 2025) — CLI bug fixes, `--list-hardware`/`--list-formats` flags, comprehensive CI testing
+**Current Release:** v1.0.0 (Dec 29, 2025) — Universal model inspector, 10 formats, CI/CD integration
 
 **Quality Gate:** `python scripts/check.py` (fast) or `python scripts/check.py --all` (full)
 
@@ -102,18 +41,17 @@ These are explicitly post-1.0:
 
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
-| **1.0 BLOCKERS** |||||
-| *None remaining* | ✅ All 1.0 blockers complete | - | - | - |
+| **SHIPPED IN 1.0** |||||
+| Epic 54: CI/CD Integration | ✅ COMPLETE | 3 | 23/23 | Done |
 | Epic 55: Demo Model Parity | ✅ COMPLETE | 1 | 2/2 | Done |
 | Epic 42: Format Conversion Testing | ✅ 1.0 tasks done | 6 | 18/38 | Done |
 | Epic 49.2: Format-Aware UI | ✅ 1.0 tasks done | 1 | 7/9 | Done |
 | Epic 52: TensorRT Docs | ✅ 1.0 tasks done | 5 | 6/24 | Done |
-| **COMPLETE** |||||
-| Epic 54: CI/CD Integration | ✅ COMPLETE | 3 | 23/23 | Done |
-| **POST-1.0** |||||
-| Epic 49: Full HuggingFace Integration | In Progress | 5 | 3/30 | P2 |
+| **POST-1.0 PRIORITIES** |||||
+| Epic 49: Full HuggingFace Integration | In Progress | 5 | 3/30 | P1 |
+| Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
 | Epic 24: GGUF LLM Support | In Progress | 2 | 7/13 | P2 |
-| Epic 52: TensorRT Documentation | Not Started | 5 | 0/24 | P2 |
+| Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
 | Epic 19: SafeTensors | Story 19.1 ✅ | 2 | 6/10 | P3 |
 | Epic 20: CoreML | Story 20.1 ✅ | 3 | 8/19 | P3 |
@@ -126,7 +64,6 @@ These are explicitly post-1.0:
 | **FUTURE** |||||
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 47: Model Card Standards | Not Started | 2 | 0/10 | P4 |
-| Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P4 |
 | Epics 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 
 **Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 25, 33, 39, 40, 41, 50, 53, 54, 55 *(archived in PRDBacklogArchive.md)*

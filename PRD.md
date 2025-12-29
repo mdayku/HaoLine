@@ -6,9 +6,9 @@
 |-------|-------|
 | Project | HaoLine - Universal Model Inspector |
 | Author | Marcus |
-| Version | 2.3 |
-| Last Updated | December 13, 2025 |
-| Status | In Development |
+| Version | 3.0 |
+| Last Updated | December 29, 2025 |
+| Status | **Released (v1.0.0)** |
 
 **Related Documents:**
 - [BACKLOG.md](BACKLOG.md) - Epic/Story/Task tracking
@@ -2055,6 +2055,8 @@ haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
 
 | Date | Change |
 |------|--------|
+| Dec 29, 2025 | **🎉 v1.0.0 RELEASED** - Universal model inspector with 10 format support, CI/CD integration, quantization analysis, 50+ GPU profiles. All 20 exit criteria complete. README verified. |
+| Dec 29, 2025 | Slimmed `[full]` extra (TF + PDF + SafeTensors, no JAX/CoreML/OpenVINO). Fixed `RiskSignal.message` bug. Fixed mypy `has_quantization_info` error. Added `uv` installation docs. |
 | Dec 23, 2025 | **Epic 50 COMPLETE** - CLI Modernization (18/18 tasks). Typer migration, dependency prompting (`check-deps`), user-friendly error messages with suggestions, direct model path invocation (`haoline model.onnx`). Fixed all mypy type errors in cli_typer.py. 509 tests pass. |
 | Dec 23, 2025 | **1.0 Exit Criteria defined** - 18-task checklist added to BACKLOG.md. Epics 42, 49.2, 52 scoped to 1.0-critical subsets. |
 | Dec 23, 2025 | **Epic 54 COMPLETE** - CI/CD Integration (23/23 tasks). `--fail-on` threshold flags, `.github/examples/model-check.yml` workflow template, `--decision-report` for audit trails. 10 new tests. |

@@ -9,8 +9,75 @@
 
 ## Table of Contents
 
-1. [Completed Epics (Detailed)](#completed-epics-detailed)
-2. [PRD Delta Log Archive (Pre-December 6, 2025)](#prd-delta-log-archive)
+1. [Version 1.0 Release (Archived)](#version-10-release-archived)
+2. [Completed Epics (Detailed)](#completed-epics-detailed)
+3. [PRD Delta Log Archive (Pre-December 6, 2025)](#prd-delta-log-archive)
+
+---
+
+# Version 1.0 Release (Archived)
+
+*Completed: December 29, 2025*
+
+## 1.0 Exit Criteria - ALL COMPLETE
+
+**Definition:** HaoLine 1.0 means *"a user can reliably analyze, compare, and make deployment decisions about real-world models across major formats, with predictable behavior and clear limitations."*
+
+### 1.0 Checklist (20/20 tasks)
+
+| # | Category | Task | Status |
+|---|----------|------|--------|
+| 1 | **Testing** | PyTorch→ONNX conversion tests pass | ✅ Done |
+| 2 | **Testing** | ONNX analysis produces correct metrics | ✅ Done |
+| 3 | **Testing** | TensorRT comparison (`--compare-trt`) works | ✅ Done |
+| 4 | **Testing** | Conversion error handling test (42.5.6) | ✅ Done |
+| 5 | **Testing** | TF/Keras→ONNX conversion test (42.2.4-5) | ✅ Done |
+| 6 | **Testing** | IR invariant: same model via different paths → identical metrics | ✅ Done |
+| 7 | **UX** | Disable graph tab for formats without graph (49.2.4) | ✅ Done |
+| 8 | **UX** | Show "Convert to ONNX for full analysis" prompt (49.2.5) | ✅ Done |
+| 9 | **UX** | Add format tier badge in reports (49.2.6) | ✅ Done |
+| 10 | **UX** | Show "Feature unavailable" with upgrade path (49.2.7) | ✅ Done |
+| 11 | **TRT Docs** | README: TensorRT limitations section (52.1.1-3) | ✅ Done |
+| 12 | **TRT Docs** | README: TensorRT troubleshooting (52.1.6) | ✅ Done |
+| 13 | **TRT Docs** | Test graceful degradation when TRT missing (52.3.2) | ✅ Done |
+| 14 | **TRT Docs** | CLI error message when TRT missing (52.3.5) | ✅ Done |
+| 15 | **README** | Verify all CLI examples work | ✅ Done |
+| 16 | **README** | Verify format support claims match reality | ✅ Done |
+| 17 | **README** | Remove/update any "coming soon" language | ✅ Done |
+| 18 | **Stability** | CI passes on main branch | ✅ Done |
+| 19 | **Stability** | No open issues that produce incorrect metrics without warning | ✅ Done |
+| 20 | **UX** | Demo model shows same analysis as uploaded models (55.1) | ✅ Done |
+
+### README Accuracy Checklist - ALL VERIFIED
+
+| Section | Claim | Status |
+|---------|-------|--------|
+| Quick Start | `pip install haoline` works | ✅ Verified |
+| Quick Start | `python -m haoline model.onnx --out-html report.html` works | ✅ Verified |
+| Quick Start | `python -m haoline compare` works (requires `--eval-metrics`) | ✅ Verified (docs updated) |
+| Beginner Guide | Model download example works | ✅ Verified (docs updated) |
+| Beginner Guide | `--from-pytorch` with input-shape works | ✅ Verified |
+| Web Interface | HF Spaces link is live and functional | ✅ Verified |
+| Web Interface | `haoline-web` command works | ✅ Verified |
+| Installation | All extras install correctly (`[llm]`, `[full]`, etc.) | ✅ Verified |
+| Common Commands | `haoline --list-hardware` works | ✅ Verified |
+| Common Commands | `--from-tensorflow` conversion works | ⏭️ Skipped (not in `[full]`) |
+| CI/CD Section | `--fail-on` example works | ✅ Verified |
+| CI/CD Section | `--decision-report` example works | ✅ Verified |
+| Format Support | All listed formats actually load | ✅ Verified |
+
+### What Was NOT Required for 1.0
+
+These were explicitly post-1.0:
+- AWS GPU deployment (Epic 51)
+- SaaS web app (Epic 10)
+- LLM-scale analysis (Epics 26-30)
+- Native FLOPs for non-ONNX formats (Epic 49.5)
+- Model optimization service (Epics 31-32)
+- Model card standards (Epic 47)
+- JAX conversion tests (42.2.7-8, 42.3.8-9)
+- SafeTensors writer tests (42.6.x)
+- GGUF advanced UI (Epic 24.2)
 
 ---
 

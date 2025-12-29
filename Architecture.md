@@ -1360,3 +1360,4 @@ class MyFormatAdapter:
 | 1.0 | Dec 2025 | Marcus | Initial architecture document |
 | 1.1 | Dec 6, 2025 | Marcus | Added Universal IR (Epic 18), Quantization Linter (Epic 33), Report Sections (Epic 41), updated file structure |
 | 1.2 | Dec 6, 2025 | Marcus | **v0.5.0** - Full Pydantic migration complete. All 58 dataclasses converted to Pydantic BaseModel. Zero `@dataclass` remaining. |
+| 2.0 | Dec 29, 2025 | Marcus | **v1.0.0 Released** - Universal model inspector supporting 10 formats. CI/CD integration with `--fail-on` thresholds. Typer CLI. Slimmed extras (`[full]` = practical defaults). |
