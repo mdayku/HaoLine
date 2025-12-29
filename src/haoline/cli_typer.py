@@ -598,7 +598,7 @@ def display_report_summary(report) -> None:
     if report.risk_signals:
         console.print(f"\n[bold yellow]Risk Signals:[/bold yellow] {len(report.risk_signals)}")
         for risk in report.risk_signals[:3]:
-            console.print(f"  [yellow]![/yellow] {risk.message}")
+            console.print(f"  [yellow]![/yellow] {risk.description}")
         if len(report.risk_signals) > 3:
             console.print(f"  ... and {len(report.risk_signals) - 3} more")
 

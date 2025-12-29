@@ -122,10 +122,17 @@ formats = [
     "haoline[safetensors]",
     # tflite, coreml, openvino have platform-specific deps, install separately
 ]
+# Recommended for most users - practical "batteries included"
 full = [
-    "haoline[runtime,viz,llm,pdf,gpu,web,pytorch,tensorflow,ultralytics,jax,safetensors,coreml,openvino]",
-    # Note: tflite excluded from full because it's not available on Windows
-    # Install separately on Linux/Mac: pip install haoline[tflite]
+    "haoline[runtime,viz,llm,gpu,web,ultralytics]",
+    # Includes: ONNX runtime, YOLO/PyTorch support, web UI, LLM summaries, GPU detection
+    # Fast install (~2-3 min), works on Python 3.10-3.12
+]
+# Everything - for CI/testing or power users who need all converters
+all = [
+    "haoline[full,pdf,tensorflow,jax,safetensors,coreml,openvino]",
+    # Warning: Large install (~10+ min), may have platform-specific issues
+    # tflite excluded (not available on Windows)
 ]
 dev = [
     "pytest>=7.0.0",

@@ -189,7 +189,8 @@ This opens an interactive dashboard at `http://localhost:8501` with:
 |---------|--------------|
 | `pip install haoline` | Core analysis (ONNX, GGUF) + charts |
 | `pip install haoline[llm]` | + AI-powered summaries |
-| `pip install haoline[full]` | **Everything** - all formats, LLM, PDF, GPU, web UI |
+| `pip install haoline[full]` | **Recommended** - web UI, LLM, YOLO/PyTorch, GPU (~2-3 min) |
+| `pip install haoline[all]` | Everything - all converters (~10+ min, for CI/power users) |
 
 ### Using uv (Faster Alternative)
 
