@@ -60,8 +60,9 @@ pip install haoline
 # Analyze a model
 python -m haoline model.onnx --out-html report.html --hardware auto
 
-# Compare two variants
-python -m haoline compare --models v1.onnx v2.onnx --out-html comparison.html
+# Compare variants with eval metrics (for CI/CD pipelines)
+python -m haoline compare --models base.onnx optimized.onnx \
+    --eval-metrics base_eval.json optimized_eval.json --out-md comparison.md
 ```
 
 ---
@@ -87,14 +88,11 @@ python -m haoline --help
 
 ### Step 2: Get a Model to Analyze
 
-**Option A: Download a pre-trained model from Hugging Face**
+**Option A: Download a pre-trained model from ONNX Model Zoo**
 
 ```bash
-# Install huggingface_hub if you don't have it
-pip install huggingface_hub
-
-# Download a small image classification model (MobileNet, ~14MB)
-python -c "from huggingface_hub import hf_hub_download; hf_hub_download('onnx/models', 'validated/vision/classification/mobilenet/model/mobilenetv2-7.onnx', local_dir='.')"
+# Download SqueezeNet (~5MB) - a simple image classifier
+python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/onnx/models/raw/main/validated/vision/classification/squeezenet/model/squeezenet1.0-7.onnx', 'squeezenet.onnx'); print('Downloaded squeezenet.onnx')"
 ```
 
 **Option B: Use your own model**
