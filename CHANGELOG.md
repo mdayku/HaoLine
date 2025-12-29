@@ -5,6 +5,34 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-12-29
+
+### 🎉 First Stable Release
+
+HaoLine 1.0 is the universal model inspector that helps ML teams make informed deployment decisions.
+
+### Added
+- **10 Format Support**: ONNX, PyTorch, TensorFlow, TensorRT, CoreML, TFLite, OpenVINO, GGUF, SafeTensors
+- **CI/CD Integration**: `--fail-on` thresholds for automated model validation in pipelines
+- **Decision Reports**: `--decision-report` for audit trails (JSON/Markdown)
+- **GitHub Actions Template**: Ready-to-use workflow for PR model checks
+- **Streamlit Demo Model Parity**: Demo models now use identical code path as uploads
+- **uv Installation Docs**: Added `uv tool install haoline` and `uvx` examples
+
+### Changed
+- **Slimmed `[full]` extra**: Now includes practical defaults (TF, PDF, SafeTensors, PyTorch/YOLO) without exotic formats
+- **New `[all]` extra**: For power users who need JAX, CoreML, OpenVINO converters
+- **README examples updated**: Fixed `compare` command syntax, model download URLs
+
+### Fixed
+- `RiskSignal.message` → `RiskSignal.description` attribute bug
+- `has_quantization_lint` → `has_quantization_info` mypy error
+- Redundant `Path` import causing `UnboundLocalError` in Streamlit export tab
+- `QuantizationAdvice.recommendations` attribute error (use `strategy` + `qat_workflow` fields)
+- HuggingFace Spaces Docker cache issue (factory reboot required for updates)
+
+---
+
 # 0.9.3 - 2025-12-12
 
 ### Fixed
@@ -223,6 +251,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Compare mode for quantization analysis
 - CLI: `haoline` command with comprehensive flags
 
+[1.0.0]: https://github.com/mdayku/HaoLine/compare/v0.9.11...v1.0.0
 [0.4.0]: https://github.com/mdayku/HaoLine/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mdayku/HaoLine/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/mdayku/HaoLine/compare/v0.2.2...v0.2.3
