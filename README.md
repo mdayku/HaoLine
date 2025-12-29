@@ -191,6 +191,21 @@ This opens an interactive dashboard at `http://localhost:8501` with:
 | `pip install haoline[llm]` | + AI-powered summaries |
 | `pip install haoline[full]` | **Everything** - all formats, LLM, PDF, GPU, web UI |
 
+### Using uv (Faster Alternative)
+
+[uv](https://github.com/astral-sh/uv) is a fast Python package manager. HaoLine works seamlessly with it:
+
+```bash
+# Install as a tool (recommended for CLI usage)
+uv tool install haoline
+
+# Or run without installing (ephemeral)
+uvx haoline model.onnx
+
+# Or install in a uv-managed environment
+uv pip install haoline[full]
+```
+
 ### Format-Specific Extras
 
 Install only what you need:
