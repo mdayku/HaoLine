@@ -702,7 +702,7 @@ def render_quantization_tab(
         capabilities = get_capabilities_from_extension(Path(model_path).suffix)
 
     # Task 49.2.7: Show unavailable message for formats without quantization lint
-    if capabilities and not capabilities.has_quantization_lint:
+    if capabilities and not capabilities.has_quantization_info:
         render_feature_unavailable(
             "Quantization Analysis",
             capabilities.description or "Quantization linting requires ONNX graph structure.",
