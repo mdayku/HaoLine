@@ -904,8 +904,6 @@ def render_export_tab(
 
                 pdf_gen = PDFGenerator()
                 with tf_pdf.NamedTemporaryFile(suffix=".pdf", delete=False) as pdf_tmp:
-                    from pathlib import Path
-
                     if pdf_gen.generate_from_html(html_data, Path(pdf_tmp.name)):
                         with open(pdf_tmp.name, "rb") as f:
                             pdf_data = f.read()
