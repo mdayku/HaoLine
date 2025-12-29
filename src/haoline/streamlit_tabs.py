@@ -304,8 +304,16 @@ def prepare_quantization_data(
         "layer_risks": [],
     }
 
-    if advice and advice.recommendations:
-        data["recommendations"] = list(advice.recommendations)
+    # Build recommendations from QuantizationAdvice fields (no 'recommendations' attr)
+    if advice:
+        recs = []
+        # Strategy is the main recommendation
+        if hasattr(advice, "strategy") and advice.strategy:
+            recs.append(advice.strategy)
+        # Add first few QAT workflow steps
+        if hasattr(advice, "qat_workflow") and advice.qat_workflow:
+            recs.extend(advice.qat_workflow[:2])
+        data["recommendations"] = recs
 
     if lint_result.layer_risk_scores:
         data["layer_risks"] = [
