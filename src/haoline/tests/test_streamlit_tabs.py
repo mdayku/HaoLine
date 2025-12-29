@@ -191,8 +191,13 @@ class MockLayerRisk:
 class MockAdvice:
     """Mock quantization advice."""
 
-    def __init__(self, recommendations: list | None = None):
-        self.recommendations = recommendations or ["Use INT8 for Conv layers"]
+    def __init__(
+        self,
+        strategy: str | None = None,
+        qat_workflow: list | None = None,
+    ):
+        self.strategy = strategy or "Use INT8 for Conv layers"
+        self.qat_workflow = qat_workflow or []
 
 
 # =============================================================================
@@ -410,10 +415,12 @@ class TestPrepareQuantizationData:
 
     def test_with_advice(self):
         lint_result = MockLintResult()
-        advice = MockAdvice(recommendations=["Rec 1", "Rec 2"])
+        advice = MockAdvice(strategy="Use INT8", qat_workflow=["Step 1", "Step 2"])
         data = prepare_quantization_data(lint_result, advice)
 
-        assert len(data["recommendations"]) == 2
+        # strategy + first 2 qat_workflow items = 3 recommendations
+        assert len(data["recommendations"]) == 3
+        assert data["recommendations"][0] == "Use INT8"
 
     def test_with_layer_risks(self):
         lint_result = MockLintResult(layer_risk_scores=[MockLayerRisk()])
