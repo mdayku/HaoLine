@@ -262,6 +262,10 @@ def inspect(
         str | None,
         typer.Option("--input-shape", help="Input shape for conversion (e.g., 1,3,224,224)"),
     ] = None,
+    keep_onnx: Annotated[
+        Path | None,
+        typer.Option("--keep-onnx", help="Save converted ONNX model to this path"),
+    ] = None,
     # LLM options
     llm_summary: Annotated[
         bool,
@@ -313,6 +317,7 @@ def inspect(
             model_path=model_path,
             from_pytorch=from_pytorch,
             input_shape=input_shape,
+            keep_onnx=keep_onnx,
             out_json=out_json,
             out_md=out_md,
             out_html=out_html,
@@ -394,6 +399,7 @@ def _run_inspect(
     model_path: Path | None,
     from_pytorch: Path | None,
     input_shape: str | None,
+    keep_onnx: Path | None,
     out_json: Path | None,
     out_md: Path | None,
     out_html: Path | None,
@@ -438,7 +444,7 @@ def _run_inspect(
             result_path, _ = _convert_pytorch_to_onnx(
                 pytorch_path=from_pytorch,
                 input_shape_str=input_shape,
-                output_path=None,  # Use temp file
+                output_path=keep_onnx,  # Save to specified path or use temp file
                 opset_version=17,
                 logger=logger,
             )
@@ -446,6 +452,8 @@ def _run_inspect(
                 err_console.print("[red]Error:[/red] PyTorch conversion failed")
                 raise typer.Exit(1)
             analysis_path = str(result_path)
+            if keep_onnx and not quiet:
+                console.print(f"[green]Saved ONNX:[/green] {keep_onnx}")
     else:
         analysis_path = str(model_path)
 
