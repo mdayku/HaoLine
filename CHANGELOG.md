@@ -5,6 +5,24 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-12-29
+
+### CLI Parity Complete
+
+All 42 legacy CLI flags have been ported to the new Typer CLI for 100% feature parity.
+
+### Added
+- **Global list commands**: `--list-cloud` (show cloud instances), `--list-conversions` (show format conversion matrix)
+- **Conversion flags**: `--from-frozen-graph`, `--tf-inputs`, `--tf-outputs`, `--jax-apply-fn`, `--pytorch-weights`
+- **Deployment flags**: `--deployment-target`, `--target-latency-ms`, `--target-throughput-fps`
+- **Profiling flags**: `--no-gpu-metrics`, `--no-bottleneck-analysis`
+- **Quantization flags**: `--quant-bottlenecks`, `--quant-advice-report`
+
+### Fixed
+- `--list-cloud` now correctly iterates over cloud instance dictionary
+
+---
+
 ## [1.0.0] - 2025-12-29
 
 ### 🎉 First Stable Release
@@ -251,6 +269,7 @@ HaoLine 1.0 is the universal model inspector that helps ML teams make informed d
 - Compare mode for quantization analysis
 - CLI: `haoline` command with comprehensive flags
 
+[1.1.0]: https://github.com/mdayku/HaoLine/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mdayku/HaoLine/compare/v0.9.11...v1.0.0
 [0.4.0]: https://github.com/mdayku/HaoLine/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mdayku/HaoLine/compare/v0.2.3...v0.3.0

@@ -104,6 +104,59 @@ def _list_formats_callback(value: bool) -> None:
         raise typer.Exit()
 
 
+def _list_cloud_callback(value: bool) -> None:
+    """List available cloud instances."""
+    if not value:
+        return
+
+    from haoline.hardware import CLOUD_INSTANCES
+
+    table = Table(title="Cloud GPU Instances", show_header=True)
+    table.add_column("Instance", style="cyan")
+    table.add_column("Provider", style="green")
+    table.add_column("GPU", style="yellow")
+    table.add_column("$/hr", style="magenta")
+
+    for name, instance in CLOUD_INSTANCES.items():
+        table.add_row(
+            name,
+            instance.provider,
+            f"{instance.gpu_count}x {instance.hardware.name}",
+            f"${instance.hourly_cost_usd:.2f}",
+        )
+
+    console.print(table)
+    raise typer.Exit()
+
+
+def _list_conversions_callback(value: bool) -> None:
+    """List available format conversions."""
+    if not value:
+        return
+
+    table = Table(title="Format Conversion Matrix", show_header=True)
+    table.add_column("From", style="cyan")
+    table.add_column("To", style="green")
+    table.add_column("CLI Flag", style="yellow")
+    table.add_column("Dependency", style="dim")
+
+    conversions = [
+        ("PyTorch (.pt)", "ONNX", "--from-pytorch", "torch"),
+        ("TensorFlow SavedModel", "ONNX", "--from-tensorflow", "tf2onnx"),
+        ("Keras (.h5/.keras)", "ONNX", "--from-keras", "tf2onnx"),
+        ("TFLite (.tflite)", "ONNX", "--from-tflite", "tflite2onnx"),
+        ("JAX/Flax", "ONNX", "--from-jax", "jax, tf2onnx"),
+        ("Frozen Graph (.pb)", "ONNX", "--from-frozen-graph", "tf2onnx"),
+    ]
+
+    for src, dst, flag, dep in conversions:
+        table.add_row(src, dst, flag, dep)
+
+    console.print(table)
+    console.print("\n[dim]Use --keep-onnx PATH to save the converted model.[/dim]")
+    raise typer.Exit()
+
+
 @app.callback()
 def callback(
     version: Annotated[
@@ -131,6 +184,24 @@ def callback(
             "--list-formats",
             help="List supported model formats and exit",
             callback=_list_formats_callback,
+            is_eager=True,
+        ),
+    ] = False,
+    list_cloud: Annotated[
+        bool,
+        typer.Option(
+            "--list-cloud",
+            help="List available cloud instances and exit",
+            callback=_list_cloud_callback,
+            is_eager=True,
+        ),
+    ] = False,
+    list_conversions: Annotated[
+        bool,
+        typer.Option(
+            "--list-conversions",
+            help="List available format conversions and exit",
+            callback=_list_conversions_callback,
             is_eager=True,
         ),
     ] = False,
@@ -286,6 +357,26 @@ def inspect(
         Path | None,
         typer.Option("--from-jax", help="Convert JAX/Flax model to ONNX"),
     ] = None,
+    jax_apply_fn: Annotated[
+        str | None,
+        typer.Option("--jax-apply-fn", help="JAX apply function (module:function)"),
+    ] = None,
+    from_frozen_graph: Annotated[
+        Path | None,
+        typer.Option("--from-frozen-graph", help="Convert TensorFlow frozen graph (.pb)"),
+    ] = None,
+    tf_inputs: Annotated[
+        str | None,
+        typer.Option("--tf-inputs", help="Input tensor names for frozen graph (comma-separated)"),
+    ] = None,
+    tf_outputs: Annotated[
+        str | None,
+        typer.Option("--tf-outputs", help="Output tensor names for frozen graph (comma-separated)"),
+    ] = None,
+    pytorch_weights: Annotated[
+        Path | None,
+        typer.Option("--pytorch-weights", help="Original PyTorch weights for metadata extraction"),
+    ] = None,
     # Universal IR export options
     export_ir: Annotated[
         Path | None,
@@ -342,6 +433,14 @@ def inspect(
         bool,
         typer.Option("--quant-llm-advice", help="Get LLM-powered quantization advice"),
     ] = False,
+    quant_bottlenecks: Annotated[
+        bool,
+        typer.Option("--quant-bottlenecks", help="Show quantization bottleneck analysis"),
+    ] = False,
+    quant_advice_report: Annotated[
+        Path | None,
+        typer.Option("--quant-advice-report", help="Output QAT readiness report"),
+    ] = None,
     # TensorRT comparison
     compare_trt: Annotated[
         Path | None,
@@ -378,6 +477,18 @@ def inspect(
         float,
         typer.Option("--deployment-hours", help="Hours/day for cost calculation"),
     ] = 24.0,
+    deployment_target: Annotated[
+        str | None,
+        typer.Option("--deployment-target", help="Deployment target (edge, local, cloud)"),
+    ] = None,
+    target_latency_ms: Annotated[
+        float | None,
+        typer.Option("--target-latency-ms", help="Target latency in milliseconds"),
+    ] = None,
+    target_throughput_fps: Annotated[
+        float | None,
+        typer.Option("--target-throughput-fps", help="Target throughput in FPS"),
+    ] = None,
     # Privacy options
     redact_names: Annotated[
         bool,
@@ -400,6 +511,14 @@ def inspect(
         int,
         typer.Option("--profile-runs", help="Number of profiling runs"),
     ] = 10,
+    no_gpu_metrics: Annotated[
+        bool,
+        typer.Option("--no-gpu-metrics", help="Disable GPU metrics capture"),
+    ] = False,
+    no_bottleneck_analysis: Annotated[
+        bool,
+        typer.Option("--no-bottleneck-analysis", help="Disable bottleneck analysis"),
+    ] = False,
     # Visualization options
     with_plots: Annotated[
         bool,
@@ -434,7 +553,14 @@ def inspect(
         haoline --from-pytorch model.pt --input-shape 1,3,224,224
     """
     # Handle no model path - check all conversion options
-    conversion_sources = [from_pytorch, from_tensorflow, from_keras, from_tflite, from_jax]
+    conversion_sources = [
+        from_pytorch,
+        from_tensorflow,
+        from_keras,
+        from_tflite,
+        from_jax,
+        from_frozen_graph,
+    ]
     if model_path is None and all(src is None for src in conversion_sources):
         console.print("[red]Error:[/red] No model path provided")
         console.print("Run [bold]haoline --help[/bold] for usage")
@@ -454,6 +580,11 @@ def inspect(
             from_keras=from_keras,
             from_tflite=from_tflite,
             from_jax=from_jax,
+            jax_apply_fn=jax_apply_fn,
+            from_frozen_graph=from_frozen_graph,
+            tf_inputs=tf_inputs,
+            tf_outputs=tf_outputs,
+            pytorch_weights=pytorch_weights,
             input_shape=input_shape,
             keep_onnx=keep_onnx,
             opset_version=opset_version,
@@ -480,18 +611,25 @@ def inspect(
             input_resolution=input_resolution,
             deployment_fps=deployment_fps,
             deployment_hours=deployment_hours,
+            deployment_target=deployment_target,
+            target_latency_ms=target_latency_ms,
+            target_throughput_fps=target_throughput_fps,
             llm_summary=llm_summary,
             llm_model=llm_model,
             lint_quant=lint_quant,
             quant_report=quant_report,
             quant_report_html=quant_report_html,
             quant_llm_advice=quant_llm_advice,
+            quant_bottlenecks=quant_bottlenecks,
+            quant_advice_report=quant_advice_report,
             compare_trt=compare_trt,
             redact_names=redact_names,
             summary_only=summary_only,
             offline=offline,
             no_profile=no_profile,
             profile_runs=profile_runs,
+            no_gpu_metrics=no_gpu_metrics,
+            no_bottleneck_analysis=no_bottleneck_analysis,
             with_plots=with_plots,
             quiet=quiet,
             verbose=verbose,
@@ -566,6 +704,11 @@ def _run_inspect(
     from_keras: Path | None,
     from_tflite: Path | None,
     from_jax: Path | None,
+    jax_apply_fn: str | None,
+    from_frozen_graph: Path | None,
+    tf_inputs: str | None,
+    tf_outputs: str | None,
+    pytorch_weights: Path | None,
     input_shape: str | None,
     keep_onnx: Path | None,
     opset_version: int,
@@ -592,18 +735,25 @@ def _run_inspect(
     input_resolution: str | None,
     deployment_fps: float | None,
     deployment_hours: float,
+    deployment_target: str | None,
+    target_latency_ms: float | None,
+    target_throughput_fps: float | None,
     llm_summary: bool,
     llm_model: str,
     lint_quant: bool,
     quant_report: Path | None,
     quant_report_html: Path | None,
     quant_llm_advice: bool,
+    quant_bottlenecks: bool,
+    quant_advice_report: Path | None,
     compare_trt: Path | None,
     redact_names: bool,
     summary_only: bool,
     offline: bool,
     no_profile: bool,
     profile_runs: int,
+    no_gpu_metrics: bool,
+    no_bottleneck_analysis: bool,
     with_plots: bool,
     quiet: bool,
     verbose: bool,

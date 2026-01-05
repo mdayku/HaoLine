@@ -10,8 +10,9 @@
 ## Table of Contents
 
 1. [Version 1.0 Release (Archived)](#version-10-release-archived)
-2. [Completed Epics (Detailed)](#completed-epics-detailed)
-3. [PRD Delta Log Archive (Pre-December 6, 2025)](#prd-delta-log-archive)
+2. [Version 1.1 Release (Archived)](#version-11-release-archived)
+3. [Completed Epics (Detailed)](#completed-epics-detailed)
+4. [PRD Delta Log Archive (Pre-December 6, 2025)](#prd-delta-log-archive)
 
 ---
 
@@ -78,6 +79,25 @@ These were explicitly post-1.0:
 - JAX conversion tests (42.2.7-8, 42.3.8-9)
 - SafeTensors writer tests (42.6.x)
 - GGUF advanced UI (Epic 24.2)
+
+---
+
+# Version 1.1 Release (Archived)
+
+*Completed: December 29, 2025*
+
+## 1.1 Summary - CLI Parity Complete
+
+**Goal:** Ensure `cli_typer.py` has 100% feature parity with `_cli_legacy.py`
+
+**What was delivered:**
+- All 42 legacy CLI flags ported to new Typer CLI
+- Added `--list-cloud` and `--list-conversions` global options
+- Added conversion flags: `--from-frozen-graph`, `--tf-inputs`, `--tf-outputs`, `--jax-apply-fn`, `--pytorch-weights`
+- Added deployment flags: `--deployment-target`, `--target-latency-ms`, `--target-throughput-fps`
+- Added profiling flags: `--no-gpu-metrics`, `--no-bottleneck-analysis`
+- Added quantization flags: `--quant-bottlenecks`, `--quant-advice-report`
+- All CLI tests pass (29 tests)
 
 ---
 
@@ -908,6 +928,71 @@ Made HaoLine a gatekeeper in ML pipelines with threshold-based failure, GitHub A
 - `.github/examples/model-check.yml` - Full-featured GitHub Actions workflow template
 - `src/haoline/cli_typer.py` - `_build_decision_report()`, `_decision_report_to_markdown()`
 - `src/haoline/tests/test_cli_typer.py` - 10 new tests for --fail-on and decision reports
+
+---
+
+## Epic 56: CLI Parity - Typer Migration Completion (COMPLETE - 42/42)
+
+*Completed: December 29, 2025 (v1.1.0)*
+
+Ported all remaining flags from legacy argparse CLI to new Typer CLI for 100% feature parity.
+
+### Story 56.1: Conversion Flags - COMPLETE (13/13)
+- [x] `--keep-onnx` - Save converted ONNX to path
+- [x] `--opset-version` - ONNX opset version for exports
+- [x] `--from-tensorflow` - Convert TensorFlow SavedModel
+- [x] `--from-keras` - Convert Keras .h5/.keras model
+- [x] `--from-tflite` - Convert TFLite model
+- [x] `--from-frozen-graph` - Convert TF frozen graph
+- [x] `--tf-inputs` / `--tf-outputs` - Tensor names for frozen graph
+- [x] `--from-jax` - Convert JAX/Flax model
+- [x] `--jax-apply-fn` - JAX apply function path
+- [x] `--list-conversions` - List available conversions
+- [x] `--pytorch-weights` - Original PyTorch weights path
+
+### Story 56.2: Output & Export Flags - COMPLETE (7/7)
+- [x] `--html-graph` - Standalone interactive graph HTML
+- [x] `--layer-csv` - Per-layer metrics CSV export
+- [x] `--include-layer-table` - Layer table in HTML report
+- [x] `--export-ir` - Export Universal IR JSON
+- [x] `--export-graph` - Export graph as DOT/PNG
+- [x] `--graph-max-nodes` - Max nodes in graph visualization
+- [x] `--assets-dir` - Directory for plot files
+
+### Story 56.3: Hardware & Deployment Flags - COMPLETE (11/11)
+- [x] `--cloud` - Cloud instance type
+- [x] `--list-cloud` - List cloud instances
+- [x] `--system-requirements` - Steam-style requirements
+- [x] `--sweep-batch-sizes` - Batch size sweep analysis
+- [x] `--sweep-resolutions` - Resolution sweep analysis
+- [x] `--input-resolution` - Override input resolution
+- [x] `--deployment-target` - Edge/local/cloud target
+- [x] `--deployment-fps` - Target FPS for cost calc
+- [x] `--deployment-hours` - Hours/day for cost calc
+- [x] `--target-latency-ms` - Latency target
+- [x] `--target-throughput-fps` - Throughput target
+
+### Story 56.4: Profiling & Privacy Flags - COMPLETE (9/9)
+- [x] `--no-profile` - Disable ONNX Runtime profiling
+- [x] `--profile-runs` - Number of profiling runs
+- [x] `--no-gpu-metrics` - Disable GPU metrics
+- [x] `--no-bottleneck-analysis` - Disable bottleneck analysis
+- [x] `--redact-names` - Anonymize layer names
+- [x] `--summary-only` - Aggregate stats only
+- [x] `--offline` - Disable network access
+- [x] `--progress` - Show progress indicators
+- [x] `--log-level` - Logging verbosity
+
+### Story 56.5: TensorRT & Quantization Flags - COMPLETE (6/6)
+- [x] `--compare-trt` - Compare with TensorRT engine
+- [x] `--quant-bottlenecks` - Quantization bottleneck analysis
+- [x] `--quant-report` - Quantization report (Markdown)
+- [x] `--quant-report-html` - Quantization report (HTML)
+- [x] `--quant-llm-advice` - LLM quantization advice
+- [x] `--quant-advice-report` - QAT readiness report
+
+**Key Files Modified:**
+- `src/haoline/cli_typer.py` - Added 42 new flags with full implementations
 
 ---
 
