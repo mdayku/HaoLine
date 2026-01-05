@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "haoline"
-version = "1.1.0"
+version = "1.1.1"
 description = "HaoLine (皓线) - Universal Model Inspector. See what's really inside your models."
 readme = "README.md"
 license = "MIT"
@@ -42,7 +42,7 @@ classifiers = [
     "Environment :: Console",
     "Environment :: Web Environment",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "onnx>=1.14.0",
     "numpy>=1.20.0",

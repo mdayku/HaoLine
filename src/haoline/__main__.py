@@ -18,6 +18,23 @@ Subcommands:
 import sys
 from pathlib import Path
 
+# Check Python version early, before importing Typer (which fails on 3.13+)
+MIN_PYTHON = (3, 10)
+MAX_PYTHON = (3, 12)
+
+if sys.version_info < MIN_PYTHON or sys.version_info >= (MAX_PYTHON[0], MAX_PYTHON[1] + 1):
+    print(
+        f"\n[ERROR] HaoLine requires Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]}-"
+        f"{MAX_PYTHON[0]}.{MAX_PYTHON[1]}, but you're running {sys.version_info[0]}.{sys.version_info[1]}.\n"
+        "\nMost ML packages (PyTorch, TensorFlow, ONNX) don't support Python 3.13+ yet."
+        "\n\nTo fix this, create a new environment with a supported Python version:"
+        "\n  conda create -n haoline python=3.11"
+        "\n  conda activate haoline"
+        "\n  pip install haoline"
+        "\n"
+    )
+    sys.exit(1)
+
 
 def _maybe_insert_inspect() -> None:
     """If first arg looks like a model file, insert 'inspect' subcommand.

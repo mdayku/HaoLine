@@ -3,7 +3,7 @@
 **The Model Decision Layer — Prevent teams from shipping the wrong model.**
 
 [![PyPI version](https://badge.fury.io/py/haoline.svg)](https://badge.fury.io/py/haoline)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10-3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-500%2B%20passed-brightgreen.svg)]()
 
@@ -53,10 +53,12 @@ Without a universal IR, format-specific graphs can obscure what's actually happe
 
 ## Quick Start
 
+> **Requires Python 3.10-3.12** (Python 3.13+ not yet supported due to upstream dependencies)
+
 **Try it now:** [huggingface.co/spaces/mdayku/haoline](https://huggingface.co/spaces/mdayku/haoline) — no installation required!
 
 ```bash
-# Install
+# Install (requires Python 3.10-3.12)
 pip install haoline
 
 # Analyze a model
