@@ -25,6 +25,7 @@ HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
+| **P0** | CLI Parity | Epic 56 (port all legacy CLI flags to Typer) |
 | **P1** | LLM-Scale Analysis | Epics 26-30 (70B+ param models, MoE, KV cache) |
 | **P1** | GGUF Advanced UI | Epic 24.2 (quantization breakdown, VRAM calculator) |
 | **P2** | AWS GPU Deployment | Epic 51 (TensorRT, runtime benchmarking) |
@@ -41,6 +42,8 @@ HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
 
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
+| **CRITICAL - 1.0.x** |||||
+| Epic 56: CLI Parity | 🚧 In Progress | 5 | 32/42 | P0 |
 | **SHIPPED IN 1.0** |||||
 | Epic 54: CI/CD Integration | ✅ COMPLETE | 3 | 23/23 | Done |
 | Epic 55: Demo Model Parity | ✅ COMPLETE | 1 | 2/2 | Done |
@@ -92,6 +95,127 @@ HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
 - Does it dilute our competitive moat or strengthen it?
 
 **Status:** Idea only — needs validation before scoping
+
+---
+
+## Epic 56: CLI Parity - Typer Migration Completion
+
+**Priority:** P0 (Critical - blocks 1.0.x release)  
+**Goal:** Ensure `cli_typer.py` has 100% feature parity with `_cli_legacy.py`
+
+**Background:** The Typer CLI migration (Epic 50) was incomplete. ~40 flags from the legacy argparse CLI were not ported, including critical conversion, IR export, and profiling features. The README documents these flags but they don't work in the new CLI.
+
+**Exit Criteria:**
+- [ ] All legacy CLI flags available in Typer CLI
+- [ ] Test coverage for each flag (at minimum: help text, basic invocation)
+- [ ] README CLI Reference matches actual implementation
+- [ ] Legacy CLI can be deprecated (add deprecation warning)
+
+---
+
+### Story 56.1: Conversion Flags
+
+Port all model conversion flags from legacy to Typer CLI.
+
+| Task | Flag | Description | Status |
+|------|------|-------------|--------|
+| 56.1.1 | `--keep-onnx` | Save converted ONNX to path | ✅ Done |
+| 56.1.2 | `--opset-version` | ONNX opset version for exports | ✅ Done |
+| 56.1.3 | `--from-tensorflow` | Convert TensorFlow SavedModel | ✅ Done |
+| 56.1.4 | `--from-keras` | Convert Keras .h5/.keras model | ✅ Done |
+| 56.1.5 | `--from-tflite` | Convert TFLite model | ✅ Done |
+| 56.1.6 | `--from-frozen-graph` | Convert TF frozen graph | |
+| 56.1.7 | `--tf-inputs` / `--tf-outputs` | Tensor names for frozen graph | |
+| 56.1.8 | `--from-jax` | Convert JAX/Flax model | ✅ Done (partial) |
+| 56.1.9 | `--jax-apply-fn` | JAX apply function path | |
+| 56.1.10 | `--convert-to` | Target format for conversion | |
+| 56.1.11 | `--convert-output` | Output path for conversion | |
+| 56.1.12 | `--list-conversions` | List available conversions | |
+| 56.1.13 | `--pytorch-weights` | Original PyTorch weights path | |
+
+---
+
+### Story 56.2: Output & Export Flags
+
+Port additional output format flags.
+
+| Task | Flag | Description | Status |
+|------|------|-------------|--------|
+| 56.2.1 | `--html-graph` | Standalone interactive graph HTML | ✅ Done |
+| 56.2.2 | `--layer-csv` | Per-layer metrics CSV export | ✅ Done |
+| 56.2.3 | `--include-layer-table` | Layer table in HTML report | ✅ Done |
+| 56.2.4 | `--export-ir` | Export Universal IR JSON | ✅ Done |
+| 56.2.5 | `--export-graph` | Export graph as DOT/PNG | ✅ Done |
+| 56.2.6 | `--graph-max-nodes` | Max nodes in graph visualization | ✅ Done |
+| 56.2.7 | `--assets-dir` | Directory for plot files | ✅ Done |
+
+---
+
+### Story 56.3: Hardware & Deployment Flags
+
+Port hardware profiling and deployment cost flags.
+
+| Task | Flag | Description | Status |
+|------|------|-------------|--------|
+| 56.3.1 | `--cloud` | Cloud instance type | ✅ Done |
+| 56.3.2 | `--list-cloud` | List cloud instances | |
+| 56.3.3 | `--system-requirements` | Steam-style requirements | ✅ Done |
+| 56.3.4 | `--sweep-batch-sizes` | Batch size sweep analysis | ✅ Done |
+| 56.3.5 | `--sweep-resolutions` | Resolution sweep analysis | ✅ Done |
+| 56.3.6 | `--input-resolution` | Override input resolution | ✅ Done |
+| 56.3.7 | `--deployment-target` | Edge/local/cloud target | |
+| 56.3.8 | `--deployment-fps` | Target FPS for cost calc | ✅ Done |
+| 56.3.9 | `--deployment-hours` | Hours/day for cost calc | ✅ Done |
+| 56.3.10 | `--target-latency-ms` | Latency target | |
+| 56.3.11 | `--target-throughput-fps` | Throughput target | |
+
+---
+
+### Story 56.4: Profiling & Privacy Flags
+
+Port runtime profiling and privacy control flags.
+
+| Task | Flag | Description | Status |
+|------|------|-------------|--------|
+| 56.4.1 | `--no-profile` | Disable ONNX Runtime profiling | ✅ Done |
+| 56.4.2 | `--profile-runs` | Number of profiling runs | ✅ Done |
+| 56.4.3 | `--no-gpu-metrics` | Disable GPU metrics | |
+| 56.4.4 | `--no-bottleneck-analysis` | Disable bottleneck analysis | |
+| 56.4.5 | `--redact-names` | Anonymize layer names | ✅ Done |
+| 56.4.6 | `--summary-only` | Aggregate stats only | ✅ Done |
+| 56.4.7 | `--offline` | Disable network access | ✅ Done |
+| 56.4.8 | `--progress` | Show progress indicators | ✅ Done |
+| 56.4.9 | `--log-level` | Logging verbosity | ✅ Done |
+
+---
+
+### Story 56.5: TensorRT & Quantization Flags
+
+Port TensorRT comparison and quantization report flags.
+
+| Task | Flag | Description | Status |
+|------|------|-------------|--------|
+| 56.5.1 | `--compare-trt` | Compare with TensorRT engine | ✅ Done |
+| 56.5.2 | `--quant-bottlenecks` | Quantization bottleneck analysis | |
+| 56.5.3 | `--quant-report` | Quantization report (Markdown) | ✅ Done |
+| 56.5.4 | `--quant-report-html` | Quantization report (HTML) | ✅ Done |
+| 56.5.5 | `--quant-llm-advice` | LLM quantization advice | ✅ Done |
+| 56.5.6 | `--quant-advice-report` | QAT readiness report | |
+
+---
+
+### Story 56.6: Test Coverage
+
+Ensure all ported flags have test coverage.
+
+| Task | Description | Status |
+|------|-------------|--------|
+| 56.6.1 | Add test for each conversion flag (help text + basic invoke) | |
+| 56.6.2 | Add test for each output flag | |
+| 56.6.3 | Add test for each hardware flag | |
+| 56.6.4 | Add test for each privacy flag | |
+| 56.6.5 | Add parity test: compare legacy vs typer CLI help output | |
+| 56.6.6 | Update README CLI Reference to match implementation | |
 
 ---
 

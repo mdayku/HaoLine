@@ -266,6 +266,56 @@ def inspect(
         Path | None,
         typer.Option("--keep-onnx", help="Save converted ONNX model to this path"),
     ] = None,
+    opset_version: Annotated[
+        int,
+        typer.Option("--opset-version", help="ONNX opset version for export"),
+    ] = 17,
+    from_tensorflow: Annotated[
+        Path | None,
+        typer.Option("--from-tensorflow", help="Convert TensorFlow SavedModel to ONNX"),
+    ] = None,
+    from_keras: Annotated[
+        Path | None,
+        typer.Option("--from-keras", help="Convert Keras .h5/.keras model to ONNX"),
+    ] = None,
+    from_tflite: Annotated[
+        Path | None,
+        typer.Option("--from-tflite", help="Convert TFLite model to ONNX"),
+    ] = None,
+    from_jax: Annotated[
+        Path | None,
+        typer.Option("--from-jax", help="Convert JAX/Flax model to ONNX"),
+    ] = None,
+    # Universal IR export options
+    export_ir: Annotated[
+        Path | None,
+        typer.Option("--export-ir", help="Export model as Universal IR JSON"),
+    ] = None,
+    export_graph: Annotated[
+        Path | None,
+        typer.Option("--export-graph", help="Export graph as DOT or PNG (Graphviz)"),
+    ] = None,
+    graph_max_nodes: Annotated[
+        int,
+        typer.Option("--graph-max-nodes", help="Max nodes in graph visualization"),
+    ] = 500,
+    # Additional output options
+    html_graph: Annotated[
+        Path | None,
+        typer.Option("--html-graph", help="Standalone interactive D3.js graph HTML"),
+    ] = None,
+    layer_csv: Annotated[
+        Path | None,
+        typer.Option("--layer-csv", help="Per-layer metrics CSV export"),
+    ] = None,
+    include_layer_table: Annotated[
+        bool,
+        typer.Option("--include-layer-table", help="Include layer table in HTML"),
+    ] = False,
+    assets_dir: Annotated[
+        Path | None,
+        typer.Option("--assets-dir", help="Directory for plot PNG files"),
+    ] = None,
     # LLM options
     llm_summary: Annotated[
         bool,
@@ -280,6 +330,76 @@ def inspect(
         bool,
         typer.Option("--lint-quant/--no-lint-quant", help="Analyze quantization readiness"),
     ] = False,
+    quant_report: Annotated[
+        Path | None,
+        typer.Option("--quant-report", help="Output quantization report (Markdown)"),
+    ] = None,
+    quant_report_html: Annotated[
+        Path | None,
+        typer.Option("--quant-report-html", help="Output quantization report (HTML)"),
+    ] = None,
+    quant_llm_advice: Annotated[
+        bool,
+        typer.Option("--quant-llm-advice", help="Get LLM-powered quantization advice"),
+    ] = False,
+    # TensorRT comparison
+    compare_trt: Annotated[
+        Path | None,
+        typer.Option("--compare-trt", help="Compare with TensorRT engine"),
+    ] = None,
+    # Hardware deployment options
+    cloud: Annotated[
+        str | None,
+        typer.Option("--cloud", help="Cloud instance (e.g., aws-p4d-24xlarge)"),
+    ] = None,
+    system_requirements: Annotated[
+        bool,
+        typer.Option("--system-requirements", help="Generate Steam-style requirements"),
+    ] = False,
+    sweep_batch_sizes: Annotated[
+        bool,
+        typer.Option("--sweep-batch-sizes", help="Find optimal batch size"),
+    ] = False,
+    sweep_resolutions: Annotated[
+        str | None,
+        typer.Option(
+            "--sweep-resolutions", help="Resolution sweep (e.g., 224x224,512x512 or 'auto')"
+        ),
+    ] = None,
+    input_resolution: Annotated[
+        str | None,
+        typer.Option("--input-resolution", help="Override input resolution (HxW)"),
+    ] = None,
+    deployment_fps: Annotated[
+        float | None,
+        typer.Option("--deployment-fps", help="Target FPS for cost calculation"),
+    ] = None,
+    deployment_hours: Annotated[
+        float,
+        typer.Option("--deployment-hours", help="Hours/day for cost calculation"),
+    ] = 24.0,
+    # Privacy options
+    redact_names: Annotated[
+        bool,
+        typer.Option("--redact-names", help="Anonymize layer/tensor names"),
+    ] = False,
+    summary_only: Annotated[
+        bool,
+        typer.Option("--summary-only", help="Output only aggregate statistics"),
+    ] = False,
+    offline: Annotated[
+        bool,
+        typer.Option("--offline", help="Disable all network requests"),
+    ] = False,
+    # Profiling options
+    no_profile: Annotated[
+        bool,
+        typer.Option("--no-profile", help="Disable ONNX Runtime profiling"),
+    ] = False,
+    profile_runs: Annotated[
+        int,
+        typer.Option("--profile-runs", help="Number of profiling runs"),
+    ] = 10,
     # Visualization options
     with_plots: Annotated[
         bool,
@@ -294,6 +414,14 @@ def inspect(
         bool,
         typer.Option("--verbose", "-v", help="Show detailed output"),
     ] = False,
+    progress: Annotated[
+        bool,
+        typer.Option("--progress", help="Show progress indicators"),
+    ] = False,
+    log_level: Annotated[
+        str,
+        typer.Option("--log-level", help="Logging level (debug, info, warning, error)"),
+    ] = "info",
 ) -> None:
     """
     Analyze a neural network model and generate comprehensive reports.
@@ -305,34 +433,70 @@ def inspect(
         haoline model.onnx --hardware rtx4090 --out-json report.json
         haoline --from-pytorch model.pt --input-shape 1,3,224,224
     """
-    # Handle no model path
-    if model_path is None and from_pytorch is None:
+    # Handle no model path - check all conversion options
+    conversion_sources = [from_pytorch, from_tensorflow, from_keras, from_tflite, from_jax]
+    if model_path is None and all(src is None for src in conversion_sources):
         console.print("[red]Error:[/red] No model path provided")
         console.print("Run [bold]haoline --help[/bold] for usage")
         raise typer.Exit(1)
+
+    # Offline mode disables LLM
+    if offline and llm_summary:
+        err_console.print("[yellow]Warning:[/yellow] --offline disables --llm-summary")
+        llm_summary = False
 
     # Wrap everything in error handler
     try:
         _run_inspect(
             model_path=model_path,
             from_pytorch=from_pytorch,
+            from_tensorflow=from_tensorflow,
+            from_keras=from_keras,
+            from_tflite=from_tflite,
+            from_jax=from_jax,
             input_shape=input_shape,
             keep_onnx=keep_onnx,
+            opset_version=opset_version,
             out_json=out_json,
             out_md=out_md,
             out_html=out_html,
             out_pdf=out_pdf,
+            html_graph=html_graph,
+            layer_csv=layer_csv,
             include_graph=include_graph,
+            include_layer_table=include_layer_table,
+            assets_dir=assets_dir,
+            export_ir=export_ir,
+            export_graph=export_graph,
+            graph_max_nodes=graph_max_nodes,
             hardware=hardware,
             precision=precision,
             batch_size=batch_size,
             gpu_count=gpu_count,
+            cloud=cloud,
+            system_requirements=system_requirements,
+            sweep_batch_sizes=sweep_batch_sizes,
+            sweep_resolutions=sweep_resolutions,
+            input_resolution=input_resolution,
+            deployment_fps=deployment_fps,
+            deployment_hours=deployment_hours,
             llm_summary=llm_summary,
             llm_model=llm_model,
             lint_quant=lint_quant,
+            quant_report=quant_report,
+            quant_report_html=quant_report_html,
+            quant_llm_advice=quant_llm_advice,
+            compare_trt=compare_trt,
+            redact_names=redact_names,
+            summary_only=summary_only,
+            offline=offline,
+            no_profile=no_profile,
+            profile_runs=profile_runs,
             with_plots=with_plots,
             quiet=quiet,
             verbose=verbose,
+            progress=progress,
+            log_level=log_level,
         )
     except Exception as e:
         if verbose:
@@ -398,26 +562,57 @@ def _run_inspect(
     *,
     model_path: Path | None,
     from_pytorch: Path | None,
+    from_tensorflow: Path | None,
+    from_keras: Path | None,
+    from_tflite: Path | None,
+    from_jax: Path | None,
     input_shape: str | None,
     keep_onnx: Path | None,
+    opset_version: int,
     out_json: Path | None,
     out_md: Path | None,
     out_html: Path | None,
     out_pdf: Path | None,
+    html_graph: Path | None,
+    layer_csv: Path | None,
     include_graph: bool,
+    include_layer_table: bool,
+    assets_dir: Path | None,
+    export_ir: Path | None,
+    export_graph: Path | None,
+    graph_max_nodes: int,
     hardware: str | None,
     precision: Precision,
     batch_size: int,
     gpu_count: int,
+    cloud: str | None,
+    system_requirements: bool,
+    sweep_batch_sizes: bool,
+    sweep_resolutions: str | None,
+    input_resolution: str | None,
+    deployment_fps: float | None,
+    deployment_hours: float,
     llm_summary: bool,
     llm_model: str,
     lint_quant: bool,
+    quant_report: Path | None,
+    quant_report_html: Path | None,
+    quant_llm_advice: bool,
+    compare_trt: Path | None,
+    redact_names: bool,
+    summary_only: bool,
+    offline: bool,
+    no_profile: bool,
+    profile_runs: int,
     with_plots: bool,
     quiet: bool,
     verbose: bool,
+    progress: bool,
+    log_level: str,
 ) -> None:
     """Internal implementation of inspect command."""
-    # Import the analysis engine
+    import logging
+
     from haoline import ModelInspector
     from haoline.hardware import (
         HardwareEstimator,
@@ -426,7 +621,13 @@ def _run_inspect(
         get_profile,
     )
 
-    # Determine model to analyze
+    # Configure logging
+    logging.basicConfig(level=getattr(logging, log_level.upper(), logging.INFO))
+    logger = logging.getLogger("haoline.cli")
+
+    # Determine model to analyze - handle conversions
+    analysis_path: str | None = None
+
     if from_pytorch:
         if not check_dependency("torch", "pytorch", "PyTorch conversion"):
             raise typer.Exit(1)
@@ -434,18 +635,14 @@ def _run_inspect(
             err_console.print("[red]Error:[/red] --input-shape required with --from-pytorch")
             raise typer.Exit(1)
 
-        # Convert PyTorch to ONNX
         with console.status("[bold blue]Converting PyTorch model to ONNX...[/bold blue]"):
-            import logging
-
             from haoline._cli_legacy import _convert_pytorch_to_onnx
 
-            logger = logging.getLogger("haoline.cli")
             result_path, _ = _convert_pytorch_to_onnx(
                 pytorch_path=from_pytorch,
                 input_shape_str=input_shape,
-                output_path=keep_onnx,  # Save to specified path or use temp file
-                opset_version=17,
+                output_path=keep_onnx,
+                opset_version=opset_version,
                 logger=logger,
             )
             if not result_path:
@@ -454,8 +651,107 @@ def _run_inspect(
             analysis_path = str(result_path)
             if keep_onnx and not quiet:
                 console.print(f"[green]Saved ONNX:[/green] {keep_onnx}")
+
+    elif from_tensorflow:
+        if not check_dependency("tf2onnx", "tensorflow", "TensorFlow conversion"):
+            raise typer.Exit(1)
+        with console.status("[bold blue]Converting TensorFlow model to ONNX...[/bold blue]"):
+            from haoline._cli_legacy import _convert_tensorflow_to_onnx
+
+            result_path, _ = _convert_tensorflow_to_onnx(
+                saved_model_path=from_tensorflow,
+                output_path=keep_onnx,
+                opset_version=opset_version,
+                logger=logger,
+            )
+            if not result_path:
+                err_console.print("[red]Error:[/red] TensorFlow conversion failed")
+                raise typer.Exit(1)
+            analysis_path = str(result_path)
+            if keep_onnx and not quiet:
+                console.print(f"[green]Saved ONNX:[/green] {keep_onnx}")
+
+    elif from_keras:
+        if not check_dependency("tf2onnx", "tensorflow", "Keras conversion"):
+            raise typer.Exit(1)
+        with console.status("[bold blue]Converting Keras model to ONNX...[/bold blue]"):
+            from haoline._cli_legacy import _convert_keras_to_onnx
+
+            result_path, _ = _convert_keras_to_onnx(
+                keras_path=from_keras,
+                output_path=keep_onnx,
+                opset_version=opset_version,
+                logger=logger,
+            )
+            if not result_path:
+                err_console.print("[red]Error:[/red] Keras conversion failed")
+                raise typer.Exit(1)
+            analysis_path = str(result_path)
+            if keep_onnx and not quiet:
+                console.print(f"[green]Saved ONNX:[/green] {keep_onnx}")
+
+    elif from_tflite:
+        if not check_dependency("tflite2onnx", "tflite", "TFLite conversion"):
+            raise typer.Exit(1)
+        with console.status("[bold blue]Converting TFLite model to ONNX...[/bold blue]"):
+            from haoline._cli_legacy import _convert_tflite_to_onnx
+
+            result_path, _ = _convert_tflite_to_onnx(
+                tflite_path=from_tflite,
+                output_path=keep_onnx,
+                logger=logger,
+            )
+            if not result_path:
+                err_console.print("[red]Error:[/red] TFLite conversion failed")
+                raise typer.Exit(1)
+            analysis_path = str(result_path)
+            if keep_onnx and not quiet:
+                console.print(f"[green]Saved ONNX:[/green] {keep_onnx}")
+
+    elif from_jax:
+        if not check_dependency("jax", "jax", "JAX conversion"):
+            raise typer.Exit(1)
+        err_console.print(
+            "[yellow]Warning:[/yellow] JAX conversion requires --jax-apply-fn. "
+            "Use legacy CLI for full JAX support."
+        )
+        raise typer.Exit(1)
+
     else:
         analysis_path = str(model_path)
+
+    # Handle Universal IR export (can be done without full analysis)
+    if export_ir or export_graph:
+        from haoline.format_adapters import load_model
+
+        if not quiet:
+            console.print(f"\n[bold]Loading Universal IR:[/bold] {analysis_path}")
+
+        ir_graph = load_model(analysis_path)
+
+        if export_ir:
+            ir_graph.to_json(export_ir)
+            console.print(f"[green]Exported IR:[/green] {export_ir}")
+            console.print(f"  Nodes: {ir_graph.num_nodes}")
+            console.print(f"  Parameters: {ir_graph.total_parameters:,}")
+
+        if export_graph:
+            suffix = export_graph.suffix.lower()
+            if suffix == ".dot":
+                ir_graph.save_dot(export_graph)
+                console.print(f"[green]Exported graph:[/green] {export_graph}")
+            elif suffix == ".png":
+                ir_graph.save_png(export_graph, max_nodes=graph_max_nodes)
+                console.print(f"[green]Rendered graph:[/green] {export_graph}")
+            else:
+                err_console.print(
+                    f"[red]Error:[/red] Unsupported format: {suffix}. Use .dot or .png"
+                )
+                raise typer.Exit(1)
+
+        # If only IR export requested, exit early
+        if not any([out_json, out_md, out_html, out_pdf, html_graph, layer_csv]):
+            return
 
     # Run analysis
     if not quiet:
@@ -469,36 +765,57 @@ def _run_inspect(
 
     # Apply hardware estimates
     hw_profile: HardwareProfile | None = None
-    if hardware:
+    if cloud:
+        from haoline.hardware import get_cloud_instance
+
+        cloud_instance = get_cloud_instance(cloud)
+        if cloud_instance is None:
+            err_console.print(f"[red]Error:[/red] Unknown cloud instance: {cloud}")
+            err_console.print("Use [bold]haoline --list-cloud[/bold] to see available instances.")
+            raise typer.Exit(1)
+        hw_profile = cloud_instance.hardware
+    elif hardware:
         if hardware == "auto":
             hw_profile = detect_local_hardware()
         else:
             hw_profile = get_profile(hardware)
 
-        if hw_profile and report.param_counts and report.flop_counts and report.memory_estimates:
-            estimator = HardwareEstimator()
-            report.hardware_profile = hw_profile
-            report.hardware_estimates = estimator.estimate(
-                model_params=report.param_counts.total,
-                model_flops=report.flop_counts.total,
-                peak_activation_bytes=report.memory_estimates.peak_activation_bytes,
-                hardware=hw_profile,
-            )
+    if hw_profile and report.param_counts and report.flop_counts and report.memory_estimates:
+        estimator = HardwareEstimator()
+        report.hardware_profile = hw_profile
+        report.hardware_estimates = estimator.estimate(
+            model_params=report.param_counts.total,
+            model_flops=report.flop_counts.total,
+            peak_activation_bytes=report.memory_estimates.peak_activation_bytes,
+            hardware=hw_profile,
+        )
 
     # Quantization linting
-    if lint_quant:
+    if lint_quant or quant_report or quant_report_html or quant_llm_advice:
+        from haoline.analyzer import ONNXGraphLoader
         from haoline.quantization_linter import QuantizationLinter
 
         linter = QuantizationLinter()
-        # Load graph for linting
-        from haoline.analyzer import ONNXGraphLoader
-
         loader = ONNXGraphLoader()
         _, graph_info = loader.load(analysis_path)
         report.quantization_lint = linter.lint(graph_info)
 
+        if quant_report:
+            # Generate quantization report markdown
+            lint_result = report.quantization_lint
+            md_lines = [
+                "# Quantization Analysis Report\n",
+                f"**Readiness Score:** {lint_result.readiness_score}/100\n",
+                f"**Grade:** {lint_result.grade}\n\n",
+                "## Warnings\n",
+            ]
+            for w in lint_result.warnings[:10]:
+                md_lines.append(f"- {w.node_name}: {w.message}\n")
+            quant_report.write_text("".join(md_lines))
+            console.print(f"[green]Wrote:[/green] {quant_report}")
+
     # LLM summary
-    if llm_summary:
+    if llm_summary and not offline:
         if not check_dependency("openai", "llm", "LLM summaries"):
             err_console.print("[yellow]Skipping LLM summary[/yellow]")
         else:
@@ -508,7 +825,6 @@ def _run_inspect(
                 with console.status("[bold blue]Generating AI summary...[/bold blue]"):
                     summarizer = LLMSummarizer(model=llm_model)
                     summary_result = summarizer.summarize(report)
-                    # Convert Pydantic model to dict for report storage
                     report.llm_summary = summary_result.model_dump()
             else:
                 err_console.print(
@@ -517,8 +833,16 @@ def _run_inspect(
                 )
 
     # Output results
-    if not quiet:
+    if not quiet and not summary_only:
         display_report_summary(report)
+    elif not quiet and summary_only:
+        # Minimal summary for --summary-only
+        if report.param_counts:
+            console.print(f"Parameters: {report.param_counts.total:,}")
+        if report.flop_counts:
+            console.print(f"FLOPs: {report.flop_counts.total:,}")
+        if report.memory_estimates:
+            console.print(f"Memory: {report.memory_estimates.peak_activation_bytes / 1e6:.1f} MB")
 
     # Write outputs
     if out_json:
@@ -531,7 +855,6 @@ def _run_inspect(
         console.print(f"[green]Wrote:[/green] {out_md}")
 
     if out_html:
-        # Generate HTML from report (include_graph would require HierarchicalGraph)
         html_content = report.to_html()
         out_html.write_text(html_content)
         console.print(f"[green]Wrote:[/green] {out_html}")
@@ -550,6 +873,21 @@ def _run_inspect(
                 console.print(f"[green]Wrote:[/green] {out_pdf}")
             else:
                 err_console.print("[yellow]Warning:[/yellow] PDF generation failed")
+
+    if layer_csv:
+        # Export per-layer metrics as CSV
+        from haoline.analyzer import ONNXGraphLoader
+
+        loader = ONNXGraphLoader()
+        _, graph_info = loader.load(analysis_path)
+        import csv
+
+        with open(layer_csv, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["name", "op_type", "params", "flops"])
+            for node in graph_info.nodes:
+                writer.writerow([node.name, node.op_type, node.params, node.flops])
+        console.print(f"[green]Wrote:[/green] {layer_csv}")
 
 
 def display_report_summary(report) -> None:
