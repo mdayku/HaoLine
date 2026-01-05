@@ -177,12 +177,12 @@ class MockLayerRisk:
 
     def __init__(
         self,
-        layer_name: str = "softmax_0",
+        name: str = "softmax_0",
         op_type: str = "Softmax",
         risk_score: float = 0.8,
         reason: str = "Softmax is accuracy-sensitive",
     ):
-        self.layer_name = layer_name
+        self.name = name
         self.op_type = op_type
         self.risk_score = risk_score
         self.reason = reason

@@ -318,7 +318,7 @@ def prepare_quantization_data(
     if lint_result.layer_risk_scores:
         data["layer_risks"] = [
             {
-                "Layer": risk.layer_name,
+                "Layer": risk.name,
                 "Op": risk.op_type,
                 "Risk": risk.risk_score,
                 "Reason": risk.reason,
@@ -735,7 +735,9 @@ def render_quantization_tab(
         if quant_data["warnings"]:
             st.markdown("#### Warnings")
             for w in quant_data["warnings"]:
-                st.markdown(f"- {w}")
+                # w is a QuantWarning object with message attribute
+                msg = w.message if hasattr(w, "message") else str(w)
+                st.markdown(f"- {msg}")
 
         # Unsupported ops
         if quant_data["unsupported_ops"]:
