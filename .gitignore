@@ -83,6 +83,7 @@ integration_output/
 demo_outputs/
 runs/
 *.pt
+*_ir.json
 
 # Test model artifacts (downloaded/generated during testing)
 test_models/
