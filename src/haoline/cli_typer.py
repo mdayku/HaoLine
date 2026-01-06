@@ -770,6 +770,7 @@ def _run_inspect(
         detect_local_hardware,
         get_profile,
     )
+    from haoline.report import InspectionReport
 
     # Configure logging
     logging.basicConfig(level=getattr(logging, log_level.upper(), logging.INFO))
@@ -910,8 +911,67 @@ def _run_inspect(
     with (
         console.status("[bold blue]Running analysis...[/bold blue]") if not quiet else nullcontext()
     ):
-        inspector = ModelInspector()
-        report = inspector.inspect(analysis_path)
+        # Check if this is a GGUF file (LLM weights-only format)
+        from pathlib import Path
+
+        analysis_path_obj = Path(analysis_path) if isinstance(analysis_path, str) else analysis_path
+        file_ext = analysis_path_obj.suffix.lower()
+        if file_ext == ".gguf":
+            # GGUF-specific analysis path
+            from haoline.analyzer import MemoryEstimates, ParamCounts
+            from haoline.formats.gguf import GGUFReader
+            from haoline.report import GraphSummary, ModelMetadata
+
+            gguf_reader = GGUFReader(analysis_path_obj)
+            gguf_data = gguf_reader.read()
+
+            # Create minimal report from GGUF data
+            report = InspectionReport(
+                metadata=ModelMetadata(
+                    path=str(analysis_path_obj),
+                    ir_version=gguf_data.version,
+                    producer_name=f"GGUF ({gguf_data.architecture})",
+                    producer_version="",
+                    domain="llm",
+                    model_version=0,
+                    doc_string=gguf_data.model_name,
+                    opsets={},
+                ),
+                graph_summary=GraphSummary(
+                    num_nodes=gguf_data.tensor_count,
+                    num_inputs=1,
+                    num_outputs=1,
+                    num_initializers=gguf_data.tensor_count,
+                    input_shapes={},
+                    output_shapes={},
+                    op_type_counts=gguf_data.quantization_breakdown,
+                ),
+                param_counts=ParamCounts(
+                    total=gguf_data.total_params,
+                    trainable=0,
+                    non_trainable=gguf_data.total_params,
+                    precision_breakdown=gguf_data.quantization_breakdown,
+                ),
+                flop_counts=None,  # GGUF has no graph, can't estimate FLOPs
+                memory_estimates=MemoryEstimates(
+                    model_size_bytes=gguf_data.total_size_bytes,
+                    peak_activation_bytes=0,
+                ),
+                detected_blocks=[],
+                architecture_type=gguf_data.architecture,
+                risk_signals=[],
+                gguf_info=gguf_data,  # Store for LLM details in exports
+            )
+
+            if not quiet:
+                console.print(
+                    f"  [dim]GGUF model:[/dim] {gguf_data.model_name} "
+                    f"({gguf_data.architecture}, {gguf_data.total_params:,} params)"
+                )
+        else:
+            # Standard ONNX analysis path
+            inspector = ModelInspector()
+            report = inspector.inspect(analysis_path)
 
     # Apply hardware estimates
     hw_profile: HardwareProfile | None = None
