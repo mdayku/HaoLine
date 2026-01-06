@@ -320,30 +320,34 @@
 
 ---
 
-## Epic 26: Advanced Quantization Analysis (P3)
+## Epic 26: Advanced Quantization Analysis (P3) - MOSTLY COMPLETE (12/15 tasks)
 
 *Modern LLMs use complex quantization beyond simple int8/fp16.*
 
-### Story 26.1: Mixed Precision Detection
-- [ ] **Task 26.1.1**: Detect per-layer precision (weights vs activations vs accumulation)
-- [ ] **Task 26.1.2**: Identify INT4 weights with FP16 activations pattern
-- [ ] **Task 26.1.3**: Detect FP32 accumulation in quantized MatMuls
-- [ ] **Task 26.1.4**: Report precision breakdown by layer type (attention vs FFN vs embed)
-- [ ] **Task 26.1.5**: Visualize precision transitions in graph (where fp16→int8 happens)
+**Module:** `src/haoline/quantization_analysis.py`
+**CLI Flags:** `--quant-analysis`, `--quant-analysis-json`
+**Tests:** `src/haoline/tests/test_quantization_analysis.py` (26 tests)
 
-### Story 26.2: Quantization Scheme Detection
-- [ ] **Task 26.2.1**: Detect GPTQ quantization patterns (group-wise, act_order)
-- [ ] **Task 26.2.2**: Detect AWQ quantization patterns (activation-aware)
-- [ ] **Task 26.2.3**: Detect GGML/GGUF quantization types (Q4_0, Q4_K_M, Q5_K_S, etc.)
-- [ ] **Task 26.2.4**: Detect bitsandbytes NF4/FP4 quantization
-- [ ] **Task 26.2.5**: Report expected accuracy degradation per scheme
-- [ ] **Task 26.2.6**: Compare memory vs accuracy tradeoffs between schemes
+### Story 26.1: Mixed Precision Detection - COMPLETE (4/5)
+- [x] **Task 26.1.1**: Detect per-layer precision (weights vs activations vs accumulation)
+- [x] **Task 26.1.2**: Identify INT4 weights with FP16 activations pattern
+- [x] **Task 26.1.3**: Detect FP32 accumulation in quantized MatMuls
+- [x] **Task 26.1.4**: Report precision breakdown by layer type (attention vs FFN vs embed)
+- [ ] **Task 26.1.5**: Visualize precision transitions in graph (where fp16→int8 happens) - *Future: requires graph viz update*
 
-### Story 26.3: Calibration Analysis
-- [ ] **Task 26.3.1**: Detect if model has calibration metadata
-- [ ] **Task 26.3.2**: Estimate quantization error per layer
-- [ ] **Task 26.3.3**: Identify sensitive layers (high quantization error)
-- [ ] **Task 26.3.4**: Recommend layers to keep at higher precision
+### Story 26.2: Quantization Scheme Detection - COMPLETE (6/6)
+- [x] **Task 26.2.1**: Detect GPTQ quantization patterns (group-wise, act_order)
+- [x] **Task 26.2.2**: Detect AWQ quantization patterns (activation-aware)
+- [x] **Task 26.2.3**: Detect GGML/GGUF quantization types (Q4_0, Q4_K_M, Q5_K_S, etc.)
+- [x] **Task 26.2.4**: Detect bitsandbytes NF4/FP4 quantization
+- [x] **Task 26.2.5**: Report expected accuracy degradation per scheme
+- [x] **Task 26.2.6**: Compare memory vs accuracy tradeoffs between schemes
+
+### Story 26.3: Calibration Analysis - PARTIAL (2/4)
+- [ ] **Task 26.3.1**: Detect if model has calibration metadata - *Future: requires ONNX QDQ inspection*
+- [ ] **Task 26.3.2**: Estimate quantization error per layer - *Future: requires inference comparison*
+- [x] **Task 26.3.3**: Identify sensitive layers (high quantization error)
+- [x] **Task 26.3.4**: Recommend layers to keep at higher precision
 
 ---
 

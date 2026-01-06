@@ -254,6 +254,9 @@ class InspectionReport(BaseModel):
     # Quantization analysis (optional, set by CLI if --lint-quantization specified)
     quantization_lint: Any | None = None  # QuantizationLintResult
 
+    # Advanced quantization analysis (Epic 26, set by --quant-analysis)
+    quantization_analysis: dict[str, Any] | None = None
+
     # GGUF info (optional, set when analyzing GGUF files)
     # Contains LLM-specific metadata: architecture, context length, quantization breakdown
     gguf_info: Any | None = None  # GGUFInfo from haoline.formats.gguf

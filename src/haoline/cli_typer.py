@@ -579,6 +579,17 @@ def inspect(
         Path | None,
         typer.Option("--quant-advice-report", help="Output QAT readiness report"),
     ] = None,
+    quant_analysis: Annotated[
+        bool,
+        typer.Option(
+            "--quant-analysis",
+            help="Advanced quantization analysis (scheme detection, accuracy estimates)",
+        ),
+    ] = False,
+    quant_analysis_json: Annotated[
+        Path | None,
+        typer.Option("--quant-analysis-json", help="Output advanced quantization analysis JSON"),
+    ] = None,
     # TensorRT comparison
     compare_trt: Annotated[
         Path | None,
@@ -765,6 +776,8 @@ def inspect(
             quant_llm_advice=quant_llm_advice,
             quant_bottlenecks=quant_bottlenecks,
             quant_advice_report=quant_advice_report,
+            quant_analysis=quant_analysis,
+            quant_analysis_json=quant_analysis_json,
             compare_trt=compare_trt,
             redact_names=redact_names,
             summary_only=summary_only,
@@ -893,6 +906,8 @@ def _run_inspect(
     quant_llm_advice: bool,
     quant_bottlenecks: bool,
     quant_advice_report: Path | None,
+    quant_analysis: bool,
+    quant_analysis_json: Path | None,
     compare_trt: Path | None,
     redact_names: bool,
     summary_only: bool,
@@ -1354,6 +1369,57 @@ def _run_inspect(
                 md_lines.append(f"- {w.node_name}: {w.message}\n")
             quant_report.write_text("".join(md_lines))
             console.print(f"[green]Wrote:[/green] {quant_report}")
+
+    # Advanced quantization analysis (Epic 26)
+    if quant_analysis or quant_analysis_json:
+        from haoline.analyzer import ONNXGraphLoader
+        from haoline.patterns import PatternAnalyzer
+        from haoline.quantization_analysis import QuantizationAnalyzer
+
+        with console.status("[bold blue]Running advanced quantization analysis...[/bold blue]"):
+            loader = ONNXGraphLoader()
+            _, graph_info = loader.load(analysis_path)
+
+            # Get architectural blocks for layer type classification
+            pattern_analyzer = PatternAnalyzer()
+            blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+            # Run analysis
+            quant_analyzer = QuantizationAnalyzer()
+            quant_result = quant_analyzer.analyze(graph_info, blocks)
+
+            # Store in report (use a new field or extend existing)
+            report.quantization_analysis = quant_result.to_dict()
+
+        # Print summary
+        console.print("\n[bold cyan]Advanced Quantization Analysis[/bold cyan]")
+        console.print(f"  Scheme: [bold]{quant_result.scheme_info.scheme.value.upper()}[/bold]")
+        console.print(f"  Confidence: {quant_result.scheme_info.confidence:.0%}")
+        if quant_result.scheme_info.bits:
+            console.print(f"  Weight Bits: {quant_result.scheme_info.bits}")
+        console.print(f"  Mixed Precision: {'Yes' if quant_result.is_mixed_precision else 'No'}")
+        console.print(f"  Quantized Params: {quant_result.quantization_ratio:.1%}")
+
+        if quant_result.accuracy_impact:
+            ai = quant_result.accuracy_impact
+            console.print("\n  [bold]Accuracy Impact Estimate:[/bold]")
+            if ai.perplexity_increase_pct is not None:
+                console.print(f"    Perplexity Increase: ~{ai.perplexity_increase_pct:.1f}%")
+            console.print(f"    Memory Reduction: {ai.memory_reduction_factor:.1f}x")
+
+        if quant_result.sensitive_layers:
+            console.print(
+                f"\n  [bold]Sensitive Layers:[/bold] {len(quant_result.sensitive_layers)}"
+            )
+            for sl in quant_result.sensitive_layers[:3]:
+                console.print(f"    - {sl.layer_name}: {sl.reason}")
+
+        # Write JSON if requested
+        if quant_analysis_json:
+            import json
+
+            quant_analysis_json.write_text(json.dumps(quant_result.to_dict(), indent=2))
+            console.print(f"\n[green]Wrote:[/green] {quant_analysis_json}")
 
     # LLM summary
     if llm_summary and not offline:

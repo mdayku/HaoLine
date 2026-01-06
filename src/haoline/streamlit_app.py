@@ -94,7 +94,6 @@ from haoline.hardware import (
 )
 from haoline.hierarchical_graph import HierarchicalGraphBuilder
 from haoline.html_export import generate_html as generate_graph_html
-from haoline.patterns import PatternAnalyzer
 from haoline.streamlit_tabs import (
     get_capabilities_from_extension,
     render_details_tab,
@@ -2714,6 +2713,139 @@ def main():
 
                             except Exception as e:
                                 st.warning(f"Could not run quantization analysis: {e}")
+
+                        # Epic 26: Advanced Quantization Analysis (scheme detection)
+                        with st.expander("Advanced Quantization Analysis", expanded=False):
+                            try:
+                                from haoline.analyzer import ONNXGraphLoader
+                                from haoline.patterns import PatternAnalyzer
+                                from haoline.quantization_analysis import QuantizationAnalyzer
+
+                                # Load graph if not already loaded
+                                if "graph_info" not in dir():
+                                    graph_loader = ONNXGraphLoader()
+                                    _, graph_info = graph_loader.load(tmp_path)
+
+                                # Get architectural blocks
+                                pattern_analyzer = PatternAnalyzer()
+                                blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+                                # Run advanced analysis
+                                quant_analyzer = QuantizationAnalyzer()
+                                adv_result = quant_analyzer.analyze(graph_info, blocks)
+
+                                # Scheme badge
+                                scheme_colors = {
+                                    "fp32": "#737373",
+                                    "fp16": "#06b6d4",
+                                    "bf16": "#8b5cf6",
+                                    "int8_static": "#22c55e",
+                                    "int8_dynamic": "#84cc16",
+                                    "gptq": "#f59e0b",
+                                    "awq": "#f97316",
+                                    "ggml": "#ec4899",
+                                    "bnb_nf4": "#a855f7",
+                                    "bnb_fp4": "#a855f7",
+                                }
+                                scheme_name = adv_result.scheme_info.scheme.value
+                                scheme_color = scheme_colors.get(scheme_name, "#737373")
+
+                                st.markdown(
+                                    f"""
+                                    <div style="display: inline-block; padding: 0.5rem 1rem;
+                                        background: {scheme_color}22; border: 1px solid {scheme_color};
+                                        border-radius: 8px; margin-bottom: 1rem;">
+                                        <span style="color: {scheme_color}; font-weight: bold;">
+                                            {scheme_name.upper()}
+                                        </span>
+                                        <span style="color: #a3a3a3; margin-left: 0.5rem;">
+                                            ({adv_result.scheme_info.confidence:.0%} confidence)
+                                        </span>
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True,
+                                )
+
+                                # Key metrics
+                                m1, m2, m3 = st.columns(3)
+                                with m1:
+                                    if adv_result.scheme_info.bits:
+                                        st.metric("Weight Bits", adv_result.scheme_info.bits)
+                                    else:
+                                        st.metric(
+                                            "Weight Precision",
+                                            adv_result.weight_precision_dominant.value.upper(),
+                                        )
+                                with m2:
+                                    st.metric(
+                                        "Mixed Precision",
+                                        "Yes" if adv_result.is_mixed_precision else "No",
+                                    )
+                                with m3:
+                                    st.metric("Quantized", f"{adv_result.quantization_ratio:.1%}")
+
+                                # Accuracy impact
+                                if adv_result.accuracy_impact:
+                                    ai = adv_result.accuracy_impact
+                                    st.markdown("#### Accuracy Impact Estimate")
+                                    ai1, ai2 = st.columns(2)
+                                    with ai1:
+                                        if ai.perplexity_increase_pct is not None:
+                                            st.metric(
+                                                "Perplexity Increase",
+                                                f"~{ai.perplexity_increase_pct:.1f}%",
+                                            )
+                                    with ai2:
+                                        st.metric(
+                                            "Memory Reduction", f"{ai.memory_reduction_factor:.1f}x"
+                                        )
+
+                                    if ai.recommendations:
+                                        st.markdown("**Recommendations:**")
+                                        for rec in ai.recommendations[:3]:
+                                            st.markdown(f"- {rec}")
+
+                                # Sensitive layers
+                                if adv_result.sensitive_layers:
+                                    st.markdown(
+                                        f"#### Sensitive Layers ({len(adv_result.sensitive_layers)})"
+                                    )
+                                    st.caption(
+                                        "These layers are sensitive to quantization and may benefit from higher precision."
+                                    )
+                                    for sl in adv_result.sensitive_layers[:5]:
+                                        st.markdown(f"- **{sl.layer_name}**: {sl.reason}")
+
+                                # Precision by layer type
+                                if adv_result.precision_by_layer_type:
+                                    st.markdown("#### Precision by Layer Type")
+                                    import pandas as pd
+
+                                    prec_data = []
+                                    for lt, info in adv_result.precision_by_layer_type.items():
+                                        prec_data.append(
+                                            {
+                                                "Layer Type": lt.upper(),
+                                                "Layers": info.layer_count,
+                                                "Params": f"{info.total_params:,}",
+                                                "Dominant Precision": info.dominant_precision.value.upper(),
+                                            }
+                                        )
+                                    if prec_data:
+                                        st.dataframe(pd.DataFrame(prec_data), hide_index=True)
+
+                                # Download JSON
+                                import json
+
+                                st.download_button(
+                                    "Download Analysis JSON",
+                                    data=json.dumps(adv_result.to_dict(), indent=2),
+                                    file_name=f"{uploaded_file.name.replace('.onnx', '')}_quant_analysis.json",
+                                    mime="application/json",
+                                )
+
+                            except Exception as e:
+                                st.warning(f"Could not run advanced quantization analysis: {e}")
 
                     # Memory breakdown by op type
                     if (
