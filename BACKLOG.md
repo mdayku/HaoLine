@@ -28,7 +28,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epic 49: HuggingFace Integration | In Progress | 5 | 17/30 | P1 |
+| Epic 49: HuggingFace Integration | In Progress | 5 | 21/30 | P1 |
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
@@ -221,13 +221,13 @@
 - [ ] **Task 49.2.8**: Add "Why is this grayed out?" help tooltip explaining format limitations *(post-1.0)*
 - [ ] **Task 49.2.9**: Generate "Format Capabilities Report" section showing what was/wasn't analyzed *(post-1.0)*
 
-### Story 49.3: SafeTensors → ONNX Path
+### Story 49.3: SafeTensors → ONNX Path - **COMPLETE** ✅
 *If SafeTensors is alongside config.json, auto-load and convert.*
 
-- [ ] **Task 49.3.1**: Detect config.json in same directory as .safetensors
-- [ ] **Task 49.3.2**: Parse config.json to get architecture type
-- [ ] **Task 49.3.3**: Auto-suggest HF model load if config found
-- [ ] **Task 49.3.4**: Support local directory with config + safetensors
+- [x] **Task 49.3.1**: Detect config.json in same directory as .safetensors ✅
+- [x] **Task 49.3.2**: Parse config.json to get architecture type ✅
+- [x] **Task 49.3.3**: Auto-suggest HF model load if config found ✅
+- [x] **Task 49.3.4**: Support local directory with config + safetensors ✅
 
 ### Story 49.4: ONNX Hub Conversions (Full Analysis Path)
 *Convert TFLite/CoreML/OpenVINO → ONNX to enable full analysis capabilities.*

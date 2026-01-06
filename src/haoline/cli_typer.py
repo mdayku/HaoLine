@@ -1176,6 +1176,71 @@ def _run_inspect(
                     f"  [dim]SafeTensors:[/dim] {len(st_data.tensors)} tensors, "
                     f"{st_data.total_params:,} params"
                 )
+        elif file_ext == ".tflite":
+            # Task 49.4.7: Auto-prompt for TFLite conversion
+            if not quiet:
+                console.print(
+                    "  [yellow]TFLite detected[/yellow] - Limited analysis available.\n"
+                    "  For full analysis with FLOPs and graph visualization, use:\n"
+                    f"    [bold]haoline inspect --from-tflite {analysis_path_obj}[/bold]"
+                )
+            # Provide basic TFLite analysis using native reader
+            try:
+                from haoline.formats.tflite import TFLiteReader
+
+                tflite_reader = TFLiteReader(analysis_path_obj)
+                tflite_data = tflite_reader.read()
+
+                from haoline.analyzer import MemoryEstimates, ParamCounts
+                from haoline.report import GraphSummary, ModelMetadata
+
+                report = InspectionReport(
+                    metadata=ModelMetadata(
+                        path=str(analysis_path_obj),
+                        ir_version=tflite_data.version,
+                        producer_name="TFLite",
+                        producer_version="",
+                        domain="mobile",
+                        model_version=0,
+                        doc_string=f"TFLite model ({len(tflite_data.operators)} operators)",
+                        opsets={},
+                    ),
+                    graph_summary=GraphSummary(
+                        num_nodes=len(tflite_data.operators),
+                        num_inputs=len(tflite_data.inputs),
+                        num_outputs=len(tflite_data.outputs),
+                        num_initializers=len(tflite_data.tensors),
+                        input_shapes={},
+                        output_shapes={},
+                        op_type_counts=tflite_data.op_counts,
+                    ),
+                    param_counts=ParamCounts(
+                        total=tflite_data.total_params,
+                        trainable=0,
+                        non_trainable=tflite_data.total_params,
+                        precision_breakdown={},
+                    ),
+                    flop_counts=None,  # TFLite reader doesn't estimate FLOPs
+                    memory_estimates=MemoryEstimates(
+                        model_size_bytes=tflite_data.total_size_bytes,
+                        peak_activation_bytes=0,
+                    ),
+                    detected_blocks=[],
+                    architecture_type="unknown",
+                    risk_signals=[],
+                    format_tier="Graph",
+                )
+                if not quiet:
+                    console.print(
+                        f"  [dim]TFLite:[/dim] {len(tflite_data.operators)} ops, "
+                        f"{tflite_data.total_params:,} params"
+                    )
+            except ImportError as e:
+                err_console.print(
+                    "[red]Error:[/red] TFLite reader not available. "
+                    "Use --from-tflite to convert to ONNX."
+                )
+                raise typer.Exit(1) from e
         else:
             # Standard ONNX analysis path
             inspector = ModelInspector()

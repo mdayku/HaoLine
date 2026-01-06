@@ -2025,8 +2025,18 @@ def main():
             st.stop()
 
         elif file_ext in [".tflite"]:
-            # TFLite analysis
+            # TFLite analysis - Task 49.4.8: Show conversion hint
             st.info("**TFLite model detected** - Analyzing with TFLite reader...")
+            st.warning("""
+            **Limited Analysis** - TFLite format has limited analysis capabilities.
+
+            For full analysis with FLOPs and interactive graph visualization,
+            convert to ONNX using the CLI:
+            ```bash
+            haoline inspect --from-tflite your_model.tflite --keep-onnx converted.onnx
+            ```
+            Then upload the converted ONNX file.
+            """)
             with tempfile.NamedTemporaryFile(suffix=".tflite", delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tmp_path = tmp.name
