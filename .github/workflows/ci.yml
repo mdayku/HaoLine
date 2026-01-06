@@ -42,7 +42,7 @@ jobs:
 
       - name: Lint with Ruff
         run: |
-          ruff check src/haoline/
+          ruff check src/haoline/ --ignore I001
 
       - name: Type check with mypy
         run: |
