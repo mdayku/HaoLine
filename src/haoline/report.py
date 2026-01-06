@@ -270,11 +270,11 @@ class InspectionReport(BaseModel):
 
             if obj is None:
                 return None
-            if isinstance(obj, (str, int, float, bool)):
+            if isinstance(obj, str | int | float | bool):
                 return obj
             if isinstance(obj, np.ndarray):
                 return obj.tolist()
-            if isinstance(obj, (np.integer, np.floating)):
+            if isinstance(obj, np.integer | np.floating):
                 return obj.item()
             # Handle UniversalGraph specially (Pydantic model with to_dict method)
             if hasattr(obj, "to_dict") and hasattr(obj, "num_nodes"):

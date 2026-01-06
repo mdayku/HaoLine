@@ -251,7 +251,7 @@ def parse_generic_json(
         if key in ("model_id", "model", "name", "dataset", "data", "timestamp", "metadata"):
             continue
 
-        if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(value, int | float) and not isinstance(value, bool):
             # Apply mapping if provided
             metric_name = mapping.get(key, key)
             metrics[metric_name] = float(value)
@@ -536,7 +536,7 @@ def parse_lm_eval(
                     val = task_data[m]
                     # Handle both raw scores (0-1) and percentages (0-100)
                     return float(val) * 100 if float(val) <= 1 else float(val)
-        elif isinstance(task_data, (int, float)):
+        elif isinstance(task_data, int | float):
             val = float(task_data)
             return val * 100 if val <= 1 else val
         return None

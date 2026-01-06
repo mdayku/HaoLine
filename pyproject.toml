@@ -118,6 +118,13 @@ tensorrt = [
     # Engine files must match GPU architecture
 ]
 # GGUF is pure Python, no deps needed
+# HuggingFace Hub integration (Epic 49.1)
+huggingface = [
+    "transformers>=4.36.0",
+    "optimum>=1.16.0",
+    "huggingface_hub>=0.20.0",
+    # For --from-huggingface REPO_ID: download + convert HF models to ONNX
+]
 formats = [
     "haoline[safetensors]",
     # tflite, coreml, openvino have platform-specific deps, install separately

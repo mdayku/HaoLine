@@ -126,7 +126,7 @@ def _collect_names_recursive(obj: Any, names: set[str], key: str = "") -> None:
                     for item in v:
                         if isinstance(item, dict) and "name" in item:
                             names.add(item["name"])
-                        elif isinstance(item, (list, tuple)) and len(item) >= 1:
+                        elif isinstance(item, list | tuple) and len(item) >= 1:
                             if isinstance(item[0], str):
                                 names.add(item[0])
 

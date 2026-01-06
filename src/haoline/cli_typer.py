@@ -145,6 +145,7 @@ def _list_conversions_callback(value: bool) -> None:
         ("TensorFlow SavedModel", "ONNX", "--from-tensorflow", "tf2onnx"),
         ("Keras (.h5/.keras)", "ONNX", "--from-keras", "tf2onnx"),
         ("TFLite (.tflite)", "ONNX", "--from-tflite", "tflite2onnx"),
+        ("HuggingFace Hub", "ONNX", "--from-huggingface", "transformers+optimum"),
         ("JAX/Flax", "ONNX", "--from-jax", "jax, tf2onnx"),
         ("Frozen Graph (.pb)", "ONNX", "--from-frozen-graph", "tf2onnx"),
     ]
@@ -271,6 +272,114 @@ def format_number(n: int | float) -> str:
     return str(int(n))
 
 
+def _convert_huggingface_to_onnx(
+    repo_id: str,
+    output_path: Path | None,
+    console: Console,
+) -> Path | None:
+    """Download a HuggingFace model and export to ONNX using optimum.
+
+    Args:
+        repo_id: HuggingFace Hub repository ID (e.g., 'bert-base-uncased')
+        output_path: Optional path to save the ONNX model
+        console: Rich console for output
+
+    Returns:
+        Path to the exported ONNX model, or None on failure
+    """
+    import tempfile
+
+    try:
+        from optimum.onnxruntime import ORTModelForSequenceClassification
+        from transformers import AutoConfig
+    except ImportError as e:
+        err_console.print(f"[red]Error:[/red] Missing dependency: {e}")
+        err_console.print("Install with: [bold]pip install haoline[huggingface][/bold]")
+        return None
+
+    try:
+        # Detect model type from config
+        console.print(f"  Fetching config from [cyan]{repo_id}[/cyan]...")
+        config = AutoConfig.from_pretrained(repo_id)
+        model_type = getattr(config, "model_type", "unknown")
+        console.print(f"  Model type: [green]{model_type}[/green]")
+
+        # Map model types to optimum export classes
+        # This is a simplified mapping - optimum supports many more
+        model_class_map = {
+            "bert": "ORTModelForSequenceClassification",
+            "roberta": "ORTModelForSequenceClassification",
+            "distilbert": "ORTModelForSequenceClassification",
+            "albert": "ORTModelForSequenceClassification",
+            "gpt2": "ORTModelForCausalLM",
+            "gpt_neo": "ORTModelForCausalLM",
+            "gpt_neox": "ORTModelForCausalLM",
+            "llama": "ORTModelForCausalLM",
+            "mistral": "ORTModelForCausalLM",
+            "opt": "ORTModelForCausalLM",
+            "t5": "ORTModelForSeq2SeqLM",
+            "bart": "ORTModelForSeq2SeqLM",
+            "vit": "ORTModelForImageClassification",
+            "clip": "ORTModelForZeroShotImageClassification",
+            "whisper": "ORTModelForSpeechSeq2Seq",
+        }
+
+        # Determine output directory
+        if output_path:
+            onnx_dir = output_path.parent
+        else:
+            temp_dir = tempfile.mkdtemp(prefix="haoline_hf_")
+            onnx_dir = Path(temp_dir)
+
+        # Export using optimum
+        console.print("  Exporting to ONNX (this may take a while for large models)...")
+
+        # Use the appropriate export class based on model type
+        export_class_name = model_class_map.get(model_type, "ORTModelForSequenceClassification")
+
+        # Dynamic import based on detected model type
+        if "CausalLM" in export_class_name:
+            from optimum.onnxruntime import ORTModelForCausalLM
+
+            model = ORTModelForCausalLM.from_pretrained(repo_id, export=True)
+        elif "Seq2SeqLM" in export_class_name:
+            from optimum.onnxruntime import ORTModelForSeq2SeqLM
+
+            model = ORTModelForSeq2SeqLM.from_pretrained(repo_id, export=True)
+        elif "ImageClassification" in export_class_name:
+            from optimum.onnxruntime import ORTModelForImageClassification
+
+            model = ORTModelForImageClassification.from_pretrained(repo_id, export=True)
+        else:
+            # Default to sequence classification
+            model = ORTModelForSequenceClassification.from_pretrained(repo_id, export=True)
+
+        # Save the model
+        model.save_pretrained(onnx_dir)
+
+        # Find the main ONNX file
+        onnx_path = onnx_dir / "model.onnx"
+        if not onnx_path.exists():
+            # Some models export with different names
+            for f in onnx_dir.glob("*.onnx"):
+                onnx_path = f
+                break
+
+        if output_path and onnx_path != output_path:
+            # Move to requested path
+            import shutil
+
+            shutil.move(str(onnx_path), str(output_path))
+            onnx_path = output_path
+
+        console.print(f"  [green]✓[/green] Exported to: {onnx_path}")
+        return onnx_path
+
+    except Exception as e:
+        err_console.print(f"[red]Error during HuggingFace export:[/red] {e}")
+        return None
+
+
 # =============================================================================
 # Main inspect command
 # =============================================================================
@@ -372,6 +481,14 @@ def inspect(
     tf_outputs: Annotated[
         str | None,
         typer.Option("--tf-outputs", help="Output tensor names for frozen graph (comma-separated)"),
+    ] = None,
+    # HuggingFace Hub integration
+    from_huggingface: Annotated[
+        str | None,
+        typer.Option(
+            "--from-huggingface",
+            help="Load model from HuggingFace Hub (e.g., 'bert-base-uncased')",
+        ),
     ] = None,
     pytorch_weights: Annotated[
         Path | None,
@@ -560,6 +677,7 @@ def inspect(
         from_tflite,
         from_jax,
         from_frozen_graph,
+        from_huggingface,
     ]
     if model_path is None and all(src is None for src in conversion_sources):
         console.print("[red]Error:[/red] No model path provided")
@@ -584,6 +702,7 @@ def inspect(
             from_frozen_graph=from_frozen_graph,
             tf_inputs=tf_inputs,
             tf_outputs=tf_outputs,
+            from_huggingface=from_huggingface,
             pytorch_weights=pytorch_weights,
             input_shape=input_shape,
             keep_onnx=keep_onnx,
@@ -708,6 +827,7 @@ def _run_inspect(
     from_frozen_graph: Path | None,
     tf_inputs: str | None,
     tf_outputs: str | None,
+    from_huggingface: str | None,
     pytorch_weights: Path | None,
     input_shape: str | None,
     keep_onnx: Path | None,
@@ -868,6 +988,27 @@ def _run_inspect(
             "Use legacy CLI for full JAX support."
         )
         raise typer.Exit(1)
+
+    elif from_huggingface:
+        if not check_dependency("transformers", "huggingface", "HuggingFace integration"):
+            raise typer.Exit(1)
+        if not check_dependency("optimum", "huggingface", "HuggingFace ONNX export"):
+            raise typer.Exit(1)
+
+        with console.status(
+            f"[bold blue]Loading model from HuggingFace Hub: {from_huggingface}[/bold blue]"
+        ):
+            result_path = _convert_huggingface_to_onnx(
+                repo_id=from_huggingface,
+                output_path=keep_onnx,
+                console=console,
+            )
+            if not result_path:
+                err_console.print("[red]Error:[/red] HuggingFace conversion failed")
+                raise typer.Exit(1)
+            analysis_path = str(result_path)
+            if keep_onnx and not quiet:
+                console.print(f"[green]Saved ONNX:[/green] {keep_onnx}")
 
     else:
         analysis_path = str(model_path)
@@ -1811,6 +1952,8 @@ DEPENDENCY_CATEGORIES: dict[str, dict[str, tuple[str, str, str]]] = {
         "tensorflow": ("tensorflow", "TensorFlow → ONNX conversion", "--from-tensorflow"),
         "tf2onnx": ("tensorflow", "TF/Keras to ONNX", "--from-keras"),
         "jax": ("jax", "JAX → ONNX conversion", "--from-jax"),
+        "transformers": ("huggingface", "HuggingFace Hub integration", "--from-huggingface"),
+        "optimum": ("huggingface", "HuggingFace → ONNX export", "--from-huggingface"),
     },
     "Format Readers": {
         "tensorrt": ("tensorrt", "TensorRT .engine analysis", "model.engine"),

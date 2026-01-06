@@ -392,7 +392,7 @@ def _get_numeric_metric(report: Any, *path: str) -> float | None:
             obj = obj[key]
         else:
             return None
-    if isinstance(obj, (int, float)):
+    if isinstance(obj, int | float):
         return float(obj)
     return None
 
@@ -463,7 +463,7 @@ def _compute_deltas(baseline: VariantReport, other: VariantReport) -> dict[str, 
     # Metric-wise deltas from eval/perf JSON (only for overlapping numeric fields)
     for key, base_val in baseline.metrics.items():
         other_val = other.metrics.get(key)
-        if isinstance(base_val, (int, float)) and isinstance(other_val, (int, float)):
+        if isinstance(base_val, int | float) and isinstance(other_val, int | float):
             # Don't overwrite structural deltas we already computed
             if key not in deltas:
                 deltas[key] = other_val - base_val
