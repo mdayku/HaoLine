@@ -28,7 +28,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epic 49: HuggingFace Integration | In Progress | 5 | 3/30 | P1 |
+| Epic 49: HuggingFace Integration | In Progress | 5 | 10/30 | P1 |
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
@@ -197,16 +197,16 @@
 
 *Format Capability Matrix and Tier System details archived to PRDBacklogArchive.md*
 
-### Story 49.1: HuggingFace Model Integration
+### Story 49.1: HuggingFace Model Integration - **COMPLETE** ✅
 *Load HF models (config + weights) and auto-convert to ONNX for full analysis.*
 
-- [ ] **Task 49.1.1**: Add `--from-huggingface REPO_ID` CLI flag
-- [ ] **Task 49.1.2**: Download config.json + model files from HF Hub
-- [ ] **Task 49.1.3**: Detect model type from config (BERT, GPT, LLaMA, etc.)
-- [ ] **Task 49.1.4**: Load model using `transformers` library
-- [ ] **Task 49.1.5**: Export to ONNX using `optimum` library
-- [ ] **Task 49.1.6**: Run full analysis on exported ONNX
-- [ ] **Task 49.1.7**: Add `huggingface` extra to pyproject.toml (transformers, optimum)
+- [x] **Task 49.1.1**: Add `--from-huggingface REPO_ID` CLI flag ✅
+- [x] **Task 49.1.2**: Download config.json + model files from HF Hub ✅
+- [x] **Task 49.1.3**: Detect model type from config (BERT, GPT, LLaMA, etc.) ✅
+- [x] **Task 49.1.4**: Load model using `transformers` library ✅
+- [x] **Task 49.1.5**: Export to ONNX using `optimum` library ✅
+- [x] **Task 49.1.6**: Run full analysis on exported ONNX ✅
+- [x] **Task 49.1.7**: Add `huggingface` extra to pyproject.toml (transformers, optimum) ✅
 
 ### Story 49.2: Format-Aware UI/CLI
 *Show appropriate metrics and disable unavailable features per format.*
