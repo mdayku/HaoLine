@@ -2051,10 +2051,11 @@ haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
 
 *Full historical changelog archived in [PRDBacklogArchive.md](PRDBacklogArchive.md) to reduce context window usage.*
 
-**Recent Changes (December 2025):**
+**Recent Changes (December 2025 - January 2026):**
 
 | Date | Change |
 |------|--------|
+| Jan 6, 2026 | **v1.2.0** - GGUF LLM Details UI: architecture card, quantization breakdown, VRAM calculator, tensor explorer. Export enhancements: GGUF details in MD/HTML/JSON. Dynamic version in reports. |
 | Dec 29, 2025 | **🎉 v1.0.0 RELEASED** - Universal model inspector with 10 format support, CI/CD integration, quantization analysis, 50+ GPU profiles. All 20 exit criteria complete. README verified. |
 | Dec 29, 2025 | Slimmed `[full]` extra (TF + PDF + SafeTensors, no JAX/CoreML/OpenVINO). Fixed `RiskSignal.message` bug. Fixed mypy `has_quantization_info` error. Added `uv` installation docs. |
 | Dec 23, 2025 | **Epic 50 COMPLETE** - CLI Modernization (18/18 tasks). Typer migration, dependency prompting (`check-deps`), user-friendly error messages with suggestions, direct model path invocation (`haoline model.onnx`). Fixed all mypy type errors in cli_typer.py. 509 tests pass. |

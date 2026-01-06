@@ -82,6 +82,27 @@ These were explicitly post-1.0:
 
 ---
 
+# Version 1.2 Release (Archived)
+
+*Completed: January 6, 2026*
+
+## 1.2 Summary - GGUF LLM Details UI + Export Enhancements
+
+**What was delivered:**
+- "LLM Details" tab in Streamlit for GGUF models with:
+  - Architecture card (model name, architecture, layers, heads, context length, vocab size)
+  - Quantization breakdown charts (tensor count and size by quantization type)
+  - Interactive VRAM calculator with context length slider
+  - GPU compatibility table
+  - Tensor explorer with searchable table and CSV export
+- Export enhancements:
+  - Markdown export includes LLM architecture, VRAM estimates, quantization breakdown
+  - HTML export includes styled LLM details section
+  - JSON export includes full `gguf_info` object
+  - Report version now dynamically references package `__version__`
+
+---
+
 # Version 1.1 Release (Archived)
 
 *Completed: December 29, 2025*

@@ -1,5 +1,24 @@
 # HaoLine Cursor Rules
 
+## Indexter Integration (Semantic Code Search)
+
+For any task involving:
+- Understanding existing code
+- Modifying non-trivial logic
+- Debugging behavior
+- Refactoring
+- Explaining system design
+
+You MUST:
+1. Query Indexter via MCP with a semantic search describing the intent.
+2. Review the returned code snippets before proposing changes.
+3. Cite the retrieved code in your reasoning.
+
+Do NOT rely on assumptions or prior messages as a substitute for Indexter results.
+If Indexter returns no results, state that explicitly.
+
+---
+
 ## Quick Reference
 
 ```bash

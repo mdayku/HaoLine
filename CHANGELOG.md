@@ -5,6 +5,29 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-06
+
+### GGUF LLM Details Tab (Epic 24.2)
+
+New "LLM Details" tab for GGUF models in Streamlit UI with comprehensive LLM analysis:
+
+- **Architecture display**: Model name, architecture, layers, hidden size, attention heads, KV heads (GQA), vocab size, context length
+- **Quantization breakdown**: Bar charts showing tensor count and size by quantization type (Q4_K_M, Q5_K_S, etc.)
+- **VRAM calculator**: Interactive context length slider with dynamic VRAM estimation (weights + KV cache)
+- **GPU compatibility table**: Shows which GPUs fit the model with headroom
+- **Tensor explorer**: Searchable table of all tensors with name, shape, type, and size; CSV export
+
+### Export Enhancements
+
+All export formats now include GGUF-specific details when analyzing LLM models:
+
+- **Markdown**: LLM Model Details section with architecture table, VRAM requirements, quantization breakdown
+- **HTML**: Styled LLM Details section with metric cards and tables
+- **JSON**: Full `gguf_info` object with all metadata, tensors, and quantization breakdown
+- **Version tracking**: Report `autodoc_version` now dynamically references package version
+
+---
+
 ## [1.1.1] - 2025-12-29
 
 ### Python Version Check

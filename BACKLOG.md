@@ -31,7 +31,7 @@ HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
 | **P2** | HuggingFace Integration | Epic 49.1 (`--from-huggingface` CLI flag) |
 | **P3** | Model Optimization Service | Epics 31-32 (automated quantization) |
 
-**Current Release:** v1.1.0 (Dec 29, 2025) — CLI parity complete, all legacy flags ported
+**Current Release:** v1.2.0 (Jan 6, 2026) — GGUF LLM Details UI + Export Enhancements
 
 **Quality Gate:** `python scripts/check.py` (fast) or `python scripts/check.py --all` (full)
 
@@ -52,7 +52,7 @@ HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
 | **POST-1.0 PRIORITIES** |||||
 | Epic 49: Full HuggingFace Integration | In Progress | 5 | 3/30 | P1 |
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
-| Epic 24: GGUF LLM Support | In Progress | 2 | 7/13 | P2 |
+| Epic 24: GGUF LLM Support | ✅ COMPLETE | 2 | 14/14 | Done |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
 | Epic 19: SafeTensors | Story 19.1 ✅ | 2 | 6/10 | P3 |
@@ -255,16 +255,17 @@ Made HaoLine a gatekeeper in ML pipelines with `--fail-on` threshold flags, GitH
 ### Story 24.1: GGUF Reader - **COMPLETE**
 *Archived to PRDBacklogArchive.md - 6/6 tasks complete*
 
-### Story 24.2: GGUF Streamlit UI & Analysis Features **← DEEP RESEARCH PRIORITY**
-**Gap Identified:** GGUF can be analyzed but `.gguf` not in Streamlit file picker. LLM-specific charts (quant-breakdown, context-slider) not implemented.
+### Story 24.2: GGUF Streamlit UI & Analysis Features - **COMPLETE**
+*Completed: January 6, 2026*
 
-- [x] **Task 24.2.1**: Add `.gguf` to Streamlit file_uploader accepted types ✅ **DONE**
-- [ ] **Task 24.2.2**: Display quantization breakdown chart (bar chart of tensor counts by bit-width)
-- [ ] **Task 24.2.3**: Display architecture details (layers, hidden_size, num_heads, context_length)
-- [ ] **Task 24.2.4**: Add VRAM calculator with context length slider (recompute estimates dynamically)
-- [ ] **Task 24.2.5**: Show tensor-level quantization table
-- [ ] **Task 24.2.6**: Create "LLM Model Details" tab in Streamlit for GGUF models
-- [ ] **Task 24.2.7**: Show unsupported_ops warnings from quantization_lint
+- [x] **Task 24.2.1**: Add `.gguf` to Streamlit file_uploader accepted types ✅
+- [x] **Task 24.2.2**: Display quantization breakdown chart (bar chart of tensor counts by bit-width) ✅
+- [x] **Task 24.2.3**: Display architecture details (layers, hidden_size, num_heads, context_length) ✅
+- [x] **Task 24.2.4**: Add VRAM calculator with context length slider (recompute estimates dynamically) ✅
+- [x] **Task 24.2.5**: Show tensor-level quantization table ✅
+- [x] **Task 24.2.6**: Create "LLM Model Details" tab in Streamlit for GGUF models ✅
+- [x] **Task 24.2.7**: Export enhancements - GGUF details in MD/HTML/JSON exports ✅
+- [~] **Task 24.2.8**: Show unsupported_ops warnings from quantization_lint *(Deferred - GGUF has its own quant info)*
 
 ---
 

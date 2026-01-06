@@ -765,6 +765,237 @@ def render_quantization_tab(
         st.warning(f"Quantization lint not available: {e}")
 
 
+def render_llm_details_tab(
+    gguf_info: Any,
+    model_name: str,
+) -> None:
+    """Render the LLM Model Details tab for GGUF models.
+
+    This tab displays GGUF-specific information:
+    - Architecture details (layers, hidden_size, heads, context length)
+    - Quantization breakdown chart
+    - VRAM calculator with context length slider
+    - Tensor-level quantization table
+
+    Args:
+        gguf_info: GGUFInfo object with parsed GGUF metadata.
+        model_name: Name of the model file.
+    """
+    import pandas as pd
+    import streamlit as st
+
+    from haoline.streamlit_tabs import format_bytes
+
+    if gguf_info is None:
+        st.info("LLM details are available for GGUF models only.")
+        return
+
+    st.markdown("### LLM Architecture")
+
+    # Architecture details card (Task 24.2.3)
+    arch_col1, arch_col2 = st.columns(2)
+
+    with arch_col1:
+        st.markdown(
+            f"""
+| Property | Value |
+|----------|-------|
+| **Architecture** | `{gguf_info.architecture}` |
+| **Model Name** | `{gguf_info.model_name}` |
+| **GGUF Version** | {gguf_info.version} |
+| **Total Parameters** | {gguf_info.total_params:,} |
+| **Model Size** | {format_bytes(gguf_info.total_size_bytes)} |
+"""
+        )
+
+    with arch_col2:
+        context_len = gguf_info.context_length or "Unknown"
+        embedding_len = gguf_info.embedding_length or "Unknown"
+        block_count = gguf_info.block_count or "Unknown"
+        head_count = gguf_info.head_count or "Unknown"
+        head_count_kv = gguf_info.head_count_kv or head_count
+        vocab_size = gguf_info.vocab_size or "Unknown"
+
+        st.markdown(
+            f"""
+| Architecture Detail | Value |
+|---------------------|-------|
+| **Layers (Blocks)** | {block_count} |
+| **Hidden Size** | {embedding_len} |
+| **Attention Heads** | {head_count} |
+| **KV Heads (GQA)** | {head_count_kv} |
+| **Context Length** | {context_len} |
+| **Vocab Size** | {vocab_size} |
+"""
+        )
+
+    st.markdown("---")
+
+    # Quantization breakdown chart (Task 24.2.2)
+    st.markdown("### Quantization Breakdown")
+
+    quant_breakdown = gguf_info.quantization_breakdown
+    size_breakdown = gguf_info.size_breakdown
+
+    if quant_breakdown:
+        quant_col1, quant_col2 = st.columns(2)
+
+        with quant_col1:
+            st.markdown("#### Tensor Count by Type")
+            quant_df = pd.DataFrame(
+                [
+                    {"Quantization Type": qtype, "Tensor Count": count}
+                    for qtype, count in sorted(quant_breakdown.items(), key=lambda x: -x[1])
+                ]
+            )
+            st.bar_chart(quant_df.set_index("Quantization Type"))
+
+        with quant_col2:
+            st.markdown("#### Size by Type")
+            size_df = pd.DataFrame(
+                [
+                    {
+                        "Quantization Type": qtype,
+                        "Size (MB)": size_bytes / (1024 * 1024),
+                    }
+                    for qtype, size_bytes in sorted(size_breakdown.items(), key=lambda x: -x[1])
+                ]
+            )
+            st.bar_chart(size_df.set_index("Quantization Type"))
+
+        # Show breakdown table
+        st.markdown("#### Quantization Summary")
+        summary_data = []
+        for qtype in sorted(quant_breakdown.keys()):
+            tensor_count = quant_breakdown.get(qtype, 0)
+            size_bytes = size_breakdown.get(qtype, 0)
+            summary_data.append(
+                {
+                    "Type": qtype,
+                    "Tensors": tensor_count,
+                    "Size": format_bytes(size_bytes),
+                    "% of Model": f"{100 * size_bytes / gguf_info.total_size_bytes:.1f}%",
+                }
+            )
+        st.dataframe(pd.DataFrame(summary_data), hide_index=True)
+
+    else:
+        st.info("No quantization breakdown available.")
+
+    st.markdown("---")
+
+    # VRAM Calculator with context slider (Task 24.2.4)
+    st.markdown("### VRAM Calculator")
+    st.markdown("*Estimate GPU memory requirements for different context lengths.*")
+
+    default_ctx = gguf_info.context_length or 4096
+    max_ctx = min(default_ctx * 4, 131072)  # Cap at 128k
+
+    context_length = st.slider(
+        "Context Length (tokens)",
+        min_value=512,
+        max_value=max_ctx,
+        value=min(default_ctx, max_ctx),
+        step=512,
+        help="Longer context = more KV cache memory",
+    )
+
+    vram = gguf_info.estimate_vram(context_length)
+
+    vram_col1, vram_col2, vram_col3 = st.columns(3)
+
+    with vram_col1:
+        st.metric("Model Weights", format_bytes(vram["weights"]))
+
+    with vram_col2:
+        st.metric("KV Cache", format_bytes(vram["kv_cache"]))
+
+    with vram_col3:
+        st.metric("Total VRAM", format_bytes(vram["total"]), delta=None)
+
+    # VRAM breakdown bar
+    weights_pct = 100 * vram["weights"] / vram["total"]
+    kv_pct = 100 * vram["kv_cache"] / vram["total"]
+
+    st.markdown(
+        f"""
+<div style="display: flex; height: 24px; border-radius: 4px; overflow: hidden; margin: 1rem 0;">
+    <div style="width: {weights_pct:.1f}%; background: #3b82f6;" title="Weights: {format_bytes(vram["weights"])}"></div>
+    <div style="width: {kv_pct:.1f}%; background: #f59e0b;" title="KV Cache: {format_bytes(vram["kv_cache"])}"></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #737373;">
+    <span><span style="color: #3b82f6;">■</span> Weights ({weights_pct:.0f}%)</span>
+    <span><span style="color: #f59e0b;">■</span> KV Cache ({kv_pct:.0f}%)</span>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+    # GPU fit recommendations
+    st.markdown("#### GPU Compatibility")
+    total_gb = vram["total"] / (1024**3)
+
+    gpu_tiers = [
+        ("RTX 4090 (24GB)", 24),
+        ("RTX 3090 (24GB)", 24),
+        ("RTX 4080 (16GB)", 16),
+        ("RTX 3080 (10GB)", 10),
+        ("A100 (40GB)", 40),
+        ("A100 (80GB)", 80),
+        ("H100 (80GB)", 80),
+    ]
+
+    fit_data = []
+    for gpu_name, gpu_vram in gpu_tiers:
+        fits = total_gb <= gpu_vram
+        headroom = gpu_vram - total_gb
+        fit_data.append(
+            {
+                "GPU": gpu_name,
+                "VRAM": f"{gpu_vram} GB",
+                "Fits": "Yes" if fits else "No",
+                "Headroom": f"{headroom:.1f} GB" if fits else "-",
+            }
+        )
+    st.dataframe(pd.DataFrame(fit_data), hide_index=True)
+
+    st.markdown("---")
+
+    # Tensor-level table (Task 24.2.5)
+    st.markdown("### Tensor Details")
+
+    with st.expander(f"View all {gguf_info.tensor_count} tensors", expanded=False):
+        tensor_data = []
+        for tensor in gguf_info.tensors:
+            tensor_data.append(
+                {
+                    "Name": tensor.name,
+                    "Shape": str(tensor.dims),
+                    "Type": tensor.type_name,
+                    "Elements": f"{tensor.n_elements:,}",
+                    "Size": format_bytes(tensor.size_bytes),
+                }
+            )
+
+        tensor_df = pd.DataFrame(tensor_data)
+
+        # Search/filter
+        search = st.text_input("Filter tensors by name", "", key="tensor_search")
+        if search:
+            tensor_df = tensor_df[tensor_df["Name"].str.contains(search, case=False, na=False)]
+
+        st.dataframe(tensor_df, hide_index=True, height=400)
+
+        # Download as CSV
+        csv = tensor_df.to_csv(index=False)
+        st.download_button(
+            "Download Tensor List (CSV)",
+            csv,
+            file_name=f"{model_name}_tensors.csv",
+            mime="text/csv",
+        )
+
+
 def render_export_tab(
     report: InspectionReport,
     model_name: str,

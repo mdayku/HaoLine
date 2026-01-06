@@ -100,6 +100,7 @@ from haoline.streamlit_tabs import (
     render_export_tab,
     render_graph_tab,
     render_layer_details_tab,
+    render_llm_details_tab,
     render_overview_tab,
     render_quantization_tab,
 )
@@ -2000,9 +2001,61 @@ def main():
 
         try:
             with st.spinner("Analyzing model architecture..."):
-                # Run analysis
-                inspector = ModelInspector()
-                report = inspector.inspect(tmp_path)
+                # Check if GGUF - needs different analysis path
+                if file_ext == ".gguf":
+                    # GGUF uses direct reader, not ONNX inspector
+                    from haoline.analyzer import MemoryEstimates, ParamCounts
+                    from haoline.formats.gguf import GGUFReader
+                    from haoline.report import (
+                        GraphSummary,
+                        InspectionReport,
+                        ModelMetadata,
+                    )
+
+                    gguf_reader = GGUFReader(tmp_path)
+                    gguf_data = gguf_reader.read()
+
+                    # Create minimal report from GGUF data
+                    report = InspectionReport(
+                        metadata=ModelMetadata(
+                            path=tmp_path,
+                            ir_version=gguf_data.version,
+                            producer_name=f"GGUF ({gguf_data.architecture})",
+                            producer_version="",
+                            domain="llm",
+                            model_version=0,
+                            doc_string=gguf_data.model_name,
+                            opsets={},
+                        ),
+                        graph_summary=GraphSummary(
+                            num_nodes=gguf_data.tensor_count,
+                            num_inputs=1,
+                            num_outputs=1,
+                            num_initializers=gguf_data.tensor_count,
+                            input_shapes={},
+                            output_shapes={},
+                            op_type_counts=gguf_data.quantization_breakdown,
+                        ),
+                        param_counts=ParamCounts(
+                            total=gguf_data.total_params,
+                            trainable=0,
+                            non_trainable=gguf_data.total_params,
+                            precision_breakdown=gguf_data.quantization_breakdown,
+                        ),
+                        flop_counts=None,  # GGUF has no graph, can't estimate FLOPs
+                        memory_estimates=MemoryEstimates(
+                            model_size_bytes=gguf_data.total_size_bytes,
+                            peak_activation_bytes=0,
+                        ),
+                        detected_blocks=[],
+                        architecture_type=gguf_data.architecture,
+                        risk_signals=[],
+                        gguf_info=gguf_data,  # Store for export
+                    )
+                else:
+                    # Standard ONNX analysis
+                    inspector = ModelInspector()
+                    report = inspector.inspect(tmp_path)
 
                 # Apply hardware estimates
                 if selected_hardware == "auto":
@@ -2062,8 +2115,13 @@ def main():
 
                 # Prepare graph_info (ONNX only) for layer/quant views
                 graph_info = None
+                gguf_info = None
+                is_gguf = False
+
                 if tmp_path and Path(tmp_path).exists():
-                    if Path(tmp_path).suffix.lower() == ".onnx":
+                    file_suffix = Path(tmp_path).suffix.lower()
+
+                    if file_suffix == ".onnx":
                         try:
                             from haoline.analyzer import ONNXGraphLoader
 
@@ -2072,9 +2130,30 @@ def main():
                         except Exception as e:
                             st.warning(f"Could not load graph for detailed views: {e}")
 
-                # Tabs for different views
-                tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-                    [
+                    elif file_suffix == ".gguf":
+                        # Load GGUFInfo for LLM Details tab
+                        is_gguf = True
+                        try:
+                            from haoline.formats.gguf import GGUFReader
+
+                            gguf_reader = GGUFReader(tmp_path)
+                            gguf_info = gguf_reader.read()
+                        except Exception as e:
+                            st.warning(f"Could not load GGUF details: {e}")
+
+                # Tabs for different views - GGUF gets LLM Details tab instead of some ONNX-only tabs
+                if is_gguf:
+                    tab_names = [
+                        "Overview",
+                        "LLM Details",
+                        "Details",
+                        "Export",
+                    ]
+                    tabs = st.tabs(tab_names)
+                    tab1, tab_llm, tab3, tab6 = tabs
+                    tab2 = tab4 = tab5 = None  # No graph/layer/quant for GGUF
+                else:
+                    tab_names = [
                         "Overview",
                         "Interactive Graph",
                         "Details",
@@ -2082,7 +2161,9 @@ def main():
                         "Quantization",
                         "Export",
                     ]
-                )
+                    tabs = st.tabs(tab_names)
+                    tab1, tab2, tab3, tab4, tab5, tab6 = tabs
+                    tab_llm = None
 
                 with tab1:
                     st.markdown("### Model Information")
@@ -2293,8 +2374,8 @@ def main():
                                     f"Quantized ops: {', '.join(report.param_counts.quantized_ops[:5])}"
                                 )
 
-                    # Quantization Readiness Analysis (Epic 33)
-                    if include_quant_analysis:
+                    # Quantization Readiness Analysis (Epic 33) - ONNX only
+                    if include_quant_analysis and not is_gguf:
                         with st.expander("INT8 Quantization Readiness", expanded=True):
                             try:
                                 from haoline.analyzer import ONNXGraphLoader
@@ -3000,86 +3081,95 @@ def main():
                                 except Exception as e:
                                     st.error(f"Error generating AI summary: {e}")
 
-                with tab2:
-                    if include_graph:
-                        st.markdown("### Interactive Architecture Graph")
-                        st.caption(
-                            "🖱️ Scroll to zoom | Drag to pan | Click nodes to expand/collapse | Use sidebar controls"
-                        )
+                # LLM Details tab (GGUF only) - Task 24.2.6
+                if tab_llm is not None and gguf_info is not None:
+                    with tab_llm:
+                        render_llm_details_tab(gguf_info, uploaded_file.name)
 
-                        try:
-                            # Build the full interactive D3.js graph
-                            import logging
-
-                            from haoline.analyzer import ONNXGraphLoader
-
-                            graph_logger = logging.getLogger("haoline.graph")
-
-                            # Load graph info
-                            loader = ONNXGraphLoader(logger=graph_logger)
-                            _, graph_info = loader.load(tmp_path)
-
-                            # Detect patterns/blocks
-                            pattern_analyzer = PatternAnalyzer(logger=graph_logger)
-                            blocks = pattern_analyzer.group_into_blocks(graph_info)
-
-                            # Analyze edges
-                            edge_analyzer = EdgeAnalyzer(logger=graph_logger)
-                            edge_result = edge_analyzer.analyze(graph_info)
-
-                            # Build hierarchical graph
-                            builder = HierarchicalGraphBuilder(logger=graph_logger)
-                            model_name = Path(uploaded_file.name).stem
-                            hier_graph = builder.build(graph_info, blocks, model_name)
-
-                            # Generate the full D3.js HTML
-                            # The HTML template auto-detects embedded mode (iframe) and:
-                            # - Collapses sidebar for more graph space
-                            # - Auto-fits the view
-                            graph_html = generate_graph_html(
-                                hier_graph,
-                                edge_result,
-                                title=model_name,
-                                model_size_bytes=len(uploaded_file.getvalue()),
+                # Interactive Graph tab (skip for GGUF - no graph)
+                if tab2 is not None:
+                    with tab2:
+                        if include_graph:
+                            st.markdown("### Interactive Architecture Graph")
+                            st.caption(
+                                "🖱️ Scroll to zoom | Drag to pan | Click nodes to expand/collapse | Use sidebar controls"
                             )
 
-                            # Embed with generous height for comfortable viewing
-                            components.html(graph_html, height=800, scrolling=False)
+                            try:
+                                # Build the full interactive D3.js graph
+                                import logging
 
-                        except Exception as e:
-                            st.warning(f"Could not generate interactive graph: {e}")
-                            # Fallback to block list
-                            if report.detected_blocks:
-                                st.markdown("#### Detected Architecture Blocks")
-                                for i, block in enumerate(report.detected_blocks[:15]):
-                                    with st.expander(
-                                        f"{block.block_type}: {block.name}", expanded=(i < 3)
-                                    ):
-                                        st.write(f"**Type:** {block.block_type}")
-                                        st.write(f"**Nodes:** {len(block.nodes)}")
-                    else:
-                        st.info(
-                            "Enable 'Interactive Graph' in the sidebar to see the architecture visualization."
-                        )
+                                from haoline.analyzer import ONNXGraphLoader
+
+                                graph_logger = logging.getLogger("haoline.graph")
+
+                                # Load graph info
+                                loader = ONNXGraphLoader(logger=graph_logger)
+                                _, graph_info = loader.load(tmp_path)
+
+                                # Detect patterns/blocks
+                                pattern_analyzer = PatternAnalyzer(logger=graph_logger)
+                                blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+                                # Analyze edges
+                                edge_analyzer = EdgeAnalyzer(logger=graph_logger)
+                                edge_result = edge_analyzer.analyze(graph_info)
+
+                                # Build hierarchical graph
+                                builder = HierarchicalGraphBuilder(logger=graph_logger)
+                                model_name = Path(uploaded_file.name).stem
+                                hier_graph = builder.build(graph_info, blocks, model_name)
+
+                                # Generate the full D3.js HTML
+                                # The HTML template auto-detects embedded mode (iframe) and:
+                                # - Collapses sidebar for more graph space
+                                # - Auto-fits the view
+                                graph_html = generate_graph_html(
+                                    hier_graph,
+                                    edge_result,
+                                    title=model_name,
+                                    model_size_bytes=len(uploaded_file.getvalue()),
+                                )
+
+                                # Embed with generous height for comfortable viewing
+                                components.html(graph_html, height=800, scrolling=False)
+
+                            except Exception as e:
+                                st.warning(f"Could not generate interactive graph: {e}")
+                                # Fallback to block list
+                                if report.detected_blocks:
+                                    st.markdown("#### Detected Architecture Blocks")
+                                    for i, block in enumerate(report.detected_blocks[:15]):
+                                        with st.expander(
+                                            f"{block.block_type}: {block.name}", expanded=(i < 3)
+                                        ):
+                                            st.write(f"**Type:** {block.block_type}")
+                                            st.write(f"**Nodes:** {len(block.nodes)}")
+                        else:
+                            st.info(
+                                "Enable 'Interactive Graph' in the sidebar to see the architecture visualization."
+                            )
 
                 with tab3:
                     # Details tab - patterns and risk signals
                     render_details_tab(report)
 
-                with tab4:
-                    # Layer Details tab
-                    model_name = uploaded_file.name.replace(".onnx", "")
-                    render_layer_details_tab(
-                        report,
-                        graph_info,
-                        model_name,
-                        redact_names=redact_names,
-                        summary_only=summary_only,
-                    )
+                # Layer Details tab (skip for GGUF - no graph)
+                if tab4 is not None:
+                    with tab4:
+                        model_name = uploaded_file.name.replace(".onnx", "")
+                        render_layer_details_tab(
+                            report,
+                            graph_info,
+                            model_name,
+                            redact_names=redact_names,
+                            summary_only=summary_only,
+                        )
 
-                with tab5:
-                    # Quantization tab
-                    render_quantization_tab(report, graph_info)
+                # Quantization tab (skip for GGUF - use LLM Details instead)
+                if tab5 is not None:
+                    with tab5:
+                        render_quantization_tab(report, graph_info)
 
                 with tab6:
                     # Export tab
