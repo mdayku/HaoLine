@@ -1251,5 +1251,57 @@ Deep analysis of NVIDIA TensorRT compiled engines. Inspired by TRT Engine Explor
 
 ---
 
+## Epic 49: HuggingFace Integration - Stories 49.1-49.4 (COMPLETE)
+
+*Completed: January 6, 2026*
+
+### Story 49.1: HuggingFace Model Integration - COMPLETE (7/7)
+*Load HF models (config + weights) and auto-convert to ONNX for full analysis.*
+
+- [x] Add `--from-huggingface REPO_ID` CLI flag
+- [x] Download config.json + model files from HF Hub
+- [x] Detect model type from config (BERT, GPT, LLaMA, etc.)
+- [x] Load model using `transformers` library
+- [x] Export to ONNX using `optimum` library
+- [x] Run full analysis on exported ONNX
+- [x] Add `huggingface` extra to pyproject.toml (transformers, optimum)
+
+### Story 49.2: Format-Aware UI/CLI - COMPLETE (7/7 + 2 post-1.0)
+*Show appropriate metrics and disable unavailable features per format.*
+
+- [x] Define `FormatCapabilities` dataclass with feature flags
+- [x] Return capabilities from each format reader
+- [x] CLI: Skip FLOPs/graph for weight-only formats with clear message
+- [x] Streamlit: Disable graph tab for formats without graph
+- [x] Show "Convert to ONNX for full analysis" prompt for Tier 3/4 formats
+- [x] Add format tier badge in reports (Full/Graph/Metadata/Weights)
+- [x] Show "Feature unavailable for [format]" with upgrade path in UI
+- Post-1.0: "Why is this grayed out?" help tooltip
+- Post-1.0: "Format Capabilities Report" section
+
+### Story 49.3: SafeTensors → ONNX Path - COMPLETE (4/4)
+*If SafeTensors is alongside config.json, auto-load and convert.*
+
+- [x] Detect config.json in same directory as .safetensors
+- [x] Parse config.json to get architecture type
+- [x] Auto-suggest HF model load if config found
+- [x] Support local directory with config + safetensors
+
+### Story 49.4: ONNX Hub Conversions - COMPLETE (5/9, 4 not feasible)
+*Convert TFLite/CoreML/OpenVINO → ONNX to enable full analysis capabilities.*
+
+**Findings:**
+- TFLite → ONNX: Works via `--from-tflite`
+- CoreML → ONNX: **NOT FEASIBLE** - coremltools converts TO CoreML, not FROM
+- OpenVINO → ONNX: **NOT FEASIBLE** - OpenVINO IR is generated FROM ONNX
+
+Completed tasks:
+- [x] TFLite → ONNX via `--from-tflite` (already existed)
+- [x] CLI auto-prompt for TFLite conversion
+- [x] Streamlit: Show conversion hint for TFLite
+- [x] Document conversion quality/lossiness per format
+
+---
+
 *End of Archive*
 

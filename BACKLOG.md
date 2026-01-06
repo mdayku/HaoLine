@@ -17,8 +17,8 @@
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
 | **P1** | LLM-Scale Analysis | Epics 26-30 (70B+ param models, MoE, KV cache) |
+| **P1** | Native Format FLOPs | Epic 49.5 (TFLite/CoreML/OpenVINO FLOPs) |
 | **P2** | AWS GPU Deployment | Epic 51 (TensorRT, runtime benchmarking) |
-| **P2** | HuggingFace Integration | Epic 49.1 (`--from-huggingface` CLI flag) |
 | **P3** | Model Optimization Service | Epics 31-32 (automated quantization) |
 
 ---
@@ -28,7 +28,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epic 49: HuggingFace Integration | In Progress | 5 | 26/30 | P1 |
+| Epic 49.5: Native Format FLOPs | Not Started | 1 | 0/4 | P1 |
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
@@ -45,7 +45,7 @@
 | Epic 47: Model Card Standards | Not Started | 2 | 0/10 | P4 |
 | Epics 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 
-**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 24, 25, 33, 39, 40, 41, 42, 49.2, 50, 52, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
+**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 24, 25, 33, 39, 40, 41, 42, 49.1-49.4, 50, 52, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
 
 ---
 
@@ -189,65 +189,16 @@
 
 ---
 
-## Epic 49: Format Capability Tiers & HuggingFace Integration (P1)
+## Epic 49: Format Capability Tiers & HuggingFace Integration
 
-*Rationalize what metrics are available per format, and add auto-conversion for weight-only formats.*
+*Stories 49.1-49.4 complete and archived to PRDBacklogArchive.md*
 
-**Relationship to Epic 42:** Epic 42 tests existing conversion paths work correctly. Epic 49 adds NEW features (HuggingFace CLI, format-aware UI). Testing for Epic 49 features should be added to Epic 42 after implementation.
+**Completed:** HuggingFace CLI (`--from-huggingface`), format tier badges, SafeTensors config detection, TFLite conversion prompts.
 
-*Format Capability Matrix and Tier System details archived to PRDBacklogArchive.md*
+**Finding:** CoreML/OpenVINO → ONNX conversions are not feasible (these formats are typically targets, not sources).
 
-### Story 49.1: HuggingFace Model Integration - **COMPLETE** ✅
-*Load HF models (config + weights) and auto-convert to ONNX for full analysis.*
-
-- [x] **Task 49.1.1**: Add `--from-huggingface REPO_ID` CLI flag ✅
-- [x] **Task 49.1.2**: Download config.json + model files from HF Hub ✅
-- [x] **Task 49.1.3**: Detect model type from config (BERT, GPT, LLaMA, etc.) ✅
-- [x] **Task 49.1.4**: Load model using `transformers` library ✅
-- [x] **Task 49.1.5**: Export to ONNX using `optimum` library ✅
-- [x] **Task 49.1.6**: Run full analysis on exported ONNX ✅
-- [x] **Task 49.1.7**: Add `huggingface` extra to pyproject.toml (transformers, optimum) ✅
-
-### Story 49.2: Format-Aware UI/CLI - **COMPLETE** ✅
-*Show appropriate metrics and disable unavailable features per format.*
-
-- [x] **Task 49.2.1**: Define `FormatCapabilities` dataclass with feature flags ✅
-- [x] **Task 49.2.2**: Return capabilities from each format reader ✅
-- [x] **Task 49.2.3**: CLI: Skip FLOPs/graph for weight-only formats with clear message ✅
-- [x] **Task 49.2.4**: Streamlit: Disable graph tab for formats without graph ✅
-- [x] **Task 49.2.5**: Show "Convert to ONNX for full analysis" prompt for Tier 3/4 formats ✅
-- [x] **Task 49.2.6**: Add format tier badge in reports (Full/Graph/Metadata/Weights) ✅
-- [x] **Task 49.2.7**: Show "Feature unavailable for [format]" with upgrade path in UI ✅
-- [ ] **Task 49.2.8**: Add "Why is this grayed out?" help tooltip explaining format limitations *(post-1.0)*
-- [ ] **Task 49.2.9**: Generate "Format Capabilities Report" section showing what was/wasn't analyzed *(post-1.0)*
-
-### Story 49.3: SafeTensors → ONNX Path - **COMPLETE** ✅
-*If SafeTensors is alongside config.json, auto-load and convert.*
-
-- [x] **Task 49.3.1**: Detect config.json in same directory as .safetensors ✅
-- [x] **Task 49.3.2**: Parse config.json to get architecture type ✅
-- [x] **Task 49.3.3**: Auto-suggest HF model load if config found ✅
-- [x] **Task 49.3.4**: Support local directory with config + safetensors ✅
-
-### Story 49.4: ONNX Hub Conversions (Full Analysis Path) - **COMPLETE** ✅
-*Convert TFLite/CoreML/OpenVINO → ONNX to enable full analysis capabilities.*
-
-**Why this approach:** Instead of building native UniversalGraph adapters for each format, convert to ONNX first and reuse all existing analysis code. Trade-off: some conversions may be lossy.
-
-- [x] **Task 49.4.1**: TFLite → ONNX via `--from-tflite` ✅ (already existed)
-- [x] **Task 49.4.2**: `--from-tflite` flag ✅ (already existed)
-- [~] **Task 49.4.3**: CoreML → ONNX - **NOT FEASIBLE** (coremltools converts TO CoreML, not FROM)
-- [~] **Task 49.4.4**: `--convert-to-onnx` for CoreML - **SKIPPED** (no conversion path)
-- [~] **Task 49.4.5**: OpenVINO → ONNX - **NOT FEASIBLE** (IR is generated FROM ONNX)
-- [~] **Task 49.4.6**: `--convert-to-onnx` for OpenVINO - **SKIPPED** (no conversion path)
-- [x] **Task 49.4.7**: CLI auto-prompt for TFLite conversion ✅
-- [x] **Task 49.4.8**: Streamlit: Show conversion hint for TFLite ✅
-- [x] **Task 49.4.9**: Document conversion quality/lossiness per format ✅
-
-### Story 49.5: Native FLOPs for Non-ONNX Formats (Optional)
+### Story 49.5: Native FLOPs for Non-ONNX Formats (P1)
 *Alternative to hub conversion: Add FLOPs directly to format readers.*
-
-**Note:** This is lower priority than 49.4. Only implement if conversion proves too lossy for specific use cases.
 
 - [ ] **Task 49.5.1**: Map TFLite builtin ops to FLOP formulas
 - [ ] **Task 49.5.2**: Map CoreML layer types to FLOP formulas
