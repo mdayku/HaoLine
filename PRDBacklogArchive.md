@@ -100,6 +100,27 @@ These were explicitly post-1.0:
   - HTML export includes styled LLM details section
   - JSON export includes full `gguf_info` object
   - Report version now dynamically references package `__version__`
+- CLI GGUF parity (v1.2.1): CLI now supports GGUF files with full LLM details in exports
+
+## Epic 24: GGUF Format - COMPLETE (14/14 tasks)
+
+*Completed: January 6, 2026*
+
+### Story 24.1: GGUF Reader - COMPLETE (6/6)
+- Pure Python GGUF header parser (no deps)
+- Model metadata extraction (arch, context_length, etc.)
+- Per-tensor quantization type extraction
+- VRAM estimation
+
+### Story 24.2: GGUF Streamlit UI & Analysis - COMPLETE (8/8)
+- `.gguf` in Streamlit file_uploader
+- Quantization breakdown chart
+- Architecture details display
+- VRAM calculator with context length slider
+- Tensor-level quantization table
+- "LLM Model Details" tab
+- Export enhancements (MD/HTML/JSON)
+- CLI GGUF parity
 
 ---
 
@@ -901,6 +922,23 @@ Fixed first-run experience issues with PATH problems on user-level pip installs.
 - [x] Document Linux/macOS PATH fix
 - [x] Add installation verification command to Quick Start
 - [x] Update `generate_cli_command()` to use `python -m haoline` format
+
+---
+
+## Epic 55: Demo Model Parity - COMPLETE (2/2 tasks)
+
+*Completed: December 24, 2025*
+
+**Problem:** Demo models used a separate code path with simplified rendering (~50% functionality).
+
+**Solution:** Made demo models flow through the SAME code path as uploaded files:
+- Demo model download creates a `DemoUploadedFile` object mimicking `UploadedFile`
+- This is stored in session state and used by the normal uploaded file handling code
+- Single code path = no parity issues, no duplication
+
+### Story 55.1: Demo-Upload Parity - COMPLETE
+- [x] Create `DemoUploadedFile` class that mimics `UploadedFile` interface
+- [x] Route demo models through uploaded file code path (no separate rendering)
 
 ---
 

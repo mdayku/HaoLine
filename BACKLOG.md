@@ -2,38 +2,24 @@
 
 *The Model Decision Layer — Prevent teams from shipping the wrong model.*
 
-**Related Documents:**
-- [PRD.md](PRD.md) - Product requirements and specifications
-- [Architecture.md](Architecture.md) - System design details
+**Related:** [PRD.md](PRD.md) | [Architecture.md](Architecture.md) | [PRDBacklogArchive.md](PRDBacklogArchive.md)
 
 ---
 
-## 🎉 Version 1.0 Released (December 29, 2025)
+**Current Release:** v1.2.1 (Jan 6, 2026)
 
-HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
-
-**What's in 1.0:**
-- Universal model analysis across 10 formats (ONNX, PyTorch, TensorFlow, TensorRT, CoreML, TFLite, OpenVINO, GGUF, SafeTensors)
-- Interactive web UI on HuggingFace Spaces
-- CI/CD integration with `--fail-on` thresholds and decision reports
-- Quantization analysis and LLM-powered recommendations
-- 50+ GPU hardware profiles
-
-*See [PRDBacklogArchive.md](PRDBacklogArchive.md) for the complete 1.0 exit criteria and verification checklist.*
+**Quality Gate:** `python scripts/check.py` (fast) or `python scripts/check.py --all` (full)
 
 ---
+
+## Priorities
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
 | **P1** | LLM-Scale Analysis | Epics 26-30 (70B+ param models, MoE, KV cache) |
-| **P1** | GGUF Advanced UI | Epic 24.2 (quantization breakdown, VRAM calculator) |
 | **P2** | AWS GPU Deployment | Epic 51 (TensorRT, runtime benchmarking) |
 | **P2** | HuggingFace Integration | Epic 49.1 (`--from-huggingface` CLI flag) |
 | **P3** | Model Optimization Service | Epics 31-32 (automated quantization) |
-
-**Current Release:** v1.2.0 (Jan 6, 2026) — GGUF LLM Details UI + Export Enhancements
-
-**Quality Gate:** `python scripts/check.py` (fast) or `python scripts/check.py --all` (full)
 
 ---
 
@@ -41,18 +27,9 @@ HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
 
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
-| **SHIPPED IN 1.1** |||||
-| Epic 56: CLI Parity | ✅ COMPLETE | 6 | 42/42 | Done |
-| **SHIPPED IN 1.0** |||||
-| Epic 54: CI/CD Integration | ✅ COMPLETE | 3 | 23/23 | Done |
-| Epic 55: Demo Model Parity | ✅ COMPLETE | 1 | 2/2 | Done |
-| Epic 42: Format Conversion Testing | ✅ 1.0 tasks done | 6 | 18/38 | Done |
-| Epic 49.2: Format-Aware UI | ✅ 1.0 tasks done | 1 | 7/9 | Done |
-| Epic 52: TensorRT Docs | ✅ 1.0 tasks done | 5 | 6/24 | Done |
-| **POST-1.0 PRIORITIES** |||||
-| Epic 49: Full HuggingFace Integration | In Progress | 5 | 3/30 | P1 |
+| **ACTIVE** |||||
+| Epic 49: HuggingFace Integration | In Progress | 5 | 3/30 | P1 |
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
-| Epic 24: GGUF LLM Support | ✅ COMPLETE | 2 | 14/14 | Done |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
 | Epic 19: SafeTensors | Story 19.1 ✅ | 2 | 6/10 | P3 |
@@ -68,7 +45,7 @@ HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
 | Epic 47: Model Card Standards | Not Started | 2 | 0/10 | P4 |
 | Epics 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 
-**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 25, 33, 39, 40, 41, 50, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
+**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 24, 25, 33, 39, 40, 41, 42, 49.2, 50, 52, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
 
 ---
 
@@ -95,40 +72,6 @@ HaoLine 1.0 is now available! All 20 exit criteria complete, README verified.
 
 **Status:** Idea only — needs validation before scoping
 
----
-
-## Epic 56: CLI Parity - Typer Migration Completion - **COMPLETE**
-
-*Completed: December 29, 2025. Archived to PRDBacklogArchive.md - 42/42 tasks.*
-
-All legacy CLI flags have been ported to the new Typer CLI. Full feature parity achieved.
-
----
-
-## Epic 54: CI/CD Integration - **COMPLETE**
-
-*Completed: December 23, 2025. Archived to PRDBacklogArchive.md - 23/23 tasks.*
-
-Made HaoLine a gatekeeper in ML pipelines with `--fail-on` threshold flags, GitHub Actions workflow template, and Decision Report format for audit trails.
-
----
-
-## Epic 55: Demo Model Parity - **COMPLETE**
-
-*Completed: December 24, 2025*
-
-**Problem (was):** Demo models used a separate code path with simplified rendering (~50% functionality).
-
-**Solution:** Made demo models flow through the SAME code path as uploaded files:
-- Demo model download creates a `DemoUploadedFile` object mimicking `UploadedFile`
-- This is stored in session state and used by the normal uploaded file handling code
-- Single code path = no parity issues, no duplication
-
-### Story 55.1: Demo-Upload Parity - **COMPLETE** (2/9 tasks needed)
-- [x] **Task 55.1.1**: Create `DemoUploadedFile` class that mimics `UploadedFile` interface
-- [x] **Task 55.1.3**: Route demo models through uploaded file code path (no separate rendering)
-
-*Remaining tasks cancelled - single code path approach eliminated need for them.*
 
 ---
 
@@ -243,29 +186,6 @@ Made HaoLine a gatekeeper in ML pipelines with `--fail-on` threshold flags, GitH
 - [ ] **Task 23.3.2**: Support ONNX → OpenVINO conversion
 - [ ] **Task 23.3.3**: Add precision options
 - [ ] **Task 23.3.4**: Add `--convert-to openvino` CLI flag
-
----
-
-## Epic 24: GGUF Format (P3 - Read-Only)
-
-*llama.cpp format for running LLMs locally.*
-
-**Note:** GGUF is a weights-only format with architecture metadata. It does NOT contain a computational graph, so interactive graph visualization is not possible. However, we can display quantization breakdown, VRAM estimates, and architecture details.
-
-### Story 24.1: GGUF Reader - **COMPLETE**
-*Archived to PRDBacklogArchive.md - 6/6 tasks complete*
-
-### Story 24.2: GGUF Streamlit UI & Analysis Features - **COMPLETE**
-*Completed: January 6, 2026*
-
-- [x] **Task 24.2.1**: Add `.gguf` to Streamlit file_uploader accepted types ✅
-- [x] **Task 24.2.2**: Display quantization breakdown chart (bar chart of tensor counts by bit-width) ✅
-- [x] **Task 24.2.3**: Display architecture details (layers, hidden_size, num_heads, context_length) ✅
-- [x] **Task 24.2.4**: Add VRAM calculator with context length slider (recompute estimates dynamically) ✅
-- [x] **Task 24.2.5**: Show tensor-level quantization table ✅
-- [x] **Task 24.2.6**: Create "LLM Model Details" tab in Streamlit for GGUF models ✅
-- [x] **Task 24.2.7**: Export enhancements - GGUF details in MD/HTML/JSON exports ✅
-- [~] **Task 24.2.8**: Show unsupported_ops warnings from quantization_lint *(Deferred - GGUF has its own quant info)*
 
 ---
 
