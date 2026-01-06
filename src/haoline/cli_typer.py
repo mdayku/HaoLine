@@ -590,6 +590,18 @@ def inspect(
         Path | None,
         typer.Option("--quant-analysis-json", help="Output advanced quantization analysis JSON"),
     ] = None,
+    # Attention analysis (Epic 27)
+    attention_analysis: Annotated[
+        bool,
+        typer.Option(
+            "--attention-analysis",
+            help="Analyze attention architecture (MHA/MQA/GQA, position encoding, KV cache)",
+        ),
+    ] = False,
+    attention_analysis_json: Annotated[
+        Path | None,
+        typer.Option("--attention-analysis-json", help="Output attention analysis JSON"),
+    ] = None,
     # TensorRT comparison
     compare_trt: Annotated[
         Path | None,
@@ -778,6 +790,8 @@ def inspect(
             quant_advice_report=quant_advice_report,
             quant_analysis=quant_analysis,
             quant_analysis_json=quant_analysis_json,
+            attention_analysis=attention_analysis,
+            attention_analysis_json=attention_analysis_json,
             compare_trt=compare_trt,
             redact_names=redact_names,
             summary_only=summary_only,
@@ -908,6 +922,8 @@ def _run_inspect(
     quant_advice_report: Path | None,
     quant_analysis: bool,
     quant_analysis_json: Path | None,
+    attention_analysis: bool,
+    attention_analysis_json: Path | None,
     compare_trt: Path | None,
     redact_names: bool,
     summary_only: bool,
@@ -1422,6 +1438,61 @@ def _run_inspect(
                 json.dumps(quant_result.to_dict(), indent=2), encoding="utf-8"
             )
             console.print(f"\n[green]Wrote:[/green] {quant_analysis_json}")
+
+    # Attention analysis (Epic 27)
+    if attention_analysis or attention_analysis_json:
+        from haoline.analyzer import ONNXGraphLoader
+        from haoline.attention_analysis import AttentionAnalyzer
+        from haoline.patterns import PatternAnalyzer
+
+        with console.status("[bold blue]Running attention analysis...[/bold blue]"):
+            loader = ONNXGraphLoader()
+            _, graph_info = loader.load(analysis_path)
+
+            # Get architectural blocks
+            pattern_analyzer = PatternAnalyzer()
+            blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+            # Run attention analysis
+            attn_analyzer = AttentionAnalyzer()
+            attn_result = attn_analyzer.analyze(graph_info, blocks)
+
+            # Store in report
+            report.attention_analysis = attn_result.to_dict()
+
+        # Print summary
+        console.print("\n[bold cyan]Attention Analysis[/bold cyan]")
+        console.print(f"  Type: [bold]{attn_result.primary_attention_type.value.upper()}[/bold]")
+        console.print(f"  Attention Layers: {attn_result.num_attention_layers}")
+        if attn_result.num_q_heads > 0:
+            console.print(
+                f"  Q Heads: {attn_result.num_q_heads}, " f"KV Heads: {attn_result.num_kv_heads}"
+            )
+
+        if attn_result.position_encoding:
+            pe = attn_result.position_encoding
+            console.print(f"\n  Position Encoding: [bold]{pe.encoding_type.value.upper()}[/bold]")
+            if pe.max_positions:
+                console.print(f"    Max Positions: {pe.max_positions}")
+            if pe.extrapolation_capable:
+                console.print("    Extrapolation: Capable")
+
+        if attn_result.kv_cache:
+            kv = attn_result.kv_cache
+            console.print("\n  [bold]KV Cache:[/bold]")
+            console.print(f"    Per Token: {kv.bytes_per_token:,} bytes")
+            console.print(f"    At 8K context: {kv.total_bytes_at_8k / 1e9:.2f} GB")
+            if kv.savings_factor > 1.0:
+                console.print(f"    Savings vs MHA: {kv.savings_factor:.1f}x")
+
+        # Write JSON if requested
+        if attention_analysis_json:
+            import json
+
+            attention_analysis_json.write_text(
+                json.dumps(attn_result.to_dict(), indent=2), encoding="utf-8"
+            )
+            console.print(f"\n[green]Wrote:[/green] {attention_analysis_json}")
 
     # LLM summary
     if llm_summary and not offline:

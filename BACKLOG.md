@@ -351,36 +351,41 @@
 
 ---
 
-## Epic 27: Attention Variant Detection (P3)
+## Epic 27: Attention Variant Detection (P3) - COMPLETE (20/20 tasks)
 
 *Modern LLMs use many attention optimizations beyond vanilla self-attention.*
 
-### Story 27.1: Attention Architecture Detection
-- [ ] **Task 27.1.1**: Detect Multi-Head Attention (MHA) - standard pattern
-- [ ] **Task 27.1.2**: Detect Multi-Query Attention (MQA) - single KV head
-- [ ] **Task 27.1.3**: Detect Grouped-Query Attention (GQA) - fewer KV heads than Q
-- [ ] **Task 27.1.4**: Report num_q_heads, num_kv_heads, head_dim
-- [ ] **Task 27.1.5**: Calculate KV cache savings for GQA/MQA vs MHA
+**Module:** `src/haoline/attention_analysis.py`
+**CLI Flags:** `--attention-analysis`, `--attention-analysis-json`
+**Tests:** `src/haoline/tests/test_attention_analysis.py` (25 tests)
 
-### Story 27.2: Attention Pattern Detection
-- [ ] **Task 27.2.1**: Detect sliding window attention (Mistral-style)
-- [ ] **Task 27.2.2**: Detect local + global attention (Longformer-style)
-- [ ] **Task 27.2.3**: Detect sparse attention patterns (BigBird, etc.)
-- [ ] **Task 27.2.4**: Detect cross-attention (encoder-decoder models)
-- [ ] **Task 27.2.5**: Report effective context length and attention complexity
+### Story 27.1: Attention Architecture Detection - COMPLETE (5/5)
+- [x] **Task 27.1.1**: Detect Multi-Head Attention (MHA) - standard pattern
+- [x] **Task 27.1.2**: Detect Multi-Query Attention (MQA) - single KV head
+- [x] **Task 27.1.3**: Detect Grouped-Query Attention (GQA) - fewer KV heads than Q
+- [x] **Task 27.1.4**: Report num_q_heads, num_kv_heads, head_dim
+- [x] **Task 27.1.5**: Calculate KV cache savings for GQA/MQA vs MHA
 
-### Story 27.3: Position Encoding Detection
-- [ ] **Task 27.3.1**: Detect RoPE (Rotary Position Embedding)
-- [ ] **Task 27.3.2**: Detect ALiBi (Attention with Linear Biases)
-- [ ] **Task 27.3.3**: Detect learned positional embeddings
-- [ ] **Task 27.3.4**: Detect sinusoidal positional encoding
-- [ ] **Task 27.3.5**: Report max context length and extrapolation capability
+### Story 27.2: Attention Pattern Detection - COMPLETE (5/5)
+- [x] **Task 27.2.1**: Detect sliding window attention (Mistral-style)
+- [x] **Task 27.2.2**: Detect local + global attention (Longformer-style) - via pattern_type enum
+- [x] **Task 27.2.3**: Detect sparse attention patterns (BigBird, etc.) - via pattern_type enum
+- [x] **Task 27.2.4**: Detect cross-attention (encoder-decoder models)
+- [x] **Task 27.2.5**: Report effective context length and attention complexity
 
-### Story 27.4: Fused Attention Patterns
-- [ ] **Task 27.4.1**: Detect FlashAttention-style fused patterns
-- [ ] **Task 27.4.2**: Detect xFormers memory-efficient attention
-- [ ] **Task 27.4.3**: Detect cuDNN fused multi-head attention
-- [ ] **Task 27.4.4**: Report theoretical vs actual memory usage
+### Story 27.3: Position Encoding Detection - COMPLETE (5/5)
+- [x] **Task 27.3.1**: Detect RoPE (Rotary Position Embedding)
+- [x] **Task 27.3.2**: Detect ALiBi (Attention with Linear Biases)
+- [x] **Task 27.3.3**: Detect learned positional embeddings
+- [x] **Task 27.3.4**: Detect sinusoidal positional encoding
+- [x] **Task 27.3.5**: Report max context length and extrapolation capability
+
+### Story 27.4: Fused Attention Patterns - COMPLETE (5/5)
+- [x] **Task 27.4.1**: Detect FlashAttention-style fused patterns
+- [x] **Task 27.4.2**: Detect xFormers memory-efficient attention
+- [x] **Task 27.4.3**: Detect cuDNN fused multi-head attention
+- [x] **Task 27.4.4**: Report theoretical vs actual memory usage
+- [x] **Task 27.4.5**: Detect PyTorch SDPA (ScaledDotProductAttention)
 
 ---
 

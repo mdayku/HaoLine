@@ -2847,6 +2847,113 @@ def main():
                             except Exception as e:
                                 st.warning(f"Could not run advanced quantization analysis: {e}")
 
+                        # Epic 27: Attention Analysis
+                        with st.expander("Attention Analysis", expanded=False):
+                            try:
+                                from haoline.analyzer import ONNXGraphLoader
+                                from haoline.attention_analysis import AttentionAnalyzer
+                                from haoline.patterns import PatternAnalyzer
+
+                                # Load graph if not already loaded
+                                if "graph_info" not in dir():
+                                    graph_loader = ONNXGraphLoader()
+                                    _, graph_info = graph_loader.load(tmp_path)
+
+                                # Get architectural blocks
+                                pattern_analyzer = PatternAnalyzer()
+                                blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+                                # Run attention analysis
+                                attn_analyzer = AttentionAnalyzer()
+                                attn_result = attn_analyzer.analyze(graph_info, blocks)
+
+                                # Type badge
+                                type_colors = {
+                                    "mha": "#06b6d4",
+                                    "mqa": "#f59e0b",
+                                    "gqa": "#22c55e",
+                                    "cross": "#8b5cf6",
+                                    "unknown": "#737373",
+                                }
+                                attn_type = attn_result.primary_attention_type.value
+                                type_color = type_colors.get(attn_type, "#737373")
+
+                                st.markdown(
+                                    f"""
+                                    <div style="display: inline-block; padding: 0.5rem 1rem;
+                                        background: {type_color}22; border: 1px solid {type_color};
+                                        border-radius: 8px; margin-bottom: 1rem;">
+                                        <span style="color: {type_color}; font-weight: bold;">
+                                            {attn_type.upper()}
+                                        </span>
+                                        <span style="color: #a3a3a3; margin-left: 0.5rem;">
+                                            ({attn_result.num_attention_layers} layers)
+                                        </span>
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True,
+                                )
+
+                                # Key metrics
+                                if attn_result.num_q_heads > 0:
+                                    m1, m2, m3 = st.columns(3)
+                                    with m1:
+                                        st.metric("Q Heads", attn_result.num_q_heads)
+                                    with m2:
+                                        st.metric("KV Heads", attn_result.num_kv_heads)
+                                    with m3:
+                                        st.metric("Head Dim", attn_result.head_dim)
+
+                                # Position encoding
+                                if attn_result.position_encoding:
+                                    pe = attn_result.position_encoding
+                                    st.markdown(
+                                        f"#### Position Encoding: {pe.encoding_type.value.upper()}"
+                                    )
+                                    pe1, pe2 = st.columns(2)
+                                    with pe1:
+                                        if pe.max_positions:
+                                            st.metric("Max Positions", f"{pe.max_positions:,}")
+                                    with pe2:
+                                        if pe.extrapolation_capable:
+                                            st.success("Extrapolation Capable")
+
+                                # KV cache
+                                if attn_result.kv_cache:
+                                    kv = attn_result.kv_cache
+                                    if kv.bytes_per_token > 0:
+                                        st.markdown("#### KV Cache Analysis")
+                                        kv1, kv2, kv3 = st.columns(3)
+                                        with kv1:
+                                            st.metric(
+                                                "Per Token",
+                                                f"{kv.bytes_per_token:,} bytes",
+                                            )
+                                        with kv2:
+                                            st.metric(
+                                                "At 8K Context",
+                                                f"{kv.total_bytes_at_8k / 1e9:.2f} GB",
+                                            )
+                                        with kv3:
+                                            if kv.savings_factor > 1.0:
+                                                st.metric(
+                                                    "Savings vs MHA",
+                                                    f"{kv.savings_factor:.1f}x",
+                                                )
+
+                                # Download JSON
+                                import json
+
+                                st.download_button(
+                                    "Download Attention Analysis JSON",
+                                    data=json.dumps(attn_result.to_dict(), indent=2),
+                                    file_name=f"{uploaded_file.name.replace('.onnx', '')}_attention_analysis.json",
+                                    mime="application/json",
+                                )
+
+                            except Exception as e:
+                                st.warning(f"Could not run attention analysis: {e}")
+
                     # Memory breakdown by op type
                     if (
                         report.memory_estimates

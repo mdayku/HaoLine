@@ -257,6 +257,9 @@ class InspectionReport(BaseModel):
     # Advanced quantization analysis (Epic 26, set by --quant-analysis)
     quantization_analysis: dict[str, Any] | None = None
 
+    # Attention analysis (Epic 27, set by --attention-analysis)
+    attention_analysis: dict[str, Any] | None = None
+
     # GGUF info (optional, set when analyzing GGUF files)
     # Contains LLM-specific metadata: architecture, context length, quantization breakdown
     gguf_info: Any | None = None  # GGUFInfo from haoline.formats.gguf
@@ -809,6 +812,45 @@ class InspectionReport(BaseModel):
                         f"{sl.get('reason', 'N/A')}"
                     )
                 lines.append("")
+
+        # Attention Analysis (Epic 27)
+        if self.attention_analysis:
+            aa = self.attention_analysis
+            attn_type = aa.get("primary_attention_type", "unknown").upper()
+            num_layers = aa.get("num_attention_layers", 0)
+
+            lines.append("## Attention Analysis")
+            lines.append("")
+            lines.append(f"**Attention Type:** {attn_type}")
+            lines.append(f"**Attention Layers:** {num_layers}")
+
+            num_q = aa.get("num_q_heads", 0)
+            num_kv = aa.get("num_kv_heads", 0)
+            if num_q > 0:
+                lines.append(f"**Q Heads:** {num_q}, **KV Heads:** {num_kv}")
+
+            # Position encoding
+            pos_enc = aa.get("position_encoding")
+            if pos_enc:
+                enc_type = pos_enc.get("encoding_type", "unknown").upper()
+                lines.append("")
+                lines.append(f"### Position Encoding: {enc_type}")
+                if pos_enc.get("max_positions"):
+                    lines.append(f"- Max Positions: {pos_enc['max_positions']}")
+                if pos_enc.get("extrapolation_capable"):
+                    lines.append("- Extrapolation: Capable")
+
+            # KV cache
+            kv = aa.get("kv_cache")
+            if kv and kv.get("bytes_per_token", 0) > 0:
+                lines.append("")
+                lines.append("### KV Cache")
+                lines.append(f"- Per Token: {kv['bytes_per_token']:,} bytes")
+                lines.append(f"- At 8K context: {kv['total_bytes_at_8k'] / 1e9:.2f} GB")
+                if kv.get("savings_factor", 1.0) > 1.0:
+                    lines.append(f"- Savings vs MHA: {kv['savings_factor']:.1f}x")
+
+            lines.append("")
 
         return "\n".join(lines)
 
@@ -1677,6 +1719,118 @@ class InspectionReport(BaseModel):
                         f"<td>{sl.get('reason', 'N/A')}</td></tr>"
                     )
                 html_parts.append("</table>")
+
+            html_parts.append("</section>")
+
+        # Attention Analysis (Epic 27)
+        if self.attention_analysis:
+            aa = self.attention_analysis
+            attn_type = aa.get("primary_attention_type", "unknown").upper()
+            num_layers = aa.get("num_attention_layers", 0)
+
+            # Type color mapping
+            type_colors = {
+                "MHA": "#06b6d4",
+                "MQA": "#f59e0b",
+                "GQA": "#22c55e",
+                "CROSS": "#8b5cf6",
+                "UNKNOWN": "#737373",
+            }
+            type_color = type_colors.get(attn_type, "#737373")
+
+            html_parts.append('<section class="attention-analysis">')
+            html_parts.append("<h2>Attention Analysis</h2>")
+
+            # Type badge
+            html_parts.append(
+                f"""
+                <div style="display: inline-block; padding: 0.5rem 1rem; margin-bottom: 1rem;
+                    background: {type_color}22; border: 1px solid {type_color}; border-radius: 8px;">
+                    <span style="color: {type_color}; font-weight: bold;">{attn_type}</span>
+                    <span style="color: var(--text-secondary); margin-left: 0.5rem;">
+                        ({num_layers} layers)
+                    </span>
+                </div>
+                """
+            )
+
+            # Key metrics
+            num_q = aa.get("num_q_heads", 0)
+            num_kv = aa.get("num_kv_heads", 0)
+            head_dim = aa.get("head_dim", 0)
+
+            if num_q > 0:
+                html_parts.append(
+                    f"""
+                    <div style="display: flex; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                        <div style="text-align: center; padding: 1rem; background: var(--bg-card);
+                             border-radius: 8px; min-width: 80px;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-cyan);">
+                                {num_q}
+                            </div>
+                            <div style="color: var(--text-secondary);">Q Heads</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: var(--bg-card);
+                             border-radius: 8px; min-width: 80px;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-cyan);">
+                                {num_kv}
+                            </div>
+                            <div style="color: var(--text-secondary);">KV Heads</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: var(--bg-card);
+                             border-radius: 8px; min-width: 80px;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-cyan);">
+                                {head_dim}
+                            </div>
+                            <div style="color: var(--text-secondary);">Head Dim</div>
+                        </div>
+                    </div>
+                    """
+                )
+
+            # Position encoding
+            pos_enc = aa.get("position_encoding")
+            if pos_enc:
+                enc_type = pos_enc.get("encoding_type", "unknown").upper()
+                html_parts.append(f"<h3>Position Encoding: {enc_type}</h3>")
+                html_parts.append("<ul>")
+                if pos_enc.get("max_positions"):
+                    html_parts.append(f"<li>Max Positions: {pos_enc['max_positions']}</li>")
+                if pos_enc.get("extrapolation_capable"):
+                    html_parts.append("<li>Extrapolation: Capable</li>")
+                html_parts.append("</ul>")
+
+            # KV cache
+            kv = aa.get("kv_cache")
+            if kv and kv.get("bytes_per_token", 0) > 0:
+                html_parts.append("<h3>KV Cache Analysis</h3>")
+                savings = kv.get("savings_factor", 1.0)
+                savings_color = "#22c55e" if savings > 1.5 else "#737373"
+                html_parts.append(
+                    f"""
+                    <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold;">
+                                {kv['bytes_per_token']:,} bytes
+                            </div>
+                            <div style="color: var(--text-secondary);">Per Token</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold;">
+                                {kv['total_bytes_at_8k'] / 1e9:.2f} GB
+                            </div>
+                            <div style="color: var(--text-secondary);">At 8K Context</div>
+                        </div>
+                        <div style="padding: 1rem; background: {savings_color}22;
+                             border: 1px solid {savings_color}; border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: {savings_color};">
+                                {savings:.1f}x
+                            </div>
+                            <div style="color: var(--text-secondary);">Savings vs MHA</div>
+                        </div>
+                    </div>
+                    """
+                )
 
             html_parts.append("</section>")
 
