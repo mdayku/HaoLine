@@ -267,18 +267,18 @@
 
 **1.0 Scope:** README docs (52.1.1-3, 52.1.6) and graceful degradation tests (52.3.2, 52.3.5) are required. PRD updates and deep tests are post-1.0.
 
-### Story 52.1: README Documentation Enhancement
+### Story 52.1: README Documentation Enhancement - **COMPLETE** ✅
 
-- [ ] **Task 52.1.1**: Expand existing "TensorRT Options" section in README with feature summary and limitations **[1.0]**
-- [ ] **Task 52.1.2**: Document guaranteed vs best-effort features (layer enumeration, fusion detection, precision stats) **[1.0]**
-- [ ] **Task 52.1.3**: Add "Known Limitations" subsection **[1.0]**
+- [x] **Task 52.1.1**: Expand existing "TensorRT Options" section in README with feature summary and limitations ✅
+- [x] **Task 52.1.2**: Document guaranteed vs best-effort features (layer enumeration, fusion detection, precision stats) ✅
+- [x] **Task 52.1.3**: Add "Known Limitations" subsection ✅
   - Dynamic shapes (heuristic detection only, not full profile reconstruction)
   - Plugin/custom layers (may show as "Unknown" type)
   - Precision inference (best-effort, TRT uses mixed precision internally)
   - No ONNX→TRT or TRT→ONNX conversion (users must build externally)
 - [ ] **Task 52.1.4**: Add workflow example *(post-1.0)*
-- [ ] **Task 52.1.5**: Clarify `pip install haoline[tensorrt]` requirement *(post-1.0)*
-- [ ] **Task 52.1.6**: Add troubleshooting section for common TRT errors **[1.0]**
+- [x] **Task 52.1.5**: Clarify `pip install haoline[tensorrt]` requirement ✅ (in troubleshooting table)
+- [x] **Task 52.1.6**: Add troubleshooting section for common TRT errors ✅
 
 ### Story 52.2: PRD TensorRT Section *(post-1.0 - PRD already has Section 20)*
 
