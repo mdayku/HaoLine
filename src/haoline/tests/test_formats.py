@@ -778,6 +778,103 @@ class TestOpenVINOReader:
 
 
 # ============================================================================
+# OpenVINO Writer Tests (Story 23.3)
+# ============================================================================
+
+
+class TestOpenVINOWriter:
+    """Tests for OpenVINOWriter."""
+
+    def test_write_from_onnx(self, tmp_path: Path) -> None:
+        """OpenVINOWriter should convert ONNX to OpenVINO IR."""
+        pytest.importorskip("openvino")
+        pytest.importorskip("onnx")
+        import numpy as np
+
+        import onnx
+        from haoline.formats.openvino import OpenVINOReader, OpenVINOWriter
+        from onnx import TensorProto, helper, numpy_helper
+
+        # Create a simple ONNX model
+        weight = numpy_helper.from_array(np.random.randn(3, 3).astype(np.float32), name="weight")
+        X = helper.make_tensor_value_info("X", TensorProto.FLOAT, [1, 3])
+        Y = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [1, 3])
+        matmul = helper.make_node("MatMul", ["X", "weight"], ["Y"])
+        graph = helper.make_graph([matmul], "test", [X], [Y], [weight])
+        model = helper.make_model(graph, producer_name="test")
+
+        onnx_path = tmp_path / "model.onnx"
+        onnx.save(model, str(onnx_path))
+
+        # Convert to OpenVINO
+        ov_path = tmp_path / "model.xml"
+        writer = OpenVINOWriter(ov_path)
+        result = writer.write_from_onnx(onnx_path)
+
+        assert result == ov_path
+        assert ov_path.exists()
+        assert (tmp_path / "model.bin").exists()
+
+        # Verify by reading back
+        reader = OpenVINOReader(ov_path)
+        info = reader.read()
+        assert info.layer_count > 0
+
+    def test_write_from_onnx_fp16(self, tmp_path: Path) -> None:
+        """OpenVINOWriter should support FP16 compression."""
+        pytest.importorskip("openvino")
+        pytest.importorskip("onnx")
+        import numpy as np
+
+        import onnx
+        from haoline.formats.openvino import OpenVINOWriter
+        from onnx import TensorProto, helper, numpy_helper
+
+        # Create a simple ONNX model
+        weight = numpy_helper.from_array(np.random.randn(3, 3).astype(np.float32), name="weight")
+        X = helper.make_tensor_value_info("X", TensorProto.FLOAT, [1, 3])
+        Y = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [1, 3])
+        matmul = helper.make_node("MatMul", ["X", "weight"], ["Y"])
+        graph = helper.make_graph([matmul], "test", [X], [Y], [weight])
+        model = helper.make_model(graph, producer_name="test")
+
+        onnx_path = tmp_path / "model.onnx"
+        onnx.save(model, str(onnx_path))
+
+        # Convert to OpenVINO with FP16
+        ov_path = tmp_path / "model_fp16.xml"
+        writer = OpenVINOWriter(ov_path)
+        result = writer.write_from_onnx(onnx_path, precision="FP16", compress_to_fp16=True)
+
+        assert result == ov_path
+        assert ov_path.exists()
+
+    def test_write_from_pytorch(self, tmp_path: Path) -> None:
+        """OpenVINOWriter should convert PyTorch to OpenVINO IR."""
+        pytest.importorskip("openvino")
+        torch = pytest.importorskip("torch")
+
+        from haoline.formats.openvino import OpenVINOWriter
+
+        # Create a simple PyTorch model
+        model = torch.nn.Sequential(
+            torch.nn.Linear(10, 5),
+            torch.nn.ReLU(),
+            torch.nn.Linear(5, 2),
+        )
+
+        example_input = torch.randn(1, 10)
+
+        ov_path = tmp_path / "pytorch_model.xml"
+        writer = OpenVINOWriter(ov_path)
+        result = writer.write_from_pytorch(model, example_input)
+
+        assert result == ov_path
+        assert ov_path.exists()
+        assert (tmp_path / "pytorch_model.bin").exists()
+
+
+# ============================================================================
 # TensorRT Reader Tests
 # ============================================================================
 

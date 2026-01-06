@@ -510,6 +510,20 @@ def inspect(
             help="Export model weights to SafeTensors format (.safetensors)",
         ),
     ] = None,
+    export_openvino: Annotated[
+        Path | None,
+        typer.Option(
+            "--export-openvino",
+            help="Convert ONNX model to OpenVINO IR format (.xml/.bin)",
+        ),
+    ] = None,
+    openvino_fp16: Annotated[
+        bool,
+        typer.Option(
+            "--openvino-fp16",
+            help="Compress OpenVINO model weights to FP16",
+        ),
+    ] = False,
     graph_max_nodes: Annotated[
         int,
         typer.Option("--graph-max-nodes", help="Max nodes in graph visualization"),
@@ -726,6 +740,8 @@ def inspect(
             export_ir=export_ir,
             export_graph=export_graph,
             export_weights=export_weights,
+            export_openvino=export_openvino,
+            openvino_fp16=openvino_fp16,
             graph_max_nodes=graph_max_nodes,
             hardware=hardware,
             precision=precision,
@@ -852,6 +868,8 @@ def _run_inspect(
     export_ir: Path | None,
     export_graph: Path | None,
     export_weights: Path | None,
+    export_openvino: Path | None,
+    openvino_fp16: bool,
     graph_max_nodes: int,
     hardware: str | None,
     precision: Precision,
@@ -1058,8 +1076,32 @@ def _run_inspect(
             writer.write_from_onnx(analysis_path)
             console.print(f"[green]Exported weights:[/green] {export_weights}")
 
-        # If only IR/weights export requested, exit early
-        if not any([out_json, out_md, out_html, out_pdf, html_graph, layer_csv, export_weights]):
+        if export_openvino:
+            from haoline.formats.openvino import OpenVINOWriter
+
+            writer = OpenVINOWriter(export_openvino)
+            precision = "FP16" if openvino_fp16 else "FP32"
+            result_path = writer.write_from_onnx(
+                analysis_path, precision=precision, compress_to_fp16=openvino_fp16
+            )
+            console.print(f"[green]Exported OpenVINO:[/green] {result_path}")
+            bin_path = result_path.with_suffix(".bin")
+            if bin_path.exists():
+                console.print(f"  [dim]Weights:[/dim] {bin_path}")
+
+        # If only IR/weights/OpenVINO export requested, exit early
+        if not any(
+            [
+                out_json,
+                out_md,
+                out_html,
+                out_pdf,
+                html_graph,
+                layer_csv,
+                export_weights,
+                export_openvino,
+            ]
+        ):
             return
 
     # Run analysis

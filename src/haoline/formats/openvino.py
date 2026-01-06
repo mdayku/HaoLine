@@ -373,6 +373,117 @@ class OpenVINOReader:
         )
 
 
+# =============================================================================
+# Story 23.3: OpenVINO Writer
+# =============================================================================
+
+
+class OpenVINOWriter:
+    """Writer for OpenVINO IR format (.xml/.bin)."""
+
+    def __init__(self, path: str | Path):
+        """
+        Initialize writer with output path.
+
+        Args:
+            path: Path to write the OpenVINO model (.xml).
+                  The .bin weights file will be created alongside.
+
+        Raises:
+            ImportError: If openvino is not installed.
+        """
+        self.path = Path(path)
+
+        # Ensure path ends with .xml
+        if self.path.suffix.lower() != ".xml":
+            self.path = self.path.with_suffix(".xml")
+
+        try:
+            import openvino  # noqa: F401
+        except ImportError as e:
+            raise ImportError("openvino required. Install with: pip install openvino") from e
+
+    def write_from_onnx(
+        self,
+        onnx_path: str | Path,
+        precision: str = "FP32",
+        compress_to_fp16: bool = False,
+        input_shape: list[int] | None = None,
+    ) -> Path:
+        """
+        Convert an ONNX model to OpenVINO IR format.
+
+        Args:
+            onnx_path: Path to the ONNX model file.
+            precision: Target precision ("FP32", "FP16").
+            compress_to_fp16: Whether to compress weights to FP16.
+            input_shape: Optional input shape override [N, C, H, W].
+
+        Returns:
+            Path to the written .xml file.
+        """
+        import openvino as ov
+
+        onnx_path = Path(onnx_path)
+        if not onnx_path.exists():
+            raise FileNotFoundError(f"ONNX model not found: {onnx_path}")
+
+        # Use OpenVINO's convert_model API (OpenVINO 2.0+)
+        # This replaces the older Model Optimizer (mo) tool
+        model = ov.convert_model(str(onnx_path))
+
+        # Serialize the model with optional FP16 compression
+        ov.save_model(
+            model,
+            str(self.path),
+            compress_to_fp16=(compress_to_fp16 or precision.upper() == "FP16"),
+        )
+
+        return self.path
+
+    def write_from_pytorch(
+        self,
+        model: Any,
+        example_input: Any,
+        precision: str = "FP32",
+        compress_to_fp16: bool = False,
+    ) -> Path:
+        """
+        Convert a PyTorch model to OpenVINO IR format.
+
+        Args:
+            model: PyTorch model (nn.Module).
+            example_input: Example input tensor for tracing.
+            precision: Target precision ("FP32", "FP16").
+            compress_to_fp16: Whether to compress weights to FP16.
+
+        Returns:
+            Path to the written .xml file.
+        """
+        try:
+            import torch  # noqa: F401
+        except ImportError as e:
+            raise ImportError("torch required. Install with: pip install torch") from e
+
+        import openvino as ov
+
+        # Ensure model is in eval mode (PyTorch models have eval())
+        if hasattr(model, "eval"):
+            model.eval()
+
+        # Convert using OpenVINO's convert_model with PyTorch model
+        ov_model = ov.convert_model(model, example_input=example_input)
+
+        # Serialize the model
+        ov.save_model(
+            ov_model,
+            str(self.path),
+            compress_to_fp16=(compress_to_fp16 or precision.upper() == "FP16"),
+        )
+
+        return self.path
+
+
 def is_openvino_file(path: str | Path) -> bool:
     """
     Check if a file is an OpenVINO model.
