@@ -756,6 +756,60 @@ class InspectionReport(BaseModel):
                     lines.append(f"**Recommendation**: {risk.recommendation}")
                     lines.append("")
 
+        # Advanced Quantization Analysis (Epic 26)
+        if self.quantization_analysis:
+            qa = self.quantization_analysis
+            scheme_info = qa.get("scheme_info", {})
+            scheme = scheme_info.get("scheme", "unknown").upper()
+            confidence = scheme_info.get("confidence", 0)
+            bits = scheme_info.get("bits")
+
+            lines.append("## Advanced Quantization Analysis")
+            lines.append("")
+            lines.append(f"**Scheme:** {scheme} ({confidence:.0%} confidence)")
+            if bits:
+                lines.append(f"**Weight Bits:** {bits}")
+            lines.append(
+                f"**Weight Precision:** {qa.get('weight_precision_dominant', 'unknown').upper()}"
+            )
+            lines.append(f"**Mixed Precision:** {'Yes' if qa.get('is_mixed_precision') else 'No'}")
+            lines.append(f"**Quantized Params:** {qa.get('quantization_ratio', 0):.1%}")
+            lines.append("")
+
+            # Accuracy impact
+            acc_impact = qa.get("accuracy_impact")
+            if acc_impact:
+                lines.append("### Accuracy Impact Estimate")
+                lines.append("")
+                perp = acc_impact.get("perplexity_increase_pct")
+                if perp is not None:
+                    lines.append(f"- Perplexity Increase: ~{perp:.1f}%")
+                mem_red = acc_impact.get("memory_reduction_factor", 1.0)
+                lines.append(f"- Memory Reduction: {mem_red:.1f}x")
+                lines.append("")
+
+                recs = acc_impact.get("recommendations", [])
+                if recs:
+                    lines.append("**Recommendations:**")
+                    lines.append("")
+                    for rec in recs[:3]:
+                        lines.append(f"- {rec}")
+                    lines.append("")
+
+            # Sensitive layers
+            sensitive = qa.get("sensitive_layers", [])
+            if sensitive:
+                lines.append(f"### Sensitive Layers ({len(sensitive)})")
+                lines.append("")
+                lines.append("*These layers may benefit from higher precision.*")
+                lines.append("")
+                for sl in sensitive[:5]:
+                    lines.append(
+                        f"- **{sl.get('layer_name', 'N/A')}** ({sl.get('layer_type', 'N/A')}): "
+                        f"{sl.get('reason', 'N/A')}"
+                    )
+                lines.append("")
+
         return "\n".join(lines)
 
     @staticmethod
@@ -1508,6 +1562,119 @@ class InspectionReport(BaseModel):
                         f"<td>{layer.get('op_type', 'N/A')}</td>"
                         f"<td>{layer.get('reason', 'N/A')}</td>"
                         f"<td>{layer.get('recommendation', 'N/A')}</td></tr>"
+                    )
+                html_parts.append("</table>")
+
+            html_parts.append("</section>")
+
+        # Advanced Quantization Analysis (Epic 26)
+        if self.quantization_analysis:
+            qa = self.quantization_analysis
+            scheme_info = qa.get("scheme_info", {})
+            scheme = scheme_info.get("scheme", "unknown").upper()
+            confidence = scheme_info.get("confidence", 0)
+            bits = scheme_info.get("bits")
+
+            # Scheme color mapping
+            scheme_colors = {
+                "FP32": "#737373",
+                "FP16": "#06b6d4",
+                "BF16": "#8b5cf6",
+                "INT8_STATIC": "#22c55e",
+                "INT8_DYNAMIC": "#84cc16",
+                "GPTQ": "#f59e0b",
+                "AWQ": "#f97316",
+                "GGML": "#ec4899",
+                "BNB_NF4": "#a855f7",
+                "BNB_FP4": "#a855f7",
+            }
+            scheme_color = scheme_colors.get(scheme, "#737373")
+
+            html_parts.append('<section class="advanced-quant">')
+            html_parts.append("<h2>Advanced Quantization Analysis</h2>")
+
+            # Scheme badge
+            html_parts.append(
+                f"""
+                <div style="display: inline-block; padding: 0.5rem 1rem; margin-bottom: 1rem;
+                    background: {scheme_color}22; border: 1px solid {scheme_color}; border-radius: 8px;">
+                    <span style="color: {scheme_color}; font-weight: bold;">{scheme}</span>
+                    <span style="color: var(--text-secondary); margin-left: 0.5rem;">
+                        ({confidence:.0%} confidence)
+                    </span>
+                </div>
+                """
+            )
+
+            # Key metrics
+            weight_prec = qa.get("weight_precision_dominant", "unknown").upper()
+            is_mixed = qa.get("is_mixed_precision", False)
+            quant_ratio = qa.get("quantization_ratio", 0)
+
+            html_parts.append(
+                f"""
+                <div style="display: flex; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <div style="text-align: center; padding: 1rem; background: var(--bg-card);
+                         border-radius: 8px; min-width: 100px;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-cyan);">
+                            {bits if bits else weight_prec}
+                        </div>
+                        <div style="color: var(--text-secondary);">
+                            {"Weight Bits" if bits else "Weight Precision"}
+                        </div>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background: var(--bg-card);
+                         border-radius: 8px; min-width: 100px;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-cyan);">
+                            {"Yes" if is_mixed else "No"}
+                        </div>
+                        <div style="color: var(--text-secondary);">Mixed Precision</div>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background: var(--bg-card);
+                         border-radius: 8px; min-width: 100px;">
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-cyan);">
+                            {quant_ratio:.1%}
+                        </div>
+                        <div style="color: var(--text-secondary);">Quantized</div>
+                    </div>
+                </div>
+                """
+            )
+
+            # Accuracy impact
+            acc_impact = qa.get("accuracy_impact")
+            if acc_impact:
+                perp = acc_impact.get("perplexity_increase_pct")
+                mem_red = acc_impact.get("memory_reduction_factor", 1.0)
+                html_parts.append("<h3>Accuracy Impact Estimate</h3>")
+                html_parts.append("<ul>")
+                if perp is not None:
+                    html_parts.append(f"<li>Perplexity Increase: ~{perp:.1f}%</li>")
+                html_parts.append(f"<li>Memory Reduction: {mem_red:.1f}x</li>")
+                html_parts.append("</ul>")
+
+                recs = acc_impact.get("recommendations", [])
+                if recs:
+                    html_parts.append("<h4>Recommendations</h4><ul>")
+                    for rec in recs[:3]:
+                        html_parts.append(f"<li>{rec}</li>")
+                    html_parts.append("</ul>")
+
+            # Sensitive layers
+            sensitive = qa.get("sensitive_layers", [])
+            if sensitive:
+                html_parts.append(f"<h3>Sensitive Layers ({len(sensitive)})</h3>")
+                html_parts.append(
+                    "<p style='color: var(--text-secondary);'>"
+                    "These layers may benefit from higher precision.</p>"
+                )
+                html_parts.append("<table>")
+                html_parts.append("<tr><th>Layer</th><th>Type</th><th>Reason</th></tr>")
+                for sl in sensitive[:5]:
+                    html_parts.append(
+                        f"<tr><td>{sl.get('layer_name', 'N/A')}</td>"
+                        f"<td>{sl.get('layer_type', 'N/A')}</td>"
+                        f"<td>{sl.get('reason', 'N/A')}</td></tr>"
                     )
                 html_parts.append("</table>")
 

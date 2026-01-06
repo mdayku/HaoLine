@@ -1367,7 +1367,7 @@ def _run_inspect(
             ]
             for w in lint_result.warnings[:10]:
                 md_lines.append(f"- {w.node_name}: {w.message}\n")
-            quant_report.write_text("".join(md_lines))
+            quant_report.write_text("".join(md_lines), encoding="utf-8")
             console.print(f"[green]Wrote:[/green] {quant_report}")
 
     # Advanced quantization analysis (Epic 26)
@@ -1418,7 +1418,9 @@ def _run_inspect(
         if quant_analysis_json:
             import json
 
-            quant_analysis_json.write_text(json.dumps(quant_result.to_dict(), indent=2))
+            quant_analysis_json.write_text(
+                json.dumps(quant_result.to_dict(), indent=2), encoding="utf-8"
+            )
             console.print(f"\n[green]Wrote:[/green] {quant_analysis_json}")
 
     # LLM summary
@@ -1453,17 +1455,17 @@ def _run_inspect(
 
     # Write outputs
     if out_json:
-        out_json.write_text(report.to_json())
+        out_json.write_text(report.to_json(), encoding="utf-8")
         console.print(f"[green]Wrote:[/green] {out_json}")
 
     if out_md:
         md_content = report.to_markdown()
-        out_md.write_text(md_content)
+        out_md.write_text(md_content, encoding="utf-8")
         console.print(f"[green]Wrote:[/green] {out_md}")
 
     if out_html:
         html_content = report.to_html()
-        out_html.write_text(html_content)
+        out_html.write_text(html_content, encoding="utf-8")
         console.print(f"[green]Wrote:[/green] {out_html}")
 
     if out_pdf:
@@ -2137,7 +2139,7 @@ def compare(
             # Determine output format based on extension
             if decision_report.suffix.lower() == ".md":
                 md_content = _decision_report_to_markdown(dr)
-                decision_report.write_text(md_content)
+                decision_report.write_text(md_content, encoding="utf-8")
             else:
                 decision_report.write_text(json.dumps(dr, indent=2))
 
