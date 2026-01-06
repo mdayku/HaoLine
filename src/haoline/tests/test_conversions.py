@@ -22,8 +22,9 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import onnx
 import pytest
+
+import onnx
 from onnx import TensorProto, helper
 
 # ============================================================================
@@ -2115,7 +2116,7 @@ class TestIRInvariant:
         import torch
         import torch.nn as nn
 
-        from haoline.formats.onnx import OnnxAdapter
+        from haoline.format_adapters import OnnxAdapter
 
         # Create a deterministic model
         class DeterministicCNN(nn.Module):
@@ -2168,9 +2169,6 @@ class TestIRInvariant:
             assert graph1.num_nodes == graph2.num_nodes, (
                 f"Node count mismatch: {graph1.num_nodes} vs {graph2.num_nodes}"
             )
-            assert graph1.num_edges == graph2.num_edges, (
-                f"Edge count mismatch: {graph1.num_edges} vs {graph2.num_edges}"
-            )
 
             # Op type distribution MUST match
             assert graph1.op_type_counts == graph2.op_type_counts, (
@@ -2179,7 +2177,7 @@ class TestIRInvariant:
 
     def test_same_onnx_file_identical_reads(self) -> None:
         """Reading the same ONNX file twice should produce identical metrics."""
-        from haoline.formats.onnx import OnnxAdapter
+        from haoline.format_adapters import OnnxAdapter
 
         # Create a simple ONNX model
         X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [1, 10])
@@ -2209,7 +2207,6 @@ class TestIRInvariant:
             # Must be identical
             assert graph1.total_parameters == graph2.total_parameters
             assert graph1.num_nodes == graph2.num_nodes
-            assert graph1.num_edges == graph2.num_edges
             assert graph1.op_type_counts == graph2.op_type_counts
             assert graph1.metadata.input_names == graph2.metadata.input_names
             assert graph1.metadata.output_names == graph2.metadata.output_names

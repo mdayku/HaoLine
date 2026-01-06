@@ -1004,6 +1004,7 @@ def _convert_pytorch_to_onnx(
             },
             opset_version=opset_version,
             do_constant_folding=True,
+            dynamo=False,  # Use legacy exporter for dynamic_axes compatibility
         )
         logger.info(f"ONNX model saved to: {onnx_path}")
 

@@ -810,7 +810,7 @@ def _run_inspect(
             from haoline._cli_legacy import _convert_tensorflow_to_onnx
 
             result_path, _ = _convert_tensorflow_to_onnx(
-                saved_model_path=from_tensorflow,
+                tf_path=from_tensorflow,
                 output_path=keep_onnx,
                 opset_version=opset_version,
                 logger=logger,
@@ -850,6 +850,7 @@ def _run_inspect(
             result_path, _ = _convert_tflite_to_onnx(
                 tflite_path=from_tflite,
                 output_path=keep_onnx,
+                opset_version=opset_version,
                 logger=logger,
             )
             if not result_path:
