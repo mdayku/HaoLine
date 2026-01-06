@@ -28,7 +28,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epic 49: HuggingFace Integration | In Progress | 5 | 10/30 | P1 |
+| Epic 49: HuggingFace Integration | In Progress | 5 | 17/30 | P1 |
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
@@ -208,18 +208,16 @@
 - [x] **Task 49.1.6**: Run full analysis on exported ONNX ✅
 - [x] **Task 49.1.7**: Add `huggingface` extra to pyproject.toml (transformers, optimum) ✅
 
-### Story 49.2: Format-Aware UI/CLI
+### Story 49.2: Format-Aware UI/CLI - **COMPLETE** ✅
 *Show appropriate metrics and disable unavailable features per format.*
 
-**1.0 Scope:** Tasks 49.2.4-7 are required for 1.0. Tasks 49.2.8-9 are polish (post-1.0).
-
-- [x] **Task 49.2.1**: Define `FormatCapabilities` dataclass with feature flags ✅ **COMPLETE**
-- [x] **Task 49.2.2**: Return capabilities from each format reader ✅ **COMPLETE**
-- [x] **Task 49.2.3**: CLI: Skip FLOPs/graph for weight-only formats with clear message ✅ **COMPLETE**
-- [ ] **Task 49.2.4**: Streamlit: Disable graph tab for formats without graph **[1.0]**
-- [ ] **Task 49.2.5**: Show "Convert to ONNX for full analysis" prompt for Tier 3/4 formats **[1.0]**
-- [ ] **Task 49.2.6**: Add format tier badge in reports (Full/Graph/Metadata/Weights) **[1.0]**
-- [ ] **Task 49.2.7**: Show "Feature unavailable for [format]" with upgrade path in UI **[1.0]**
+- [x] **Task 49.2.1**: Define `FormatCapabilities` dataclass with feature flags ✅
+- [x] **Task 49.2.2**: Return capabilities from each format reader ✅
+- [x] **Task 49.2.3**: CLI: Skip FLOPs/graph for weight-only formats with clear message ✅
+- [x] **Task 49.2.4**: Streamlit: Disable graph tab for formats without graph ✅
+- [x] **Task 49.2.5**: Show "Convert to ONNX for full analysis" prompt for Tier 3/4 formats ✅
+- [x] **Task 49.2.6**: Add format tier badge in reports (Full/Graph/Metadata/Weights) ✅
+- [x] **Task 49.2.7**: Show "Feature unavailable for [format]" with upgrade path in UI ✅
 - [ ] **Task 49.2.8**: Add "Why is this grayed out?" help tooltip explaining format limitations *(post-1.0)*
 - [ ] **Task 49.2.9**: Generate "Format Capabilities Report" section showing what was/wasn't analyzed *(post-1.0)*
 
