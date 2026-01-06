@@ -1,6 +1,6 @@
 # HaoLine Cursor Rules
 
-## Indexter Integration (Semantic Code Search)
+## indexter-rlm Integration (Semantic Code Search via MCP)
 
 For any task involving:
 - Understanding existing code
@@ -10,12 +10,15 @@ For any task involving:
 - Explaining system design
 
 You MUST:
-1. Query Indexter via MCP with a semantic search describing the intent.
+1. Query indexter-rlm via MCP with a semantic search describing the intent.
 2. Review the returned code snippets before proposing changes.
 3. Cite the retrieved code in your reasoning.
 
-Do NOT rely on assumptions or prior messages as a substitute for Indexter results.
-If Indexter returns no results, state that explicitly.
+Do NOT rely on assumptions or prior messages as a substitute for indexter-rlm results.
+If indexter-rlm returns no results, state that explicitly.
+
+**MCP Server:** `indexter-rlm` (command: `rlm-mcp`)
+**Repository name:** `HaoLine`
 
 ---
 
