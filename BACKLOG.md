@@ -976,12 +976,3 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 
 ---
 
-## Archived Merged Epics
-
-*The following epics were merged into existing epics. Any remaining tasks are tracked in their parent epics.*
-
-- **Epic 45** → Merged into Epic 11 (Streamlit UI)
-- **Epic 46** → Merged into Epic 18 (Universal IR) - Stories 18.7, 18.8 remain
-- **Epic 48** → Merged into Epic 33 (QAT Linters) - Story 33.6 remains
-
----

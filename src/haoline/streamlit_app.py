@@ -1987,29 +1987,34 @@ def main():
                     st.markdown("### Data Types")
                     import pandas as pd
 
-                    dtype_df = pd.DataFrame([
-                        {"Type": dtype, "Count": count}
-                        for dtype, count in sorted(st_data.dtype_breakdown.items(), key=lambda x: -x[1])
-                    ])
+                    dtype_df = pd.DataFrame(
+                        [
+                            {"Type": dtype, "Count": count}
+                            for dtype, count in sorted(
+                                st_data.dtype_breakdown.items(), key=lambda x: -x[1]
+                            )
+                        ]
+                    )
                     st.dataframe(dtype_df, use_container_width=True)
 
                 # Tensor list (searchable)
                 st.markdown("### Tensor Details")
                 search = st.text_input("Search tensors", placeholder="Filter by name...")
                 tensors_filtered = [
-                    t for t in st_data.tensors
-                    if not search or search.lower() in t.name.lower()
+                    t for t in st_data.tensors if not search or search.lower() in t.name.lower()
                 ]
-                tensor_df = pd.DataFrame([
-                    {
-                        "Name": t.name,
-                        "Shape": str(t.shape),
-                        "Type": t.dtype,
-                        "Elements": f"{t.n_elements:,}",
-                        "Size": format_bytes(t.size_bytes),
-                    }
-                    for t in tensors_filtered[:500]  # Limit for performance
-                ])
+                tensor_df = pd.DataFrame(
+                    [
+                        {
+                            "Name": t.name,
+                            "Shape": str(t.shape),
+                            "Type": t.dtype,
+                            "Elements": f"{t.n_elements:,}",
+                            "Size": format_bytes(t.size_bytes),
+                        }
+                        for t in tensors_filtered[:500]  # Limit for performance
+                    ]
+                )
                 st.dataframe(tensor_df, use_container_width=True, height=400)
                 if len(tensors_filtered) > 500:
                     st.caption(f"Showing 500 of {len(tensors_filtered)} tensors")
