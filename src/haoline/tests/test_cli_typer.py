@@ -450,3 +450,44 @@ class TestErrorSuggestions:
 
         assert suggestion is not None
         assert "path" in suggestion.lower() or "exists" in suggestion.lower()
+
+
+class TestHuggingFaceIntegration:
+    """Tests for --from-huggingface CLI flag (Epic 49.1)."""
+
+    def test_huggingface_flag_in_help(self):
+        """Test that --from-huggingface is shown in help."""
+        result = runner.invoke(app, ["inspect", "--help"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.output)
+        # Rich truncates long option names, so check for the prefix
+        assert "--from-huggingfa" in output or "huggingface" in output.lower()
+        assert "HuggingFace" in output
+
+    def test_huggingface_in_check_deps(self):
+        """Test that transformers/optimum appear in check-deps."""
+        result = runner.invoke(app, ["check-deps"])
+        assert result.exit_code == 0
+        output = strip_ansi(result.output)
+        assert "transformers" in output or "huggingface" in output.lower()
+
+    def test_huggingface_without_deps_shows_install_hint(self):
+        """Test that missing deps shows install instructions.
+
+        Note: This test only runs if transformers is NOT installed.
+        If transformers IS installed, skip this test.
+        """
+        try:
+            import transformers  # noqa: F401
+
+            # Dependencies are installed, skip this test
+            return
+        except ImportError:
+            pass
+
+        # Run with a fake repo ID - should fail with install hint
+        result = runner.invoke(app, ["inspect", "--from-huggingface", "bert-base-uncased"])
+        output = strip_ansi(result.output)
+
+        # Should mention the huggingface extra
+        assert "huggingface" in output.lower() or "transformers" in output.lower()
