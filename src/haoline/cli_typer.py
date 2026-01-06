@@ -503,6 +503,13 @@ def inspect(
         Path | None,
         typer.Option("--export-graph", help="Export graph as DOT or PNG (Graphviz)"),
     ] = None,
+    export_weights: Annotated[
+        Path | None,
+        typer.Option(
+            "--export-weights",
+            help="Export model weights to SafeTensors format (.safetensors)",
+        ),
+    ] = None,
     graph_max_nodes: Annotated[
         int,
         typer.Option("--graph-max-nodes", help="Max nodes in graph visualization"),
@@ -718,6 +725,7 @@ def inspect(
             assets_dir=assets_dir,
             export_ir=export_ir,
             export_graph=export_graph,
+            export_weights=export_weights,
             graph_max_nodes=graph_max_nodes,
             hardware=hardware,
             precision=precision,
@@ -843,6 +851,7 @@ def _run_inspect(
     assets_dir: Path | None,
     export_ir: Path | None,
     export_graph: Path | None,
+    export_weights: Path | None,
     graph_max_nodes: int,
     hardware: str | None,
     precision: Precision,
@@ -1042,8 +1051,15 @@ def _run_inspect(
                 )
                 raise typer.Exit(1)
 
-        # If only IR export requested, exit early
-        if not any([out_json, out_md, out_html, out_pdf, html_graph, layer_csv]):
+        if export_weights:
+            from haoline.formats.safetensors import SafeTensorsWriter
+
+            writer = SafeTensorsWriter(export_weights)
+            writer.write_from_onnx(analysis_path)
+            console.print(f"[green]Exported weights:[/green] {export_weights}")
+
+        # If only IR/weights export requested, exit early
+        if not any([out_json, out_md, out_html, out_pdf, html_graph, layer_csv, export_weights]):
             return
 
     # Run analysis

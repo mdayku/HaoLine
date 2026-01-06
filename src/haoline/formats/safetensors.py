@@ -229,6 +229,204 @@ class SafeTensorsReader:
         return dtype_map.get(dtype.type, "F32")
 
 
+# =============================================================================
+# Story 19.2: SafeTensors Writer
+# =============================================================================
+
+
+class SafeTensorsWriter:
+    """Writer for SafeTensors format files."""
+
+    def __init__(self, path: str | Path):
+        """
+        Initialize writer with output path.
+
+        Args:
+            path: Path to write the SafeTensors file.
+
+        Raises:
+            ImportError: If safetensors library is not installed.
+        """
+        self.path = Path(path)
+
+        try:
+            import safetensors  # noqa: F401
+        except ImportError as e:
+            raise ImportError(
+                "safetensors library required. Install with: pip install safetensors"
+            ) from e
+
+    def write(
+        self,
+        tensors: dict[str, Any],  # numpy arrays
+        metadata: dict[str, str] | None = None,
+    ) -> Path:
+        """
+        Write tensors to SafeTensors file.
+
+        Args:
+            tensors: Dictionary mapping tensor names to numpy arrays.
+            metadata: Optional metadata dictionary (string keys and values only).
+
+        Returns:
+            Path to the written file.
+        """
+        import numpy as np
+        from safetensors.numpy import save_file
+
+        # Validate tensors are numpy arrays
+        for name, tensor in tensors.items():
+            if not isinstance(tensor, np.ndarray):
+                raise TypeError(f"Tensor '{name}' must be a numpy array, got {type(tensor)}")
+
+        # SafeTensors metadata must be string -> string
+        safe_metadata = {}
+        if metadata:
+            for k, v in metadata.items():
+                safe_metadata[str(k)] = str(v)
+
+        save_file(tensors, str(self.path), metadata=safe_metadata or None)
+        return self.path
+
+    def write_from_onnx(
+        self,
+        onnx_path: str | Path,
+        metadata: dict[str, str] | None = None,
+    ) -> Path:
+        """
+        Extract initializers from an ONNX model and write to SafeTensors.
+
+        Args:
+            onnx_path: Path to the ONNX model file.
+            metadata: Optional additional metadata.
+
+        Returns:
+            Path to the written SafeTensors file.
+        """
+        import numpy as np
+
+        try:
+            import onnx
+            from onnx import numpy_helper
+        except ImportError as e:
+            raise ImportError("onnx library required. Install with: pip install onnx") from e
+
+        model = onnx.load(str(onnx_path))
+        tensors: dict[str, np.ndarray] = {}
+
+        # Extract initializers (weights)
+        for initializer in model.graph.initializer:
+            tensor = numpy_helper.to_array(initializer)
+            tensors[initializer.name] = tensor
+
+        # Build metadata
+        export_metadata = {
+            "source_format": "onnx",
+            "source_file": Path(onnx_path).name,
+            "tensor_count": str(len(tensors)),
+        }
+        if model.producer_name:
+            export_metadata["producer_name"] = model.producer_name
+        if model.model_version:
+            export_metadata["model_version"] = str(model.model_version)
+
+        if metadata:
+            export_metadata.update(metadata)
+
+        return self.write(tensors, export_metadata)
+
+    def write_from_pytorch(
+        self,
+        state_dict: dict[str, Any],
+        metadata: dict[str, str] | None = None,
+    ) -> Path:
+        """
+        Convert a PyTorch state_dict to SafeTensors format.
+
+        Args:
+            state_dict: PyTorch model state dictionary.
+            metadata: Optional additional metadata.
+
+        Returns:
+            Path to the written SafeTensors file.
+        """
+        try:
+            import torch
+        except ImportError as e:
+            raise ImportError("torch library required. Install with: pip install torch") from e
+
+        tensors: dict[str, Any] = {}
+
+        for name, tensor in state_dict.items():
+            if isinstance(tensor, torch.Tensor):
+                # Convert to numpy, handling various dtypes
+                np_tensor = tensor.detach().cpu().numpy()
+                tensors[name] = np_tensor
+            # Skip non-tensor entries (e.g., metadata, config)
+
+        # Build metadata
+        export_metadata = {
+            "source_format": "pytorch",
+            "tensor_count": str(len(tensors)),
+        }
+        if metadata:
+            export_metadata.update(metadata)
+
+        return self.write(tensors, export_metadata)
+
+    def write_from_pytorch_file(
+        self,
+        pytorch_path: str | Path,
+        metadata: dict[str, str] | None = None,
+    ) -> Path:
+        """
+        Load a PyTorch checkpoint file and convert to SafeTensors.
+
+        Args:
+            pytorch_path: Path to PyTorch .pt/.pth file.
+            metadata: Optional additional metadata.
+
+        Returns:
+            Path to the written SafeTensors file.
+        """
+        try:
+            import torch
+        except ImportError as e:
+            raise ImportError("torch library required. Install with: pip install torch") from e
+
+        # Load checkpoint (weights_only=True for security)
+        try:
+            checkpoint = torch.load(str(pytorch_path), map_location="cpu", weights_only=True)
+        except TypeError:
+            # Older PyTorch versions don't have weights_only
+            checkpoint = torch.load(str(pytorch_path), map_location="cpu")
+
+        # Handle different checkpoint formats
+        if isinstance(checkpoint, dict):
+            if "state_dict" in checkpoint:
+                state_dict = checkpoint["state_dict"]
+            elif "model_state_dict" in checkpoint:
+                state_dict = checkpoint["model_state_dict"]
+            elif "model" in checkpoint:
+                state_dict = checkpoint["model"]
+            else:
+                # Assume the dict itself is the state_dict
+                state_dict = checkpoint
+        else:
+            raise ValueError(
+                f"Unsupported checkpoint format. Expected dict, got {type(checkpoint)}"
+            )
+
+        # Add source file to metadata
+        file_metadata = {
+            "source_file": Path(pytorch_path).name,
+        }
+        if metadata:
+            file_metadata.update(metadata)
+
+        return self.write_from_pytorch(state_dict, file_metadata)
+
+
 def is_safetensors_file(path: str | Path) -> bool:
     """
     Check if a file is a valid SafeTensors file.

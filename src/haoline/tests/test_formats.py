@@ -222,6 +222,130 @@ class TestSafeTensorsReader:
 
 
 # ============================================================================
+# SafeTensors Writer Tests (Story 19.2)
+# ============================================================================
+
+
+class TestSafeTensorsWriter:
+    """Tests for SafeTensorsWriter."""
+
+    def test_write_basic(self, tmp_path: Path) -> None:
+        """SafeTensorsWriter should write valid SafeTensors files."""
+        pytest.importorskip("safetensors")
+        import numpy as np
+
+        from haoline.formats.safetensors import SafeTensorsReader, SafeTensorsWriter
+
+        out_path = tmp_path / "test.safetensors"
+        writer = SafeTensorsWriter(out_path)
+
+        tensors = {
+            "layer1.weight": np.random.randn(10, 20).astype(np.float32),
+            "layer1.bias": np.random.randn(10).astype(np.float32),
+        }
+        metadata = {"source": "test", "version": "1.0"}
+
+        result = writer.write(tensors, metadata)
+        assert result == out_path
+        assert out_path.exists()
+
+        # Verify by reading back
+        reader = SafeTensorsReader(out_path)
+        info = reader.read()
+        assert len(info.tensors) == 2
+        assert info.metadata.get("source") == "test"
+
+    def test_write_from_onnx(self, tmp_path: Path) -> None:
+        """SafeTensorsWriter should extract weights from ONNX models."""
+        pytest.importorskip("safetensors")
+        pytest.importorskip("onnx")
+        import numpy as np
+
+        import onnx
+        from haoline.formats.safetensors import SafeTensorsReader, SafeTensorsWriter
+        from onnx import TensorProto, helper, numpy_helper
+
+        # Create a simple ONNX model with initializers
+        weight = numpy_helper.from_array(np.random.randn(3, 3).astype(np.float32), name="weight")
+        bias = numpy_helper.from_array(np.random.randn(3).astype(np.float32), name="bias")
+
+        X = helper.make_tensor_value_info("X", TensorProto.FLOAT, [1, 3])
+        Y = helper.make_tensor_value_info("Y", TensorProto.FLOAT, [1, 3])
+
+        matmul = helper.make_node("MatMul", ["X", "weight"], ["matmul_out"])
+        add = helper.make_node("Add", ["matmul_out", "bias"], ["Y"])
+
+        graph = helper.make_graph([matmul, add], "test", [X], [Y], [weight, bias])
+        model = helper.make_model(graph, producer_name="test")
+
+        onnx_path = tmp_path / "model.onnx"
+        onnx.save(model, str(onnx_path))
+
+        # Convert to SafeTensors
+        st_path = tmp_path / "model.safetensors"
+        writer = SafeTensorsWriter(st_path)
+        result = writer.write_from_onnx(onnx_path)
+        assert result == st_path
+        assert st_path.exists()
+
+        # Verify
+        reader = SafeTensorsReader(st_path)
+        info = reader.read()
+        assert len(info.tensors) == 2
+        assert info.metadata.get("source_format") == "onnx"
+
+    def test_write_from_pytorch_state_dict(self, tmp_path: Path) -> None:
+        """SafeTensorsWriter should convert PyTorch state_dict."""
+        pytest.importorskip("safetensors")
+        torch = pytest.importorskip("torch")
+
+        from haoline.formats.safetensors import SafeTensorsReader, SafeTensorsWriter
+
+        state_dict = {
+            "fc1.weight": torch.randn(10, 5),
+            "fc1.bias": torch.randn(10),
+            "fc2.weight": torch.randn(3, 10),
+            "fc2.bias": torch.randn(3),
+        }
+
+        st_path = tmp_path / "pytorch_model.safetensors"
+        writer = SafeTensorsWriter(st_path)
+        result = writer.write_from_pytorch(state_dict)
+        assert result == st_path
+
+        # Verify
+        reader = SafeTensorsReader(st_path)
+        info = reader.read()
+        assert len(info.tensors) == 4
+        assert info.metadata.get("source_format") == "pytorch"
+
+    def test_write_from_pytorch_file(self, tmp_path: Path) -> None:
+        """SafeTensorsWriter should load and convert PyTorch checkpoint files."""
+        pytest.importorskip("safetensors")
+        torch = pytest.importorskip("torch")
+
+        from haoline.formats.safetensors import SafeTensorsReader, SafeTensorsWriter
+
+        # Create a checkpoint file
+        state_dict = {
+            "linear.weight": torch.randn(5, 3),
+            "linear.bias": torch.randn(5),
+        }
+        pt_path = tmp_path / "checkpoint.pt"
+        torch.save({"state_dict": state_dict}, pt_path)
+
+        st_path = tmp_path / "converted.safetensors"
+        writer = SafeTensorsWriter(st_path)
+        result = writer.write_from_pytorch_file(pt_path)
+        assert result == st_path
+
+        # Verify
+        reader = SafeTensorsReader(st_path)
+        info = reader.read()
+        assert len(info.tensors) == 2
+
+
+# ============================================================================
 # GGUF Reader Tests
 # ============================================================================
 
