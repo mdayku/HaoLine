@@ -711,29 +711,34 @@ Streamlit renders graph-based views only when the format includes a graph; other
 
 ### Auto-conversion to ONNX (app + CLI)
 
-| Source format | Auto-convert in Streamlit | CLI flag |
-| --- | --- | --- |
-| PyTorch (.pt/.pth) | ✅ (requires input shape prompt) | `--from-pytorch` |
-| TFLite (.tflite) | ✅ (uses `tflite2onnx` if installed) | `--from-tflite` |
-| CoreML (.mlmodel/.mlpackage) | ✅ (uses `coremltools` if installed) | `--from-coreml` |
-| TensorFlow/Keras/JAX | CLI-only | `--from-tensorflow`, `--from-keras`, `--from-jax` |
-| OpenVINO (.xml/.bin) | Not auto-converted; analyzed directly | n/a |
-| GGUF / SafeTensors | No (metadata/weights only) | n/a |
+| Source format | Analysis Tier | CLI Conversion | Notes |
+| --- | --- | --- | --- |
+| ONNX (.onnx) | 🟢 Full | N/A (native) | Complete analysis with graph, FLOPs, memory |
+| PyTorch (.pt/.pth) | 🟢 Full | `--from-pytorch` | Requires `--input-shape` |
+| TensorFlow SavedModel | 🟢 Full | `--from-tensorflow` | Uses tf2onnx |
+| Keras (.h5/.keras) | 🟢 Full | `--from-keras` | Uses tf2onnx |
+| TFLite (.tflite) | 🔵 Graph | `--from-tflite` | Native reader shows structure; convert for FLOPs |
+| HuggingFace Hub | 🟢 Full | `--from-huggingface` | Uses optimum for ONNX export |
+| CoreML (.mlmodel) | 🔵 Graph | ❌ No path | Analyze directly; no ONNX conversion available |
+| OpenVINO (.xml/.bin) | 🔵 Graph | ❌ No path | Analyze directly; IR derived from ONNX |
+| GGUF (.gguf) | 🟡 Metadata | N/A | LLM weights with quantization info |
+| SafeTensors | ⚪ Weights | N/A | Weights only; use `--from-huggingface` if config.json exists |
 
-If conversion dependencies are missing, the app falls back to native readers with limited features; provide input shapes for PyTorch or use the CLI for full control.
+**Tier Legend:**
+- 🟢 **Full**: Graph visualization, FLOPs, memory estimation, all features
+- 🔵 **Graph**: Graph structure visible, limited metrics
+- 🟡 **Metadata**: Architecture info, no computational graph
+- ⚪ **Weights**: Parameter counts only
 
-**Want Full Analysis for TFLite/CoreML/OpenVINO?**
-
-These formats have graph structure but limited FLOPs/memory analysis. Convert to ONNX externally for complete metrics:
+**Conversion Notes:**
+- TFLite → ONNX uses `tflite2onnx` (included in `[full]` extra)
+- CoreML/OpenVINO: No reliable reverse-conversion to ONNX exists. These formats are typically converted FROM ONNX/PyTorch, not the other way.
+- SafeTensors: If `config.json` exists in the same directory, use `--from-huggingface` to load the complete model
 
 ```bash
-# Example: TFLite to ONNX (requires tflite2onnx)
-pip install tflite2onnx
-tflite2onnx model.tflite model.onnx
-python -m haoline model.onnx --out-html report.html
+# Example: TFLite to ONNX for full analysis
+haoline inspect --from-tflite model.tflite --keep-onnx converted.onnx --out-html report.html
 ```
-
-**HuggingFace Models:** For models stored as SafeTensors, you need the original ONNX export or PyTorch weights. SafeTensors contains only weights, not computational graph.
 
 ---
 
