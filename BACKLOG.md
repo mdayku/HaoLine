@@ -28,7 +28,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epic 49: HuggingFace Integration | In Progress | 5 | 25/30 | P1 |
+| Epic 49: HuggingFace Integration | In Progress | 5 | 26/30 | P1 |
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
@@ -229,7 +229,7 @@
 - [x] **Task 49.3.3**: Auto-suggest HF model load if config found ✅
 - [x] **Task 49.3.4**: Support local directory with config + safetensors ✅
 
-### Story 49.4: ONNX Hub Conversions (Full Analysis Path) - **PARTIAL** ✅
+### Story 49.4: ONNX Hub Conversions (Full Analysis Path) - **COMPLETE** ✅
 *Convert TFLite/CoreML/OpenVINO → ONNX to enable full analysis capabilities.*
 
 **Why this approach:** Instead of building native UniversalGraph adapters for each format, convert to ONNX first and reuse all existing analysis code. Trade-off: some conversions may be lossy.
@@ -242,7 +242,7 @@
 - [~] **Task 49.4.6**: `--convert-to-onnx` for OpenVINO - **SKIPPED** (no conversion path)
 - [x] **Task 49.4.7**: CLI auto-prompt for TFLite conversion ✅
 - [x] **Task 49.4.8**: Streamlit: Show conversion hint for TFLite ✅
-- [ ] **Task 49.4.9**: Document conversion quality/lossiness per format
+- [x] **Task 49.4.9**: Document conversion quality/lossiness per format ✅
 
 ### Story 49.5: Native FLOPs for Non-ONNX Formats (Optional)
 *Alternative to hub conversion: Add FLOPs directly to format readers.*
