@@ -1301,6 +1301,20 @@ Completed tasks:
 - [x] Streamlit: Show conversion hint for TFLite
 - [x] Document conversion quality/lossiness per format
 
+### Story 49.5: Native FLOPs for Non-ONNX Formats - COMPLETE (4/4)
+*Added native FLOP estimation to Graph-tier format readers.*
+
+- [x] Map TFLite builtin ops to FLOP formulas (40+ ops: Conv2D, DepthwiseConv, FullyConnected, LSTM, etc.)
+- [x] Map CoreML layer types to FLOP formulas (40+ types: convolution, innerProduct, softmax, etc.)
+- [x] Map OpenVINO op types to FLOP formulas (50+ ops: Convolution, MatMul, ScaledDotProductAttention, etc.)
+- [x] Update FormatCapabilities (has_flops=True for TFLite, CoreML, OpenVINO)
+
+**Key files modified:**
+- `src/haoline/formats/tflite.py` - `TFLITE_FLOP_FORMULAS`, `_estimate_tflite_op_flops()`, `TFLiteInfo.total_flops`
+- `src/haoline/formats/coreml.py` - `COREML_FLOP_FORMULAS`, `_estimate_coreml_layer_flops()`, `CoreMLInfo.total_flops`
+- `src/haoline/formats/openvino.py` - `OPENVINO_FLOP_FORMULAS`, `_estimate_openvino_layer_flops()`, `OpenVINOInfo.total_flops`
+- `src/haoline/format_adapters.py` - Updated `FORMAT_CAPABILITIES` with `has_flops=True`
+
 ---
 
 ## Archived Merged Epics

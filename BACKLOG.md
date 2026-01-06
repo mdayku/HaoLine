@@ -17,7 +17,6 @@
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
 | **P1** | LLM-Scale Analysis | Epics 26-30 (70B+ param models, MoE, KV cache) |
-| **P1** | Native Format FLOPs | Epic 49.5 (TFLite/CoreML/OpenVINO FLOPs) |
 | **P2** | AWS GPU Deployment | Epic 51 (TensorRT, runtime benchmarking) |
 | **P3** | Model Optimization Service | Epics 31-32 (automated quantization) |
 
@@ -28,7 +27,6 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epic 49.5: Native Format FLOPs | ✅ Complete | 1 | 4/4 | P1 |
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
@@ -45,7 +43,7 @@
 | Epic 47: Model Card Standards | Not Started | 2 | 0/10 | P4 |
 | Epics 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 
-**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 24, 25, 33, 39, 40, 41, 42, 49.1-49.4, 50, 52, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
+**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 24, 25, 33, 39, 40, 41, 42, 49 (all stories), 50, 52, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
 
 ---
 
@@ -189,21 +187,18 @@
 
 ---
 
-## Epic 49: Format Capability Tiers & HuggingFace Integration
+## Epic 49: Format Capability Tiers & HuggingFace Integration - **COMPLETE** ✅
 
-*Stories 49.1-49.4 complete and archived to PRDBacklogArchive.md*
+*All 5 stories complete. Archived to PRDBacklogArchive.md*
 
-**Completed:** HuggingFace CLI (`--from-huggingface`), format tier badges, SafeTensors config detection, TFLite conversion prompts.
+**Delivered:**
+- HuggingFace CLI (`--from-huggingface`) with auto-conversion to ONNX
+- Format tier badges (Full/Graph/Metadata/Weights)
+- SafeTensors config.json detection and conversion hints
+- TFLite conversion prompts in CLI and Streamlit
+- Native FLOP estimation for TFLite, CoreML, and OpenVINO
 
 **Finding:** CoreML/OpenVINO → ONNX conversions are not feasible (these formats are typically targets, not sources).
-
-### Story 49.5: Native FLOPs for Non-ONNX Formats - **COMPLETE** ✅
-*Added native FLOP estimation to Graph-tier format readers.*
-
-- [x] **Task 49.5.1**: Map TFLite builtin ops to FLOP formulas ✅
-- [x] **Task 49.5.2**: Map CoreML layer types to FLOP formulas ✅
-- [x] **Task 49.5.3**: Map OpenVINO op types to FLOP formulas ✅
-- [x] **Task 49.5.4**: Update FormatCapabilities (has_flops=True) ✅
 
 ---
 
