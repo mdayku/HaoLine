@@ -22,9 +22,8 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pytest
-
 import onnx
+import pytest
 from onnx import TensorProto, helper
 
 # ============================================================================
