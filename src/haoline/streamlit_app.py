@@ -96,8 +96,10 @@ from haoline.hierarchical_graph import HierarchicalGraphBuilder
 from haoline.html_export import generate_html as generate_graph_html
 from haoline.patterns import PatternAnalyzer
 from haoline.streamlit_tabs import (
+    get_capabilities_from_extension,
     render_details_tab,
     render_export_tab,
+    render_format_tier_badge,
     render_graph_tab,
     render_layer_details_tab,
     render_llm_details_tab,
@@ -1802,7 +1804,7 @@ def main():
 
         # Use shared tab render functions (single source of truth)
         with tab1:
-            render_overview_tab(report, model_name)
+            render_overview_tab(report, model_name, model_path=result.model_path)
 
         with tab2:
             render_graph_tab(
@@ -1820,7 +1822,7 @@ def main():
             render_layer_details_tab(report, graph_info, model_name)
 
         with tab5:
-            render_quantization_tab(report, graph_info)
+            render_quantization_tab(report, graph_info, model_path=result.model_path)
 
         with tab6:
             render_export_tab(
@@ -2166,7 +2168,14 @@ def main():
                     tab_llm = None
 
                 with tab1:
-                    st.markdown("### Model Information")
+                    # Task 49.2.6: Show format tier badge
+                    capabilities = get_capabilities_from_extension(file_ext)
+                    badge = render_format_tier_badge(capabilities)
+                    st.markdown(
+                        f'<div style="display: flex; align-items: center; gap: 12px;">'
+                        f'<h3 style="margin: 0;">Model Information</h3>{badge}</div>',
+                        unsafe_allow_html=True,
+                    )
 
                     info_col1, info_col2 = st.columns(2)
 
