@@ -25,20 +25,23 @@ def main() -> int:
     args = set(sys.argv[1:])
     failed = False
 
+    # Use the same Python that's running this script (respects venv)
+    py = sys.executable
+
     # Always run format + lint
-    if run(["python", "-m", "ruff", "format", "src/haoline/"]) != 0:
+    if run([py, "-m", "ruff", "format", "src/haoline/"]) != 0:
         failed = True
-    if run(["python", "-m", "ruff", "check", "src/haoline/", "--fix"]) != 0:
+    if run([py, "-m", "ruff", "check", "src/haoline/", "--fix"]) != 0:
         failed = True
 
     # Optional: mypy
     if "--all" in args or "--mypy" in args:
-        if run(["python", "-m", "mypy", "src/haoline/", "--ignore-missing-imports"]) != 0:
+        if run([py, "-m", "mypy", "src/haoline/", "--ignore-missing-imports"]) != 0:
             failed = True
 
     # Optional: tests
     if "--all" in args or "--test" in args:
-        if run(["python", "-m", "pytest", "src/haoline/tests/", "-v", "--tb=short"]) != 0:
+        if run([py, "-m", "pytest", "src/haoline/tests/", "-v", "--tb=short"]) != 0:
             failed = True
 
     if failed:
