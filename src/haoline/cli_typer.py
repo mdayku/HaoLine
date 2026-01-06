@@ -1110,6 +1110,72 @@ def _run_inspect(
                     f"  [dim]GGUF model:[/dim] {gguf_data.model_name} "
                     f"({gguf_data.architecture}, {gguf_data.total_params:,} params)"
                 )
+        elif file_ext == ".safetensors":
+            # SafeTensors-specific analysis path (Story 49.3)
+            from haoline.analyzer import MemoryEstimates, ParamCounts
+            from haoline.formats.safetensors import (
+                SafeTensorsReader,
+                get_safetensors_upgrade_hint,
+            )
+            from haoline.report import GraphSummary, ModelMetadata
+
+            st_reader = SafeTensorsReader(analysis_path_obj)
+            st_data = st_reader.read_header_only()
+
+            # Check for config.json to suggest upgrade
+            upgrade_hint, hf_config = get_safetensors_upgrade_hint(analysis_path_obj)
+            if upgrade_hint and not quiet:
+                console.print(f"  [yellow]![/yellow] {upgrade_hint}")
+                console.print()
+
+            # Determine architecture from config if available
+            arch_type = "unknown"
+            if hf_config:
+                arch_type = hf_config.architecture_name
+
+            # Create minimal report from SafeTensors data
+            report = InspectionReport(
+                metadata=ModelMetadata(
+                    path=str(analysis_path_obj),
+                    ir_version=0,
+                    producer_name="SafeTensors",
+                    producer_version="",
+                    domain="weights",
+                    model_version=0,
+                    doc_string=f"SafeTensors weights file ({len(st_data.tensors)} tensors)",
+                    opsets={},
+                ),
+                graph_summary=GraphSummary(
+                    num_nodes=0,  # No graph
+                    num_inputs=0,
+                    num_outputs=0,
+                    num_initializers=len(st_data.tensors),
+                    input_shapes={},
+                    output_shapes={},
+                    op_type_counts=st_data.dtype_breakdown,
+                ),
+                param_counts=ParamCounts(
+                    total=st_data.total_params,
+                    trainable=st_data.total_params,
+                    non_trainable=0,
+                    precision_breakdown=st_data.size_breakdown,
+                ),
+                flop_counts=None,  # Weights-only, no FLOPs
+                memory_estimates=MemoryEstimates(
+                    model_size_bytes=st_data.total_size_bytes,
+                    peak_activation_bytes=0,
+                ),
+                detected_blocks=[],
+                architecture_type=arch_type,
+                risk_signals=[],
+                format_tier="Weights",
+            )
+
+            if not quiet:
+                console.print(
+                    f"  [dim]SafeTensors:[/dim] {len(st_data.tensors)} tensors, "
+                    f"{st_data.total_params:,} params"
+                )
         else:
             # Standard ONNX analysis path
             inspector = ModelInspector()

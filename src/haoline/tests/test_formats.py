@@ -146,6 +146,80 @@ class TestSafeTensorsReader:
         assert info.dtype_breakdown == {"F32": 2, "F16": 1}
         assert info.total_params == 60
 
+    # Story 49.3: Config detection tests
+    def test_detect_hf_config_with_config_json(self, tmp_path: Path) -> None:
+        """detect_hf_config should parse config.json if present."""
+        import json
+
+        from haoline.formats.safetensors import detect_hf_config
+
+        # Create config.json
+        config = {
+            "model_type": "llama",
+            "architectures": ["LlamaForCausalLM"],
+            "hidden_size": 4096,
+            "num_hidden_layers": 32,
+            "num_attention_heads": 32,
+            "vocab_size": 32000,
+        }
+        config_path = tmp_path / "config.json"
+        config_path.write_text(json.dumps(config))
+
+        # Create dummy safetensors file
+        st_path = tmp_path / "model.safetensors"
+        st_path.write_bytes(b"dummy")
+
+        result = detect_hf_config(st_path)
+        assert result is not None
+        assert result.model_type == "llama"
+        assert result.architecture_name == "LlamaForCausalLM"
+        assert result.hidden_size == 4096
+        assert result.layers == 32
+        assert result.heads == 32
+
+    def test_detect_hf_config_no_config_json(self, tmp_path: Path) -> None:
+        """detect_hf_config should return None if no config.json."""
+        from haoline.formats.safetensors import detect_hf_config
+
+        st_path = tmp_path / "model.safetensors"
+        st_path.write_bytes(b"dummy")
+
+        result = detect_hf_config(st_path)
+        assert result is None
+
+    def test_detect_hf_repo_id_from_cache_structure(self, tmp_path: Path) -> None:
+        """detect_hf_repo_id should detect repo from HF cache directory structure."""
+        from haoline.formats.safetensors import detect_hf_repo_id
+
+        # Simulate HF cache structure: models--org--model-name/snapshots/hash/model.safetensors
+        cache_dir = tmp_path / "models--meta-llama--Llama-2-7b" / "snapshots" / "abc123"
+        cache_dir.mkdir(parents=True)
+        st_path = cache_dir / "model.safetensors"
+        st_path.write_bytes(b"dummy")
+
+        result = detect_hf_repo_id(st_path)
+        assert result == "meta-llama/Llama-2-7b"
+
+    def test_get_safetensors_upgrade_hint_with_config(self, tmp_path: Path) -> None:
+        """get_safetensors_upgrade_hint should return hint when config found."""
+        import json
+
+        from haoline.formats.safetensors import get_safetensors_upgrade_hint
+
+        # Create config.json
+        config = {"model_type": "bert", "architectures": ["BertModel"]}
+        (tmp_path / "config.json").write_text(json.dumps(config))
+
+        st_path = tmp_path / "model.safetensors"
+        st_path.write_bytes(b"dummy")
+
+        hint, cfg = get_safetensors_upgrade_hint(st_path)
+        assert hint is not None
+        assert "BertModel" in hint
+        assert "--from-huggingface" in hint
+        assert cfg is not None
+        assert cfg.architecture_name == "BertModel"
+
 
 # ============================================================================
 # GGUF Reader Tests

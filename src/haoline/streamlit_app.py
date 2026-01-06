@@ -1947,15 +1947,76 @@ def main():
                 st.stop()
 
         elif file_ext == ".safetensors":
-            st.warning("""
-            **SafeTensors format detected** — This format contains only weights, not architecture.
+            # Story 49.3: SafeTensors analysis with config.json detection
+            st.info("**SafeTensors model detected** - Analyzing weights metadata...")
+            with tempfile.NamedTemporaryFile(suffix=".safetensors", delete=False) as tmp:
+                tmp.write(uploaded_file.getvalue())
+                tmp_path = tmp.name
 
-            To analyze, export to ONNX from your training code. If using HuggingFace:
-            ```python
-            from optimum.exporters.onnx import main_export
-            main_export("model-name", output="model.onnx")
-            ```
-            """)
+            try:
+                from haoline.formats.safetensors import (
+                    SafeTensorsReader,
+                )
+
+                st_reader = SafeTensorsReader(tmp_path)
+                st_data = st_reader.read_header_only()
+
+                # Check for upgrade hint (won't work for uploads, but show generic message)
+                st.warning("""
+                **Weights-Only Format** - SafeTensors contains only model weights, not the computational graph.
+
+                For full analysis including FLOPs and interactive graph visualization,
+                use the CLI with `--from-huggingface` to load the complete model:
+                ```bash
+                haoline inspect --from-huggingface your-model-name
+                ```
+                """)
+
+                # Show basic info
+                st.markdown("### Tensor Summary")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Tensors", f"{len(st_data.tensors):,}")
+                with col2:
+                    st.metric("Total Parameters", f"{st_data.total_params:,}")
+                with col3:
+                    st.metric("File Size", format_bytes(st_data.total_size_bytes))
+
+                # Dtype breakdown
+                if st_data.dtype_breakdown:
+                    st.markdown("### Data Types")
+                    import pandas as pd
+
+                    dtype_df = pd.DataFrame([
+                        {"Type": dtype, "Count": count}
+                        for dtype, count in sorted(st_data.dtype_breakdown.items(), key=lambda x: -x[1])
+                    ])
+                    st.dataframe(dtype_df, use_container_width=True)
+
+                # Tensor list (searchable)
+                st.markdown("### Tensor Details")
+                search = st.text_input("Search tensors", placeholder="Filter by name...")
+                tensors_filtered = [
+                    t for t in st_data.tensors
+                    if not search or search.lower() in t.name.lower()
+                ]
+                tensor_df = pd.DataFrame([
+                    {
+                        "Name": t.name,
+                        "Shape": str(t.shape),
+                        "Type": t.dtype,
+                        "Elements": f"{t.n_elements:,}",
+                        "Size": format_bytes(t.size_bytes),
+                    }
+                    for t in tensors_filtered[:500]  # Limit for performance
+                ])
+                st.dataframe(tensor_df, use_container_width=True, height=400)
+                if len(tensors_filtered) > 500:
+                    st.caption(f"Showing 500 of {len(tensors_filtered)} tensors")
+
+            except Exception as e:
+                st.error(f"Error analyzing SafeTensors: {e}")
+
             st.stop()
 
         elif file_ext in [".engine", ".plan"]:
