@@ -1890,7 +1890,7 @@ Not all model formats are created equal. HaoLine supports multiple formats with 
 |---------|------|---------|--------|--------|----------|------|-------------|
 | **Parameter Count** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Memory Estimate** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **FLOPs Estimate** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **FLOPs Estimate** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **Interactive Graph** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **Layer Table** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **Op Type Breakdown** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
@@ -1919,7 +1919,7 @@ If conversion deps are missing, the app falls back to native readers with limite
 
 **PyTorch (Tier 1):** Converted to ONNX via `torch.onnx.export`, inherits full ONNX capabilities.
 
-**TFLite/CoreML/OpenVINO (Tier 2):** Have graph structure, but use different op types. FLOPs formulas not yet implemented for their specific operators. Graph visualization works.
+**TFLite/CoreML/OpenVINO (Tier 2):** Have graph structure with native FLOPs estimation using format-specific op formulas. Interactive graph visualization requires ONNX conversion.
 
 **GGUF (Tier 3):** LLM weight format with architecture metadata (layer count, attention heads, context length). No computational graph - it's designed for inference engines like llama.cpp that know the architecture.
 
@@ -2055,6 +2055,7 @@ haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
 
 | Date | Change |
 |------|--------|
+| Jan 6, 2026 | **v1.3.0** - Epic 49 COMPLETE (HuggingFace Integration): Native FLOPs for TFLite/CoreML/OpenVINO, format-aware UI with tier badges, SafeTensors config detection, `--from-huggingface` CLI flag. |
 | Jan 6, 2026 | **v1.2.0** - GGUF LLM Details UI: architecture card, quantization breakdown, VRAM calculator, tensor explorer. Export enhancements: GGUF details in MD/HTML/JSON. Dynamic version in reports. |
 | Dec 29, 2025 | **🎉 v1.0.0 RELEASED** - Universal model inspector with 10 format support, CI/CD integration, quantization analysis, 50+ GPU profiles. All 20 exit criteria complete. README verified. |
 | Dec 29, 2025 | Slimmed `[full]` extra (TF + PDF + SafeTensors, no JAX/CoreML/OpenVINO). Fixed `RiskSignal.message` bug. Fixed mypy `has_quantization_info` error. Added `uv` installation docs. |

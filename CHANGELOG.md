@@ -5,6 +5,33 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-06
+
+### Epic 49: HuggingFace Integration Complete
+
+**Native FLOPs for Non-ONNX Formats (Story 49.5):**
+- TFLite: Native FLOPs estimation using builtin op formulas (Conv2D, DepthwiseConv2D, FullyConnected, etc.)
+- CoreML: Native FLOPs estimation using layer type formulas (convolution, innerProduct, LSTM, etc.)
+- OpenVINO: Native FLOPs estimation using op type formulas (Convolution, MatMul, LSTM, etc.)
+- Updated `FormatCapabilities` to reflect `has_flops=True` for Tier 2 formats
+
+**Format-Aware UI/CLI (Story 49.2):**
+- Format tier badges (Full/Graph/Metadata/Weights) displayed in reports
+- Conditional UI: disabled tabs for unsupported features, upgrade hints for Tier 3/4 formats
+- Clear messaging about what's available per format
+
+**SafeTensors → ONNX Path (Story 49.3):**
+- Detect `config.json` alongside `.safetensors` files
+- Infer HuggingFace repo ID from local cache structure
+- Provide conversion hints with specific `haoline` commands
+
+**HuggingFace Model Integration (Story 49.1):**
+- `--from-huggingface REPO_ID` CLI flag for HuggingFace Hub models
+- Auto-export to ONNX using `optimum` library
+- `huggingface` extra in pyproject.toml
+
+---
+
 ## [1.2.1] - 2026-01-06
 
 ### CLI GGUF Parity

@@ -1644,25 +1644,25 @@ def main():
                 <table class="cap-table">
                     <tr>
                         <td><strong>TFLite</strong></td>
-                        <td class="cap-cli">CLI</td>
-                        <td class="cap-cli">CLI</td>
-                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
                         <td class="cap-cli">CLI</td>
                         <td class="cap-warn">CLI only</td>
                     </tr>
                     <tr>
                         <td><strong>CoreML</strong></td>
-                        <td class="cap-cli">CLI</td>
-                        <td class="cap-cli">CLI</td>
-                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
                         <td class="cap-cli">CLI</td>
                         <td class="cap-warn">macOS CLI</td>
                     </tr>
                     <tr>
                         <td><strong>OpenVINO</strong></td>
-                        <td class="cap-cli">CLI</td>
-                        <td class="cap-cli">CLI</td>
-                        <td class="cap-no">No</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
+                        <td class="cap-yes">Yes</td>
                         <td class="cap-cli">CLI</td>
                         <td class="cap-warn">Needs .bin file</td>
                     </tr>
@@ -2030,35 +2030,33 @@ def main():
             st.stop()
 
         elif file_ext in [".tflite"]:
-            # TFLite analysis - Task 49.4.8: Show conversion hint
-            st.info("**TFLite model detected** - Analyzing with TFLite reader...")
-            st.warning("""
-            **Limited Analysis** - TFLite format has limited analysis capabilities.
-
-            For full analysis with FLOPs and interactive graph visualization,
-            convert to ONNX using the CLI:
+            # TFLite analysis - Story 49.5.1: Native FLOP estimation available
+            st.info("**TFLite model detected** - Analyzing with native TFLite reader...")
+            st.info("""
+            **Graph-tier analysis** - TFLite has native FLOP estimation (Story 49.5).
+            Parameters, memory, and op breakdown available.
+            For interactive graph visualization, convert to ONNX:
             ```bash
-            haoline inspect --from-tflite your_model.tflite --keep-onnx converted.onnx
+            haoline inspect --from-tflite model.tflite --keep-onnx converted.onnx
             ```
-            Then upload the converted ONNX file.
             """)
             with tempfile.NamedTemporaryFile(suffix=".tflite", delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tmp_path = tmp.name
 
         elif file_ext in [".mlmodel", ".mlpackage"]:
-            # CoreML analysis
-            st.info("**CoreML model detected** - Analyzing with CoreML reader...")
-            st.warning("Note: Full CoreML analysis requires macOS with coremltools installed.")
+            # CoreML analysis - Story 49.5.2: Native FLOP estimation available
+            st.info("**CoreML model detected** - Analyzing with native CoreML reader...")
+            st.info("Graph-tier analysis with native FLOP estimation. Requires coremltools.")
             with tempfile.NamedTemporaryFile(suffix=file_ext, delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())
                 tmp_path = tmp.name
 
         elif file_ext in [".xml"]:
-            # OpenVINO IR analysis
-            st.info("**OpenVINO IR detected** - Analyzing with OpenVINO reader...")
-            st.warning(
-                "Note: Full analysis requires the .bin file in the same directory. Upload may be partial."
+            # OpenVINO IR analysis - Story 49.5.3: Native FLOP estimation available
+            st.info("**OpenVINO IR detected** - Analyzing with native OpenVINO reader...")
+            st.info(
+                "Graph-tier analysis with native FLOP estimation. Best with .bin file in same directory."
             )
             with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as tmp:
                 tmp.write(uploaded_file.getvalue())

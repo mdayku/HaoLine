@@ -676,7 +676,7 @@ Not all formats support all features. Here's what you get with each:
 |---------|------|---------|--------|--------|----------|----------|------|-------------|
 | **Parameter Count** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ |
 | **Memory Estimate** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **FLOPs Estimate** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **FLOPs Estimate** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Interactive Graph** | ✅ | ✅ | 🔜 | 🔜 | 🔜 | ❌ | ❌ | ❌ |
 | **Layer-by-Layer Table** | ✅ | ✅ | 🔜 | 🔜 | 🔜 | ✅ | ❌ | ❌ |
 | **Op Type Breakdown** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
@@ -690,7 +690,7 @@ Not all formats support all features. Here's what you get with each:
 
 - **ONNX/PyTorch**: Full graph structure with UniversalGraph adapters → all features work
 - **TensorRT**: Optimized fused graph with layer info, precision breakdown, and ONNX comparison (requires NVIDIA GPU)
-- **TFLite/CoreML/OpenVINO**: Graph structure available; convert to ONNX externally for full FLOPs analysis
+- **TFLite/CoreML/OpenVINO**: Graph structure with native FLOPs estimation; interactive graph requires ONNX conversion
 - **GGUF**: LLM architecture metadata (layers, heads, quantization) but no computational graph - weights only
 - **SafeTensors**: Weights only - tensor shapes and dtypes, no graph structure
 

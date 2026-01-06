@@ -646,13 +646,13 @@ HaoLine/
 |   +-- hierarchical_graph.py # Collapsible graph structure
 |   +-- edge_analysis.py     # Tensor flow analysis
 |   |
-|   +-- formats/             # Multi-format readers (Epics 19-24)
+|   +-- formats/             # Multi-format readers (Epics 19-24, 49)
 |   |   +-- __init__.py      # detect_format(), reader exports
 |   |   +-- gguf.py          # GGUF reader (llama.cpp, pure Python)
-|   |   +-- safetensors.py   # SafeTensors reader (HuggingFace)
-|   |   +-- tflite.py        # TFLite reader (mobile/edge)
-|   |   +-- coreml.py        # CoreML reader (Apple)
-|   |   +-- openvino.py      # OpenVINO reader (Intel)
+|   |   +-- safetensors.py   # SafeTensors reader (HuggingFace), HF config detection
+|   |   +-- tflite.py        # TFLite reader (mobile/edge) with native FLOPs
+|   |   +-- coreml.py        # CoreML reader (Apple) with native FLOPs
+|   |   +-- openvino.py      # OpenVINO reader (Intel) with native FLOPs
 |   |
 |   +-- eval/                # Evaluation import module (Epic 12)
 |   |   +-- __init__.py      # Public API exports
@@ -995,7 +995,7 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | `_cli_legacy.py` | DEPRECATED: Legacy argparse CLI, kept for helper functions |
 | `eval/cli.py` | CLI entry point for `haoline-import-eval` |
 | `universal_ir.py` | UniversalGraph, UniversalNode, FormatAdapter protocol |
-| `format_adapters.py` | OnnxAdapter, PyTorchAdapter, conversion matrix |
+| `format_adapters.py` | OnnxAdapter, PyTorchAdapter, FormatCapabilities (has_graph, has_flops, tier), conversion matrix |
 | `report_sections.py` | Reusable report dataclasses (ExtractedReportSections) |
 | `quantization_linter.py` | QuantizationLinter, QuantWarning, readiness scoring |
 | `quantization_advisor.py` | LLM-powered quantization recommendations |
