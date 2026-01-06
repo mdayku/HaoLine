@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-500%2B%20passed-brightgreen.svg)]()
 
-> **🎉 v1.0 Released!** Universal model analysis across 10 formats, CI/CD integration with threshold gates, quantization recommendations. [See what's new →](#features)
+> **🎉 v1.4 Released!** New: Advanced Quantization Analysis (GPTQ/AWQ/GGML detection) + Attention Variant Detection (MHA/MQA/GQA). [See what's new →](#features)
 
 HaoLine is a universal model inspector that makes neural network internals **legible** across formats — so you can make informed decisions about what to deploy.
 
@@ -408,6 +408,15 @@ Or use the web UI's comparison mode for an interactive experience.
 | `--quant-report PATH` | Write quantization report (Markdown) |
 | `--quant-report-html PATH` | Write quantization report (HTML) |
 | `--quant-llm-advice` | Get LLM-powered quantization recommendations |
+| `--quant-analysis` | Advanced quantization scheme detection (GPTQ, AWQ, GGML, etc.) |
+| `--quant-analysis-json PATH` | Export advanced quantization analysis to JSON |
+
+### Attention Analysis Options (LLMs)
+
+| Flag | Description |
+|------|-------------|
+| `--attention-analysis` | Detect attention architecture (MHA/MQA/GQA), position encoding, KV cache |
+| `--attention-analysis-json PATH` | Export attention analysis to JSON |
 
 ### TensorRT Options
 
@@ -601,6 +610,8 @@ See [.github/examples/model-check.yml](.github/examples/model-check.yml) for a f
 | **Multiple Formats** | Export to HTML, Markdown, PDF, JSON, or CSV |
 | **Universal IR** | Format-agnostic intermediate representation for cross-format analysis |
 | **Quantization Analysis** | QAT readiness scoring, problem layer detection, deployment recommendations; Streamlit Quant tab with readiness score, warnings, recommendations, layer sensitivity |
+| **Advanced Quant Analysis** | Detect GPTQ, AWQ, bitsandbytes, GGML quantization schemes; estimate accuracy impact; identify sensitive layers |
+| **Attention Detection** | Detect MHA/MQA/GQA attention types; RoPE/ALiBi position encodings; KV cache estimation; FlashAttention detection |
 | **Layer Details** | In-app per-layer table (search/filter, CSV/JSON download) |
 
 ---

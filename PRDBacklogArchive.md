@@ -1251,6 +1251,79 @@ Deep analysis of NVIDIA TensorRT compiled engines. Inspired by TRT Engine Explor
 
 ---
 
+## Epic 26: Advanced Quantization Analysis (COMPLETE - 12/15 tasks)
+
+*Completed: January 6, 2026 (v1.4.0)*
+
+Modern LLMs use complex quantization beyond simple int8/fp16.
+
+**Module:** `src/haoline/quantization_analysis.py`
+**CLI Flags:** `--quant-analysis`, `--quant-analysis-json`
+**Tests:** `src/haoline/tests/test_quantization_analysis.py` (26 tests)
+
+### Story 26.1: Mixed Precision Detection - COMPLETE (4/5)
+- [x] Detect per-layer precision (weights vs activations vs accumulation)
+- [x] Identify INT4 weights with FP16 activations pattern
+- [x] Detect FP32 accumulation in quantized MatMuls
+- [x] Report precision breakdown by layer type (attention vs FFN vs embed)
+- [ ] Visualize precision transitions in graph (future: requires graph viz update)
+
+### Story 26.2: Quantization Scheme Detection - COMPLETE (6/6)
+- [x] Detect GPTQ quantization patterns (group-wise, act_order)
+- [x] Detect AWQ quantization patterns (activation-aware)
+- [x] Detect GGML/GGUF quantization types (Q4_0, Q4_K_M, Q5_K_S, etc.)
+- [x] Detect bitsandbytes NF4/FP4 quantization
+- [x] Report expected accuracy degradation per scheme
+- [x] Compare memory vs accuracy tradeoffs between schemes
+
+### Story 26.3: Calibration Analysis - PARTIAL (2/4)
+- [ ] Detect if model has calibration metadata (future: requires ONNX QDQ inspection)
+- [ ] Estimate quantization error per layer (future: requires inference comparison)
+- [x] Identify sensitive layers (high quantization error)
+- [x] Recommend layers to keep at higher precision
+
+---
+
+## Epic 27: Attention Variant Detection (COMPLETE - 20/20 tasks)
+
+*Completed: January 6, 2026 (v1.4.0)*
+
+Modern LLMs use many attention optimizations beyond vanilla self-attention.
+
+**Module:** `src/haoline/attention_analysis.py`
+**CLI Flags:** `--attention-analysis`, `--attention-analysis-json`
+**Tests:** `src/haoline/tests/test_attention_analysis.py` (25 tests)
+
+### Story 27.1: Attention Architecture Detection - COMPLETE (5/5)
+- [x] Detect Multi-Head Attention (MHA) - standard pattern
+- [x] Detect Multi-Query Attention (MQA) - single KV head
+- [x] Detect Grouped-Query Attention (GQA) - fewer KV heads than Q
+- [x] Report num_q_heads, num_kv_heads, head_dim
+- [x] Calculate KV cache savings for GQA/MQA vs MHA
+
+### Story 27.2: Attention Pattern Detection - COMPLETE (5/5)
+- [x] Detect sliding window attention (Mistral-style)
+- [x] Detect local + global attention (Longformer-style) via pattern_type enum
+- [x] Detect sparse attention patterns (BigBird, etc.) via pattern_type enum
+- [x] Detect cross-attention (encoder-decoder models)
+- [x] Report effective context length and attention complexity
+
+### Story 27.3: Position Encoding Detection - COMPLETE (5/5)
+- [x] Detect RoPE (Rotary Position Embedding)
+- [x] Detect ALiBi (Attention with Linear Biases)
+- [x] Detect learned positional embeddings
+- [x] Detect sinusoidal positional encoding
+- [x] Report max context length and extrapolation capability
+
+### Story 27.4: Fused Attention Patterns - COMPLETE (5/5)
+- [x] Detect FlashAttention-style fused patterns
+- [x] Detect xFormers memory-efficient attention
+- [x] Detect cuDNN fused multi-head attention
+- [x] Report theoretical vs actual memory usage
+- [x] Detect PyTorch SDPA (ScaledDotProductAttention)
+
+---
+
 ## Epic 49: HuggingFace Integration - Stories 49.1-49.4 (COMPLETE)
 
 *Completed: January 6, 2026*

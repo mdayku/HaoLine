@@ -1659,7 +1659,7 @@ Models like Opus 4.5, GPT-4, LLaMA-70B, and Mixtral require analysis capabilitie
 - **Sparse architectures** (Mixture of Experts)
 - **Complex memory patterns** (KV cache, activation checkpointing)
 
-### 17.2 Epic 26: Advanced Quantization Analysis
+### 17.2 Epic 26: Advanced Quantization Analysis ✅ COMPLETE (v1.4.0)
 
 Modern LLMs use sophisticated quantization beyond simple INT8/FP16:
 
@@ -1670,13 +1670,16 @@ Modern LLMs use sophisticated quantization beyond simple INT8/FP16:
 | **GGML/GGUF** | llama.cpp formats (Q4_0, Q4_K_M, etc.) | 3-8x |
 | **bitsandbytes** | NF4/FP4 with fp16 activations | 4x |
 
-**Key Capabilities:**
+**Implemented Capabilities:**
 - Detect mixed precision (INT4 weights + FP16 activations + FP32 accumulation)
-- Identify quantization scheme from model patterns
-- Estimate accuracy degradation per scheme
-- Recommend layers to keep at higher precision
+- Identify quantization scheme from model tensor naming patterns
+- Estimate accuracy degradation (perplexity increase, accuracy loss) per scheme
+- Identify sensitive layers (embedding, output projection, first-layer matmul)
+- Calculate memory reduction percentages
 
-### 17.3 Epic 27: Attention Variant Detection
+**CLI:** `--quant-analysis`, `--quant-analysis-json PATH`
+
+### 17.3 Epic 27: Attention Variant Detection ✅ COMPLETE (v1.4.0)
 
 LLMs have evolved beyond vanilla multi-head attention:
 
@@ -1687,11 +1690,14 @@ LLMs have evolved beyond vanilla multi-head attention:
 | **GQA** | LLaMA 2/3, Mistral | ~4x |
 | **Sliding Window** | Mistral | Bounded cache |
 
-**Key Capabilities:**
-- Detect attention architecture (MHA/MQA/GQA)
-- Identify positional encoding (RoPE, ALiBi, learned)
-- Detect FlashAttention/memory-efficient patterns
-- Report effective context length and O(n²) impact
+**Implemented Capabilities:**
+- Detect attention architecture (MHA/MQA/GQA) from graph patterns
+- Identify positional encoding (RoPE, ALiBi, learned, sinusoidal)
+- Detect FlashAttention, xFormers, SDPA, cuDNN MHA fused patterns
+- Calculate KV cache memory requirements and savings factor
+- Report sliding window attention and sparse patterns
+
+**CLI:** `--attention-analysis`, `--attention-analysis-json PATH`
 
 ### 17.4 Epic 28: Memory Pattern Analysis
 
@@ -2055,6 +2061,7 @@ haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
 
 | Date | Change |
 |------|--------|
+| Jan 6, 2026 | **v1.4.0** - Epic 26 COMPLETE (Advanced Quantization Analysis): GPTQ/AWQ/GGML detection, accuracy impact estimation, mixed precision analysis, sensitive layer identification. Epic 27 COMPLETE (Attention Variant Detection): MHA/MQA/GQA detection, RoPE/ALiBi position encoding, KV cache estimation, FlashAttention detection. 51 new tests. |
 | Jan 6, 2026 | **v1.3.0** - Epic 49 COMPLETE (HuggingFace Integration): Native FLOPs for TFLite/CoreML/OpenVINO, format-aware UI with tier badges, SafeTensors config detection, `--from-huggingface` CLI flag. |
 | Jan 6, 2026 | **v1.2.0** - GGUF LLM Details UI: architecture card, quantization breakdown, VRAM calculator, tensor explorer. Export enhancements: GGUF details in MD/HTML/JSON. Dynamic version in reports. |
 | Dec 29, 2025 | **🎉 v1.0.0 RELEASED** - Universal model inspector with 10 format support, CI/CD integration, quantization analysis, 50+ GPU profiles. All 20 exit criteria complete. README verified. |

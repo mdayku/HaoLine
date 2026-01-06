@@ -5,6 +5,70 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-06
+
+### Epic 26: Advanced Quantization Analysis
+
+**Story 26.1: Quantization Scheme Detection**
+- Detect GPTQ, AWQ, bitsandbytes, GGML, INT8, and FP16/FP32 schemes from tensor naming patterns
+- Confidence scoring for each detected scheme
+- Support for group quantization detection with group size inference
+
+**Story 26.2: Accuracy Impact Estimation**
+- Estimate perplexity increase and accuracy degradation based on quantization scheme
+- Calculate memory reduction percentages
+- Risk-based sensitivity analysis
+
+**Story 26.3: Mixed Precision Analysis**
+- Per-layer precision breakdown (weight/activation/accumulation dtypes)
+- Identify layers with different precision configurations
+- Generate precision statistics across layer types
+
+**Story 26.4: Sensitive Layer Identification**
+- Detect embedding layers, output projections, and first-layer matmuls
+- Classify layers by sensitivity level (high/medium/low)
+- Provide recommendations for precision preservation
+
+**CLI Flags:**
+- `--quant-analysis`: Enable advanced quantization analysis
+- `--quant-analysis-json PATH`: Export quantization analysis to JSON
+
+---
+
+### Epic 27: Attention Variant Detection
+
+**Story 27.1: Attention Architecture Detection**
+- Detect MHA (Multi-Head Attention), MQA (Multi-Query Attention), GQA (Grouped-Query Attention)
+- Extract num_q_heads, num_kv_heads, head_dim from graph patterns
+- Calculate KV cache memory requirements and savings factor
+
+**Story 27.2: Attention Pattern Detection**
+- Detect sliding window attention (Mistral-style)
+- Identify causal vs bidirectional attention patterns
+- Sparse attention and local+global pattern recognition
+
+**Story 27.3: Position Encoding Detection**
+- Detect RoPE (Rotary Position Embeddings)
+- Detect ALiBi (Attention with Linear Biases)
+- Detect learned and sinusoidal position encodings
+- Report max context length and extrapolation capability
+
+**Story 27.4: Fused Attention Patterns**
+- Detect FlashAttention, xFormers, SDPA, cuDNN MHA
+- Report memory efficiency capabilities
+- Identify optimized attention implementations
+
+**CLI Flags:**
+- `--attention-analysis`: Enable attention variant detection
+- `--attention-analysis-json PATH`: Export attention analysis to JSON
+
+**Integration:**
+- Full JSON, Markdown, HTML output support
+- Streamlit UI: Attention Analysis expander in LLM Details tab
+- 51 unit tests across both epics
+
+---
+
 ## [1.3.0] - 2026-01-06
 
 ### Epic 49: HuggingFace Integration Complete

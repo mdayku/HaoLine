@@ -6,7 +6,7 @@
 
 ---
 
-**Current Release:** v1.3.0 (Jan 6, 2026)
+**Current Release:** v1.4.0 (Jan 6, 2026)
 
 **Quality Gate:** `python scripts/check.py` (fast) or `python scripts/check.py --all` (full)
 
@@ -16,7 +16,7 @@
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
-| **P1** | LLM-Scale Analysis | Epics 26-30 (70B+ param models, MoE, KV cache) |
+| **P1** | LLM-Scale Analysis | Epics 28-30 (70B+ param models, MoE, KV cache) |
 | **P2** | AWS GPU Deployment | Epic 51 (TensorRT, runtime benchmarking) |
 | **P3** | Model Optimization Service | Epics 31-32 (automated quantization) |
 
@@ -27,7 +27,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
+| Epics 28-30: LLM-Scale Analysis | Not Started | 12 | 0/52 | P1 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
 | Epic 19: SafeTensors | ✅ COMPLETE | 2 | 10/10 | P3 |
@@ -43,7 +43,7 @@
 | Epic 47: Model Card Standards | Not Started | 2 | 0/10 | P4 |
 | Epics 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 
-**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 24, 25, 33, 39, 40, 41, 42, 49, 50, 52, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
+**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 24, 25, 26, 27, 33, 39, 40, 41, 42, 49, 50, 52, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
 
 ---
 
@@ -316,76 +316,11 @@
 
 # LLM-SCALE ANALYSIS (P3+)
 
-*Epics 26-30: Handle models like Opus 4.5, GPT-4, LLaMA-70B, Mixtral*
+*Epics 28-30: Handle models like Opus 4.5, GPT-4, LLaMA-70B, Mixtral*
+
+*(Epics 26-27 complete - see PRDBacklogArchive.md)*
 
 ---
-
-## Epic 26: Advanced Quantization Analysis (P3) - MOSTLY COMPLETE (12/15 tasks)
-
-*Modern LLMs use complex quantization beyond simple int8/fp16.*
-
-**Module:** `src/haoline/quantization_analysis.py`
-**CLI Flags:** `--quant-analysis`, `--quant-analysis-json`
-**Tests:** `src/haoline/tests/test_quantization_analysis.py` (26 tests)
-
-### Story 26.1: Mixed Precision Detection - COMPLETE (4/5)
-- [x] **Task 26.1.1**: Detect per-layer precision (weights vs activations vs accumulation)
-- [x] **Task 26.1.2**: Identify INT4 weights with FP16 activations pattern
-- [x] **Task 26.1.3**: Detect FP32 accumulation in quantized MatMuls
-- [x] **Task 26.1.4**: Report precision breakdown by layer type (attention vs FFN vs embed)
-- [ ] **Task 26.1.5**: Visualize precision transitions in graph (where fp16→int8 happens) - *Future: requires graph viz update*
-
-### Story 26.2: Quantization Scheme Detection - COMPLETE (6/6)
-- [x] **Task 26.2.1**: Detect GPTQ quantization patterns (group-wise, act_order)
-- [x] **Task 26.2.2**: Detect AWQ quantization patterns (activation-aware)
-- [x] **Task 26.2.3**: Detect GGML/GGUF quantization types (Q4_0, Q4_K_M, Q5_K_S, etc.)
-- [x] **Task 26.2.4**: Detect bitsandbytes NF4/FP4 quantization
-- [x] **Task 26.2.5**: Report expected accuracy degradation per scheme
-- [x] **Task 26.2.6**: Compare memory vs accuracy tradeoffs between schemes
-
-### Story 26.3: Calibration Analysis - PARTIAL (2/4)
-- [ ] **Task 26.3.1**: Detect if model has calibration metadata - *Future: requires ONNX QDQ inspection*
-- [ ] **Task 26.3.2**: Estimate quantization error per layer - *Future: requires inference comparison*
-- [x] **Task 26.3.3**: Identify sensitive layers (high quantization error)
-- [x] **Task 26.3.4**: Recommend layers to keep at higher precision
-
----
-
-## Epic 27: Attention Variant Detection (P3) - COMPLETE (20/20 tasks)
-
-*Modern LLMs use many attention optimizations beyond vanilla self-attention.*
-
-**Module:** `src/haoline/attention_analysis.py`
-**CLI Flags:** `--attention-analysis`, `--attention-analysis-json`
-**Tests:** `src/haoline/tests/test_attention_analysis.py` (25 tests)
-
-### Story 27.1: Attention Architecture Detection - COMPLETE (5/5)
-- [x] **Task 27.1.1**: Detect Multi-Head Attention (MHA) - standard pattern
-- [x] **Task 27.1.2**: Detect Multi-Query Attention (MQA) - single KV head
-- [x] **Task 27.1.3**: Detect Grouped-Query Attention (GQA) - fewer KV heads than Q
-- [x] **Task 27.1.4**: Report num_q_heads, num_kv_heads, head_dim
-- [x] **Task 27.1.5**: Calculate KV cache savings for GQA/MQA vs MHA
-
-### Story 27.2: Attention Pattern Detection - COMPLETE (5/5)
-- [x] **Task 27.2.1**: Detect sliding window attention (Mistral-style)
-- [x] **Task 27.2.2**: Detect local + global attention (Longformer-style) - via pattern_type enum
-- [x] **Task 27.2.3**: Detect sparse attention patterns (BigBird, etc.) - via pattern_type enum
-- [x] **Task 27.2.4**: Detect cross-attention (encoder-decoder models)
-- [x] **Task 27.2.5**: Report effective context length and attention complexity
-
-### Story 27.3: Position Encoding Detection - COMPLETE (5/5)
-- [x] **Task 27.3.1**: Detect RoPE (Rotary Position Embedding)
-- [x] **Task 27.3.2**: Detect ALiBi (Attention with Linear Biases)
-- [x] **Task 27.3.3**: Detect learned positional embeddings
-- [x] **Task 27.3.4**: Detect sinusoidal positional encoding
-- [x] **Task 27.3.5**: Report max context length and extrapolation capability
-
-### Story 27.4: Fused Attention Patterns - COMPLETE (5/5)
-- [x] **Task 27.4.1**: Detect FlashAttention-style fused patterns
-- [x] **Task 27.4.2**: Detect xFormers memory-efficient attention
-- [x] **Task 27.4.3**: Detect cuDNN fused multi-head attention
-- [x] **Task 27.4.4**: Report theoretical vs actual memory usage
-- [x] **Task 27.4.5**: Detect PyTorch SDPA (ScaledDotProductAttention)
 
 ---
 
