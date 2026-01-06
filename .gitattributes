@@ -1,0 +1,24 @@
+# Ensure consistent line endings across platforms
+* text=auto eol=lf
+
+# Windows batch files need CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.onnx binary
+*.pt binary
+*.pth binary
+*.h5 binary
+*.tflite binary
+*.mlmodel binary
+*.engine binary
+*.gguf binary
+*.safetensors binary
+
