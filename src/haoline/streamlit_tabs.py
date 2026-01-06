@@ -1129,8 +1129,7 @@ def render_export_tab(
         # PDF export (if available)
         pdf_data = None
         try:
-            from haoline.pdf_generator import PDFGenerator
-            from haoline.pdf_generator import is_available as pdf_available
+            from haoline.pdf_generator import PDFGenerator, is_available as pdf_available
 
             if pdf_available():
                 import tempfile as tf_pdf

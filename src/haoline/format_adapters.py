@@ -29,8 +29,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import onnx
     import torch
+
+    import onnx
 
 from .universal_ir import (
     DataType,

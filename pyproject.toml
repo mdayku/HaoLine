@@ -204,6 +204,12 @@ ignore = [
     "E501",   # line too long (handled by ruff format)
 ]
 
+[tool.ruff.lint.isort]
+# Explicit isort settings for consistent behavior across ruff versions
+combine-as-imports = true
+force-single-line = false
+known-first-party = ["haoline"]
+
 [tool.ruff.lint.per-file-ignores]
 # CLI has availability check imports that look unused
 "src/haoline/cli.py" = ["F401", "F841"]

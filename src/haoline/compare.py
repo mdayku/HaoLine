@@ -29,8 +29,6 @@ from .compare_visualizations import (
     generate_compare_pdf,
     generate_memory_savings_chart,
     generate_tradeoff_chart,
-)
-from .compare_visualizations import (
     is_available as viz_available,
 )
 

@@ -14,8 +14,9 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-import onnx
 import pytest
+
+import onnx
 from onnx import TensorProto, helper
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))

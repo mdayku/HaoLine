@@ -16,8 +16,9 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-import onnx
 import pytest
+
+import onnx
 from onnx import TensorProto, helper
 
 # Add parent directories to path for imports

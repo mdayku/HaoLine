@@ -43,8 +43,8 @@ from .compare_visualizations import (
     generate_memory_savings_chart,
     generate_radar_chart,
     generate_tradeoff_chart,
+    is_available as is_compare_viz_available,
 )
-from .compare_visualizations import is_available as is_compare_viz_available
 from .edge_analysis import EdgeAnalysisResult, EdgeAnalyzer
 from .hardware import (
     HARDWARE_PROFILES,
@@ -60,10 +60,9 @@ from .hierarchical_graph import (
     HierarchicalGraph,
     HierarchicalGraphBuilder,
     HierarchicalNode,
+    generate_summary as generate_graph_summary,
 )
-from .hierarchical_graph import generate_summary as generate_graph_summary
-from .html_export import HTMLExporter
-from .html_export import generate_html as generate_graph_html
+from .html_export import HTMLExporter, generate_html as generate_graph_html
 from .layer_summary import (
     LayerMetrics,
     LayerSummary,
@@ -71,9 +70,13 @@ from .layer_summary import (
     generate_html_table,
     generate_markdown_table,
 )
-from .llm_summarizer import LLMSummarizer, LLMSummary, summarize_report
-from .llm_summarizer import has_api_key as has_llm_api_key
-from .llm_summarizer import is_available as is_llm_available
+from .llm_summarizer import (
+    LLMSummarizer,
+    LLMSummary,
+    has_api_key as has_llm_api_key,
+    is_available as is_llm_available,
+    summarize_report,
+)
 from .operational_profiling import (
     BatchSizeSweep,
     BatchSweepPoint,
@@ -87,8 +90,7 @@ from .operational_profiling import (
     SystemRequirements,
 )
 from .patterns import PatternAnalyzer
-from .pdf_generator import PDFGenerator, generate_pdf
-from .pdf_generator import is_available as is_pdf_available
+from .pdf_generator import PDFGenerator, generate_pdf, is_available as is_pdf_available
 from .quantization_advisor import (
     ArchitectureType,
     DeploymentRuntime,
@@ -157,8 +159,8 @@ from .visualizations import (
     ChartTheme,
     VisualizationGenerator,
     generate_visualizations,
+    is_available as is_visualization_available,
 )
-from .visualizations import is_available as is_visualization_available
 
 __all__ = [
     # Universal IR (Epic 18)

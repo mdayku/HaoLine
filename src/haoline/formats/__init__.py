@@ -19,43 +19,33 @@ Supported formats:
 from .coreml import (
     CoreMLInfo,
     CoreMLReader,
-    is_coreml_file,
-)
-from .coreml import (
     is_available as coreml_available,
+    is_coreml_file,
 )
 from .gguf import GGUFInfo, GGUFReader, is_gguf_file
 from .openvino import (
     OpenVINOInfo,
     OpenVINOReader,
-    is_openvino_file,
-)
-from .openvino import (
     is_available as openvino_available,
+    is_openvino_file,
 )
 from .safetensors import (
     SafeTensorsInfo,
     SafeTensorsReader,
-    is_safetensors_file,
-)
-from .safetensors import (
     is_available as safetensors_available,
+    is_safetensors_file,
 )
 from .tensorrt import (
     TRTEngineInfo,
     TRTEngineReader,
-    is_tensorrt_file,
-)
-from .tensorrt import (
     is_available as tensorrt_available,
+    is_tensorrt_file,
 )
 from .tflite import (
     TFLiteInfo,
     TFLiteReader,
-    is_tflite_file,
-)
-from .tflite import (
     is_available as tflite_available,
+    is_tflite_file,
 )
 
 __all__ = [

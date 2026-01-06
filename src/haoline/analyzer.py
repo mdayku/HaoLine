@@ -17,8 +17,9 @@ import pathlib
 from typing import Any, ClassVar
 
 import numpy as np
-import onnx
 from pydantic import BaseModel, ConfigDict, Field
+
+import onnx
 
 
 # Standalone implementations that work without onnxruntime

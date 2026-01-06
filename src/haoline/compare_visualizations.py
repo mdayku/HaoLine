@@ -887,8 +887,7 @@ def generate_compare_pdf(
     Uses the existing PDF generator infrastructure if available.
     """
     try:
-        from .pdf_generator import PDFGenerator
-        from .pdf_generator import is_available as is_pdf_available
+        from .pdf_generator import PDFGenerator, is_available as is_pdf_available
     except ImportError:
         LOGGER.warning("PDF generator not available")
         return None
