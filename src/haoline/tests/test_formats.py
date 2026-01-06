@@ -407,6 +407,40 @@ class TestCoreMLReader:
         assert info.layer_type_counts == {"convolution": 2, "activation": 1}
         assert info.layer_count == 3
 
+    # Story 49.5.2: CoreML FLOP estimation tests
+    def test_coreml_flop_formula_mapping_exists(self) -> None:
+        """COREML_FLOP_FORMULAS should map common layer types."""
+        from haoline.formats.coreml import COREML_FLOP_FORMULAS
+
+        assert COREML_FLOP_FORMULAS["convolution"] == "conv"
+        assert COREML_FLOP_FORMULAS["innerProduct"] == "matmul"
+        assert COREML_FLOP_FORMULAS["softmax"] == "softmax"
+        assert COREML_FLOP_FORMULAS["relu"] == "elementwise"
+        assert COREML_FLOP_FORMULAS["reshape"] == "none"
+
+    def test_coreml_info_total_flops(self) -> None:
+        """Test CoreMLInfo.total_flops computed field."""
+        from haoline.formats.coreml import CoreMLInfo, CoreMLLayerInfo
+
+        info = CoreMLInfo(
+            path=Path("test.mlmodel"),
+            spec_version=5,
+            description="Test",
+            author="Test",
+            license="MIT",
+            layers=[
+                CoreMLLayerInfo(name="conv1", type="convolution"),
+                CoreMLLayerInfo(name="relu1", type="relu"),
+            ],
+            inputs=[{"name": "input", "type": "MultiArray(FLOAT32, [1, 3, 224, 224])"}],
+            outputs=[{"name": "output", "type": "MultiArray(FLOAT32, [1, 1000])"}],
+        )
+
+        # Should have non-zero FLOPs
+        assert info.total_flops > 0
+        assert "convolution" in info.flops_by_layer_type
+        assert "relu" in info.flops_by_layer_type
+
 
 # ============================================================================
 # TFLite Reader Tests
@@ -452,6 +486,78 @@ class TestTFLiteReader:
 
         with pytest.raises(FileNotFoundError):
             TFLiteReader("/nonexistent/model.tflite")
+
+    # Story 49.5.1: TFLite FLOP estimation tests
+    def test_flop_formula_mapping_exists(self) -> None:
+        """TFLITE_FLOP_FORMULAS should map common ops to formula types."""
+        from haoline.formats.tflite import TFLITE_FLOP_FORMULAS
+
+        # Key ops should have formulas
+        assert TFLITE_FLOP_FORMULAS["CONV_2D"] == "conv"
+        assert TFLITE_FLOP_FORMULAS["DEPTHWISE_CONV_2D"] == "depthwise_conv"
+        assert TFLITE_FLOP_FORMULAS["FULLY_CONNECTED"] == "matmul"
+        assert TFLITE_FLOP_FORMULAS["SOFTMAX"] == "softmax"
+        assert TFLITE_FLOP_FORMULAS["RELU"] == "elementwise"
+        assert TFLITE_FLOP_FORMULAS["RESHAPE"] == "none"
+
+    def test_tflite_op_flops_estimation(self) -> None:
+        """Test FLOP estimation for TFLite operators."""
+        from haoline.formats.tflite import (
+            TFLiteOperatorInfo,
+            TFLiteTensorInfo,
+            _estimate_tflite_op_flops,
+        )
+
+        # Create mock tensors: input [1, 224, 224, 3], weight [32, 3, 3, 3], output [1, 112, 112, 32]
+        tensors = [
+            TFLiteTensorInfo(name="input", shape=(1, 224, 224, 3), dtype="float32", buffer_idx=0),
+            TFLiteTensorInfo(name="weight", shape=(32, 3, 3, 3), dtype="float32", buffer_idx=1),
+            TFLiteTensorInfo(name="output", shape=(1, 112, 112, 32), dtype="float32", buffer_idx=2),
+        ]
+
+        # Conv2D op: inputs=[0, 1], outputs=[2]
+        conv_op = TFLiteOperatorInfo(
+            opcode_index=0,
+            builtin_code=3,
+            inputs=[0, 1],
+            outputs=[2],  # 3 = CONV_2D
+        )
+        flops = _estimate_tflite_op_flops(conv_op, tensors)
+
+        # Expected: 2 * 3 * 3 * 3 * 32 * 112 * 112 = 21,676,032
+        expected = 2 * 3 * 3 * 3 * 32 * 112 * 112
+        assert flops == expected
+
+    def test_tflite_info_total_flops(self) -> None:
+        """Test TFLiteInfo.total_flops computed field."""
+        from haoline.formats.tflite import TFLiteInfo, TFLiteOperatorInfo, TFLiteTensorInfo
+
+        tensors = [
+            TFLiteTensorInfo(name="input", shape=(1, 28, 28, 1), dtype="float32", buffer_idx=0),
+            TFLiteTensorInfo(name="output", shape=(1, 10), dtype="float32", buffer_idx=1),
+        ]
+        operators = [
+            TFLiteOperatorInfo(
+                opcode_index=0,
+                builtin_code=25,
+                inputs=[0],
+                outputs=[1],  # 25 = SOFTMAX
+            ),
+        ]
+
+        info = TFLiteInfo(
+            path=Path("test.tflite"),
+            version=3,
+            description="Test",
+            tensors=tensors,
+            operators=operators,
+            inputs=[0],
+            outputs=[1],
+        )
+
+        # Softmax: 5 * output_elements = 5 * 10 = 50
+        assert info.total_flops == 50
+        assert info.flops_by_op == {"SOFTMAX": 50}
 
 
 # ============================================================================
@@ -507,6 +613,44 @@ class TestOpenVINOReader:
         )
         assert info.layer_type_counts == {"Convolution": 2, "ReLU": 1}
         assert info.layer_count == 3
+
+    # Story 49.5.3: OpenVINO FLOP estimation tests
+    def test_openvino_flop_formula_mapping_exists(self) -> None:
+        """OPENVINO_FLOP_FORMULAS should map common op types."""
+        from haoline.formats.openvino import OPENVINO_FLOP_FORMULAS
+
+        assert OPENVINO_FLOP_FORMULAS["Convolution"] == "conv"
+        assert OPENVINO_FLOP_FORMULAS["MatMul"] == "matmul"
+        assert OPENVINO_FLOP_FORMULAS["SoftMax"] == "softmax"
+        assert OPENVINO_FLOP_FORMULAS["Relu"] == "elementwise"
+        assert OPENVINO_FLOP_FORMULAS["Reshape"] == "none"
+
+    def test_openvino_info_total_flops(self) -> None:
+        """Test OpenVINOInfo.total_flops computed field."""
+        from haoline.formats.openvino import OpenVINOInfo, OpenVINOLayerInfo
+
+        info = OpenVINOInfo(
+            path=Path("test.xml"),
+            name="test_model",
+            framework="pytorch",
+            layers=[
+                OpenVINOLayerInfo(
+                    name="conv1",
+                    type="Convolution",
+                    output_shapes=[(1, 32, 112, 112)],
+                ),
+                OpenVINOLayerInfo(
+                    name="relu1",
+                    type="Relu",
+                    output_shapes=[(1, 32, 112, 112)],
+                ),
+            ],
+        )
+
+        # Should have non-zero FLOPs
+        assert info.total_flops > 0
+        assert "Convolution" in info.flops_by_layer_type
+        assert "Relu" in info.flops_by_layer_type
 
 
 # ============================================================================

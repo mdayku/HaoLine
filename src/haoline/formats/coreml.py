@@ -19,6 +19,54 @@ from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
+# CoreML layer type to FLOP formula mapping (Story 49.5.2)
+# Note: Without full shape info, these are rough estimates
+COREML_FLOP_FORMULAS: dict[str, str] = {
+    # Convolutions
+    "convolution": "conv",
+    "convolution2d": "conv",
+    "depthwiseConv2d": "depthwise_conv",
+    "transposedConv2d": "conv",
+    # Fully connected
+    "innerProduct": "matmul",
+    "linear": "matmul",
+    # Pooling
+    "pooling": "pooling",
+    "globalPooling": "pooling",
+    "maxPool2d": "pooling",
+    "avgPool2d": "pooling",
+    # Normalization
+    "batchnorm": "batchnorm",
+    "layerNorm": "norm",
+    "instanceNorm": "norm",
+    # Activations (elementwise)
+    "activation": "elementwise",
+    "relu": "elementwise",
+    "leakyRelu": "elementwise",
+    "sigmoid": "elementwise",
+    "tanh": "elementwise",
+    "softmax": "softmax",
+    # Arithmetic
+    "add": "elementwise",
+    "multiply": "elementwise",
+    "subtract": "elementwise",
+    "divide": "elementwise",
+    # Recurrent
+    "uniDirectionalLSTM": "lstm",
+    "biDirectionalLSTM": "lstm",
+    "gru": "rnn",
+    "simpleRecurrent": "rnn",
+    # Reshape/data movement (no FLOPs)
+    "reshape": "none",
+    "flatten": "none",
+    "permute": "none",
+    "slice": "none",
+    "concat": "none",
+    "split": "none",
+    "squeeze": "none",
+    "expandDims": "none",
+}
+
 
 class CoreMLLayerInfo(BaseModel):
     """Information about a CoreML layer."""
@@ -67,9 +115,118 @@ class CoreMLInfo(BaseModel):
         """Detected model type."""
         return str(self.metadata.get("model_type", "unknown"))
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def total_flops(self) -> int:
+        """
+        Estimated total FLOPs for the model (Story 49.5.2).
+
+        Note: CoreML doesn't expose intermediate tensor shapes, so this is
+        a rough estimate based on layer types and input shapes.
+        """
+        total = 0
+        # Try to get input shape for estimates
+        input_elements = 1
+        for inp in self.inputs:
+            type_str = inp.get("type", "")
+            # Parse shape from type string like "MultiArray(FLOAT32, [1, 3, 224, 224])"
+            if "MultiArray" in type_str and "[" in type_str:
+                try:
+                    shape_str = type_str.split("[")[1].split("]")[0]
+                    shape = [int(x.strip()) for x in shape_str.split(",") if x.strip()]
+                    for dim in shape:
+                        input_elements *= dim
+                except (ValueError, IndexError):
+                    pass
+
+        for layer in self.layers:
+            flops = _estimate_coreml_layer_flops(layer, input_elements)
+            total += flops
+
+        return total
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def flops_by_layer_type(self) -> dict[str, int]:
+        """FLOPs breakdown by layer type."""
+        breakdown: dict[str, int] = {}
+        input_elements = 1
+        for inp in self.inputs:
+            type_str = inp.get("type", "")
+            if "MultiArray" in type_str and "[" in type_str:
+                try:
+                    shape_str = type_str.split("[")[1].split("]")[0]
+                    shape = [int(x.strip()) for x in shape_str.split(",") if x.strip()]
+                    for dim in shape:
+                        input_elements *= dim
+                except (ValueError, IndexError):
+                    pass
+
+        for layer in self.layers:
+            flops = _estimate_coreml_layer_flops(layer, input_elements)
+            breakdown[layer.type] = breakdown.get(layer.type, 0) + flops
+
+        return breakdown
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return cast(dict[str, Any], self.model_dump(mode="json"))
+
+
+def _estimate_coreml_layer_flops(layer: CoreMLLayerInfo, input_elements: int) -> int:
+    """
+    Estimate FLOPs for a CoreML layer.
+
+    Args:
+        layer: The layer to estimate.
+        input_elements: Number of elements in model input (for scaling).
+
+    Returns:
+        Estimated FLOPs for this layer.
+    """
+    formula = COREML_FLOP_FORMULAS.get(layer.type, "elementwise")
+
+    if formula == "none":
+        return 0
+
+    # Without intermediate shapes, use input size as a rough baseline
+    # and scale based on typical layer behavior
+    baseline = input_elements
+
+    if formula == "conv":
+        # Conv typically has 9-27x FLOPs vs input size (3x3 or 5x5 kernel)
+        return baseline * 9
+
+    elif formula == "depthwise_conv":
+        # Depthwise is cheaper than full conv
+        return baseline * 3
+
+    elif formula == "matmul":
+        # FC layers typically reduce spatial dims, estimate as 2x input
+        return baseline * 2
+
+    elif formula == "lstm":
+        # LSTM has 4 gates, roughly 8x a matmul
+        return baseline * 16
+
+    elif formula == "rnn":
+        return baseline * 4
+
+    elif formula == "softmax":
+        return baseline * 5
+
+    elif formula == "norm":
+        return baseline * 5
+
+    elif formula == "batchnorm":
+        return baseline * 2
+
+    elif formula == "pooling":
+        # Pooling reduces size, comparisons per output
+        return baseline // 4
+
+    else:  # elementwise
+        return baseline
 
 
 class CoreMLReader:

@@ -115,7 +115,7 @@ FORMAT_CAPABILITIES: dict[SourceFormat, FormatCapabilities] = {
     ),
     SourceFormat.TFLITE: FormatCapabilities(
         has_graph=True,
-        has_flops=False,  # FLOP formulas not yet implemented for TFLite ops
+        has_flops=True,  # Story 49.5.1: Native FLOP estimation added
         has_interactive_viz=True,
         has_param_counts=True,
         has_memory_estimates=True,
@@ -123,11 +123,11 @@ FORMAT_CAPABILITIES: dict[SourceFormat, FormatCapabilities] = {
         supports_hardware_estimation=True,
         can_convert_to_onnx=True,
         tier="Graph",
-        description="Graph structure available, convert to ONNX for FLOP analysis",
+        description="Graph structure with native FLOP estimation",
     ),
     SourceFormat.COREML: FormatCapabilities(
         has_graph=True,
-        has_flops=False,  # FLOP formulas not yet implemented for CoreML ops
+        has_flops=True,  # Story 49.5.2: Native FLOP estimation added
         has_interactive_viz=True,
         has_param_counts=True,
         has_memory_estimates=False,  # Memory estimation may be incomplete
@@ -135,11 +135,11 @@ FORMAT_CAPABILITIES: dict[SourceFormat, FormatCapabilities] = {
         supports_hardware_estimation=True,
         can_convert_to_onnx=True,
         tier="Graph",
-        description="Graph structure available, convert to ONNX for complete analysis",
+        description="Graph structure with native FLOP estimation",
     ),
     SourceFormat.OPENVINO: FormatCapabilities(
         has_graph=True,
-        has_flops=False,  # FLOP formulas not yet implemented for OpenVINO ops
+        has_flops=True,  # Story 49.5.3: Native FLOP estimation added
         has_interactive_viz=True,
         has_param_counts=True,
         has_memory_estimates=False,  # Memory estimation may be incomplete
@@ -147,7 +147,7 @@ FORMAT_CAPABILITIES: dict[SourceFormat, FormatCapabilities] = {
         supports_hardware_estimation=True,
         can_convert_to_onnx=True,
         tier="Graph",
-        description="Graph structure available, convert to ONNX for complete analysis",
+        description="Graph structure with native FLOP estimation",
     ),
     SourceFormat.TENSORRT: FormatCapabilities(
         has_graph=False,  # TRT engines are compiled/fused, no original graph

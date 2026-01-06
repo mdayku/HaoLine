@@ -19,6 +19,154 @@ from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
+# OpenVINO op type to FLOP formula mapping (Story 49.5.3)
+OPENVINO_FLOP_FORMULAS: dict[str, str] = {
+    # Convolutions
+    "Convolution": "conv",
+    "GroupConvolution": "conv",
+    "ConvolutionBackpropData": "conv",
+    "DeformableConvolution": "conv",
+    # Fully connected
+    "MatMul": "matmul",
+    "FullyConnected": "matmul",
+    # Pooling
+    "MaxPool": "pooling",
+    "AvgPool": "pooling",
+    "AdaptiveMaxPool": "pooling",
+    "AdaptiveAvgPool": "pooling",
+    # Normalization
+    "BatchNormInference": "batchnorm",
+    "NormalizeL2": "norm",
+    "MVN": "norm",
+    "LayerNorm": "norm",
+    # Activations (elementwise)
+    "Relu": "elementwise",
+    "PRelu": "elementwise",
+    "Sigmoid": "elementwise",
+    "Tanh": "elementwise",
+    "Clamp": "elementwise",
+    "Swish": "elementwise",
+    "Mish": "elementwise",
+    "SoftMax": "softmax",
+    "LogSoftmax": "softmax",
+    # Arithmetic
+    "Add": "elementwise",
+    "Subtract": "elementwise",
+    "Multiply": "elementwise",
+    "Divide": "elementwise",
+    "Exp": "elementwise",
+    "Log": "elementwise",
+    "Power": "elementwise",
+    "ReduceMean": "reduce",
+    "ReduceSum": "reduce",
+    "ReduceMax": "reduce",
+    "ReduceMin": "reduce",
+    # Attention
+    "ScaledDotProductAttention": "attention",
+    # Recurrent
+    "LSTMCell": "lstm",
+    "GRUCell": "rnn",
+    "RNNCell": "rnn",
+    # No FLOPs (reshape, data movement)
+    "Reshape": "none",
+    "Squeeze": "none",
+    "Unsqueeze": "none",
+    "Transpose": "none",
+    "Concat": "none",
+    "Split": "none",
+    "Gather": "none",
+    "Slice": "none",
+    "Pad": "none",
+    "Convert": "none",
+    "Parameter": "none",
+    "Result": "none",
+    "Constant": "none",
+}
+
+
+def _estimate_openvino_layer_flops(layer: OpenVINOLayerInfo) -> int:
+    """
+    Estimate FLOPs for an OpenVINO layer.
+
+    Args:
+        layer: The layer to estimate.
+
+    Returns:
+        Estimated FLOPs for this layer.
+    """
+
+    formula = OPENVINO_FLOP_FORMULAS.get(layer.type, "elementwise")
+
+    if formula == "none":
+        return 0
+
+    # Get output elements for estimates
+    output_elements = 1
+    if layer.output_shapes:
+        for dim in layer.output_shapes[0]:
+            if dim > 0:
+                output_elements *= dim
+
+    # Get input elements
+    input_elements = 1
+    if layer.input_shapes:
+        for dim in layer.input_shapes[0]:
+            if dim > 0:
+                input_elements *= dim
+
+    if formula == "conv":
+        # Conv: 2 * K * C_in * output_elements
+        # Estimate kernel size from input/output ratio
+        if len(layer.input_shapes) >= 2:
+            # Second input is typically weights: [C_out, C_in, K_h, K_w]
+            w_shape = layer.input_shapes[1] if len(layer.input_shapes) > 1 else ()
+            if len(w_shape) >= 4:
+                c_out, c_in, k_h, k_w = w_shape[:4]
+                return 2 * k_h * k_w * c_in * output_elements
+        return output_elements * 9  # Fallback: 3x3 kernel
+
+    elif formula == "matmul":
+        # MatMul: 2 * M * N * K
+        if layer.input_shapes and layer.output_shapes:
+            if len(layer.input_shapes[0]) >= 2:
+                k = layer.input_shapes[0][-1]
+                return 2 * output_elements * k
+        return output_elements * 2
+
+    elif formula == "attention":
+        # Scaled dot-product attention: O(seq^2 * d)
+        # Approximate as 4x matmul
+        return output_elements * 4
+
+    elif formula == "lstm":
+        # LSTM: 4 gates * 2 * hidden^2
+        if layer.output_shapes and len(layer.output_shapes[0]) >= 1:
+            hidden = layer.output_shapes[0][-1]
+            return 8 * hidden * hidden
+
+    elif formula == "rnn":
+        if layer.output_shapes and len(layer.output_shapes[0]) >= 1:
+            hidden = layer.output_shapes[0][-1]
+            return 4 * hidden * hidden
+
+    elif formula == "softmax":
+        return output_elements * 5
+
+    elif formula == "norm":
+        return output_elements * 5
+
+    elif formula == "batchnorm":
+        return output_elements * 2
+
+    elif formula == "pooling":
+        return output_elements * 4
+
+    elif formula == "reduce":
+        return input_elements
+
+    else:  # elementwise
+        return output_elements
+
 
 class OpenVINOLayerInfo(BaseModel):
     """Information about an OpenVINO layer."""
@@ -67,6 +215,22 @@ class OpenVINOInfo(BaseModel):
         breakdown: dict[str, int] = {}
         for layer in self.layers:
             breakdown[layer.precision] = breakdown.get(layer.precision, 0) + 1
+        return breakdown
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def total_flops(self) -> int:
+        """Total estimated FLOPs for the model (Story 49.5.3)."""
+        return sum(_estimate_openvino_layer_flops(layer) for layer in self.layers)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def flops_by_layer_type(self) -> dict[str, int]:
+        """FLOPs breakdown by layer type."""
+        breakdown: dict[str, int] = {}
+        for layer in self.layers:
+            flops = _estimate_openvino_layer_flops(layer)
+            breakdown[layer.type] = breakdown.get(layer.type, 0) + flops
         return breakdown
 
     def to_dict(self) -> dict[str, Any]:

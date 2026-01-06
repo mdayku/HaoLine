@@ -119,6 +119,183 @@ TFLITE_BUILTINS: dict[int, str] = {
     # ... many more, but these are the common ones
 }
 
+# TFLite op to FLOP formula type mapping (Story 49.5.1)
+# Formula types: conv, depthwise_conv, matmul, elementwise, softmax, pooling, none
+TFLITE_FLOP_FORMULAS: dict[str, str] = {
+    # Convolutions (highest FLOPs)
+    "CONV_2D": "conv",
+    "DEPTHWISE_CONV_2D": "depthwise_conv",
+    "TRANSPOSE_CONV": "conv",
+    # Fully connected / matrix multiply
+    "FULLY_CONNECTED": "matmul",
+    # Pooling (comparisons, not multiply-adds)
+    "AVERAGE_POOL_2D": "pooling",
+    "MAX_POOL_2D": "pooling",
+    "L2_POOL_2D": "pooling",
+    # Normalization
+    "L2_NORMALIZATION": "norm",
+    "LOCAL_RESPONSE_NORMALIZATION": "norm",
+    "BATCH_NORMALIZATION": "batchnorm",
+    # Activations (elementwise)
+    "RELU": "elementwise",
+    "RELU6": "elementwise",
+    "RELU_N1_TO_1": "elementwise",
+    "LOGISTIC": "elementwise",  # sigmoid
+    "TANH": "elementwise",
+    "SOFTMAX": "softmax",
+    "LOG_SOFTMAX": "softmax",
+    # Arithmetic (elementwise)
+    "ADD": "elementwise",
+    "SUB": "elementwise",
+    "MUL": "elementwise",
+    "DIV": "elementwise",
+    "EXP": "elementwise",
+    "MEAN": "reduce",
+    # Recurrent
+    "LSTM": "lstm",
+    "RNN": "rnn",
+    "UNIDIRECTIONAL_SEQUENCE_LSTM": "lstm",
+    "UNIDIRECTIONAL_SEQUENCE_RNN": "rnn",
+    "BIDIRECTIONAL_SEQUENCE_RNN": "rnn",
+    # No FLOPs (reshape, data movement)
+    "RESHAPE": "none",
+    "SQUEEZE": "none",
+    "TRANSPOSE": "none",
+    "CONCATENATION": "none",
+    "SPLIT": "none",
+    "GATHER": "none",
+    "PAD": "none",
+    "STRIDED_SLICE": "none",
+    "DEQUANTIZE": "none",
+    "QUANTIZE": "none",
+    "EMBEDDING_LOOKUP": "none",
+}
+
+
+def _estimate_tflite_op_flops(
+    op: TFLiteOperatorInfo,
+    tensors: list[TFLiteTensorInfo],
+) -> int:
+    """
+    Estimate FLOPs for a single TFLite operator.
+
+    Args:
+        op: The operator to estimate.
+        tensors: List of all tensors in the model (for shape lookup).
+
+    Returns:
+        Estimated FLOPs for this operator.
+    """
+    formula = TFLITE_FLOP_FORMULAS.get(op.op_name, "elementwise")
+
+    if formula == "none":
+        return 0
+
+    # Get output shape for elementwise estimates
+    output_elements = 1
+    if op.outputs:
+        out_idx = op.outputs[0]
+        if 0 <= out_idx < len(tensors):
+            output_elements = tensors[out_idx].n_elements
+
+    if formula == "conv":
+        # Conv2D: 2 * K_h * K_w * C_in * C_out * H_out * W_out
+        # Need weight tensor shape: [C_out, K_h, K_w, C_in] (TFLite format)
+        if len(op.inputs) >= 2:
+            weight_idx = op.inputs[1]
+            if 0 <= weight_idx < len(tensors):
+                w = tensors[weight_idx]
+                if len(w.shape) == 4:
+                    # TFLite: [out_channels, kernel_h, kernel_w, in_channels]
+                    c_out, k_h, k_w, c_in = w.shape
+                    # Output spatial size from output tensor
+                    if op.outputs and 0 <= op.outputs[0] < len(tensors):
+                        out = tensors[op.outputs[0]]
+                        if len(out.shape) == 4:
+                            _, h_out, w_out, _ = out.shape
+                            return 2 * k_h * k_w * c_in * c_out * h_out * w_out
+        return output_elements * 9  # Fallback: assume 3x3 kernel
+
+    elif formula == "depthwise_conv":
+        # DepthwiseConv2D: 2 * K_h * K_w * C * H_out * W_out (no C_in * C_out, just C)
+        if len(op.inputs) >= 2:
+            weight_idx = op.inputs[1]
+            if 0 <= weight_idx < len(tensors):
+                w = tensors[weight_idx]
+                if len(w.shape) == 4:
+                    # TFLite depthwise: [1, kernel_h, kernel_w, channels * multiplier]
+                    _, k_h, k_w, c = w.shape
+                    if op.outputs and 0 <= op.outputs[0] < len(tensors):
+                        out = tensors[op.outputs[0]]
+                        if len(out.shape) == 4:
+                            _, h_out, w_out, _ = out.shape
+                            return 2 * k_h * k_w * c * h_out * w_out
+        return output_elements * 9  # Fallback
+
+    elif formula == "matmul":
+        # FullyConnected: 2 * M * N * K (M=batch, K=input_features, N=output_features)
+        if len(op.inputs) >= 2:
+            weight_idx = op.inputs[1]
+            if 0 <= weight_idx < len(tensors):
+                w = tensors[weight_idx]
+                if len(w.shape) >= 2:
+                    # TFLite FC weight: [output_features, input_features]
+                    n, k = w.shape[-2], w.shape[-1]
+                    # Batch size from input
+                    if op.inputs and 0 <= op.inputs[0] < len(tensors):
+                        inp = tensors[op.inputs[0]]
+                        m = inp.n_elements // k if k > 0 else 1
+                        return 2 * m * n * k
+        return output_elements * 2  # Fallback
+
+    elif formula == "lstm":
+        # LSTM: 4 gates × (2 × hidden × input + 2 × hidden × hidden) per timestep
+        # Simplified: 8 * hidden^2 * seq_len
+        if op.outputs and 0 <= op.outputs[0] < len(tensors):
+            out = tensors[op.outputs[0]]
+            if len(out.shape) >= 2:
+                # Assume [batch, seq_len, hidden] or similar
+                hidden = out.shape[-1] if out.shape else 256
+                seq_len = out.shape[-2] if len(out.shape) >= 2 else 1
+                return 8 * hidden * hidden * seq_len
+        return output_elements * 8
+
+    elif formula == "rnn":
+        # RNN: 2 * hidden * (input + hidden) per timestep
+        if op.outputs and 0 <= op.outputs[0] < len(tensors):
+            out = tensors[op.outputs[0]]
+            if len(out.shape) >= 2:
+                hidden = out.shape[-1] if out.shape else 256
+                seq_len = out.shape[-2] if len(out.shape) >= 2 else 1
+                return 4 * hidden * hidden * seq_len
+        return output_elements * 4
+
+    elif formula == "softmax":
+        # Softmax: ~5 ops per element (exp, sum, div, etc.)
+        return output_elements * 5
+
+    elif formula == "norm":
+        # Normalization: ~5 ops per element
+        return output_elements * 5
+
+    elif formula == "batchnorm":
+        # BatchNorm: ~2 ops per element (scale + shift)
+        return output_elements * 2
+
+    elif formula == "pooling":
+        # Pooling: comparisons, roughly 1 op per output element per kernel element
+        # Assume 2x2 or 3x3 kernel
+        return output_elements * 4
+
+    elif formula == "reduce":
+        # Mean/Sum: 1 op per input element
+        if op.inputs and 0 <= op.inputs[0] < len(tensors):
+            return tensors[op.inputs[0]].n_elements
+        return output_elements
+
+    else:  # elementwise
+        return output_elements
+
 
 class TFLiteTensorInfo(BaseModel):
     """Information about a TFLite tensor."""
@@ -226,6 +403,22 @@ class TFLiteInfo(BaseModel):
         """Check if model uses quantized types."""
         quant_types = {"int8", "uint8", "int16", "int4"}
         return any(t.dtype.lower() in quant_types for t in self.tensors)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def total_flops(self) -> int:
+        """Total estimated FLOPs for the model (Story 49.5.1)."""
+        return sum(_estimate_tflite_op_flops(op, self.tensors) for op in self.operators)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def flops_by_op(self) -> dict[str, int]:
+        """FLOPs breakdown by operator type."""
+        breakdown: dict[str, int] = {}
+        for op in self.operators:
+            flops = _estimate_tflite_op_flops(op, self.tensors)
+            breakdown[op.op_name] = breakdown.get(op.op_name, 0) + flops
+        return breakdown
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""

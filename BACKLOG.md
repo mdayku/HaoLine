@@ -28,7 +28,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epic 49.5: Native Format FLOPs | Not Started | 1 | 0/4 | P1 |
+| Epic 49.5: Native Format FLOPs | ✅ Complete | 1 | 4/4 | P1 |
 | Epics 26-30: LLM-Scale Analysis | Not Started | 19 | 0/88 | P1 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
@@ -197,13 +197,13 @@
 
 **Finding:** CoreML/OpenVINO → ONNX conversions are not feasible (these formats are typically targets, not sources).
 
-### Story 49.5: Native FLOPs for Non-ONNX Formats (P1)
-*Alternative to hub conversion: Add FLOPs directly to format readers.*
+### Story 49.5: Native FLOPs for Non-ONNX Formats - **COMPLETE** ✅
+*Added native FLOP estimation to Graph-tier format readers.*
 
-- [ ] **Task 49.5.1**: Map TFLite builtin ops to FLOP formulas
-- [ ] **Task 49.5.2**: Map CoreML layer types to FLOP formulas
-- [ ] **Task 49.5.3**: Map OpenVINO op types to FLOP formulas
-- [ ] **Task 49.5.4**: Add FLOPs to format reader return types
+- [x] **Task 49.5.1**: Map TFLite builtin ops to FLOP formulas ✅
+- [x] **Task 49.5.2**: Map CoreML layer types to FLOP formulas ✅
+- [x] **Task 49.5.3**: Map OpenVINO op types to FLOP formulas ✅
+- [x] **Task 49.5.4**: Update FormatCapabilities (has_flops=True) ✅
 
 ---
 
