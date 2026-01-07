@@ -1125,17 +1125,17 @@ def _run_inspect(
         if export_weights:
             from haoline.formats.safetensors import SafeTensorsWriter
 
-            writer = SafeTensorsWriter(export_weights)
-            writer.write_from_onnx(analysis_path)
+            st_writer = SafeTensorsWriter(export_weights)
+            st_writer.write_from_onnx(analysis_path)
             console.print(f"[green]Exported weights:[/green] {export_weights}")
 
         if export_openvino:
             from haoline.formats.openvino import OpenVINOWriter
 
-            writer = OpenVINOWriter(export_openvino)
-            precision = "FP16" if openvino_fp16 else "FP32"
-            result_path = writer.write_from_onnx(
-                analysis_path, precision=precision, compress_to_fp16=openvino_fp16
+            ov_writer = OpenVINOWriter(export_openvino)
+            ov_precision = "FP16" if openvino_fp16 else "FP32"
+            result_path = ov_writer.write_from_onnx(
+                analysis_path, precision=ov_precision, compress_to_fp16=openvino_fp16
             )
             console.print(f"[green]Exported OpenVINO:[/green] {result_path}")
             bin_path = result_path.with_suffix(".bin")
@@ -1673,10 +1673,10 @@ def _run_inspect(
         import csv
 
         with open(layer_csv, "w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["name", "op_type", "params", "flops"])
+            csv_writer = csv.writer(f)
+            csv_writer.writerow(["name", "op_type", "params", "flops"])
             for node in graph_info.nodes:
-                writer.writerow([node.name, node.op_type, node.params, node.flops])
+                csv_writer.writerow([node.name, node.op_type, node.params, node.flops])
         console.print(f"[green]Wrote:[/green] {layer_csv}")
 
 

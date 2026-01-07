@@ -96,7 +96,7 @@ class TestLayerPrecisionInfo:
             sensitivity_reason="Embedding layers are sensitive",
         )
         assert lp.is_sensitive
-        assert "Embedding" in lp.sensitivity_reason
+        assert lp.sensitivity_reason is not None and "Embedding" in lp.sensitivity_reason
 
     def test_to_dict(self) -> None:
         """Test serialization to dict."""

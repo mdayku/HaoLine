@@ -143,11 +143,13 @@ def _estimate_openvino_layer_flops(layer: OpenVINOLayerInfo) -> int:
         if layer.output_shapes and len(layer.output_shapes[0]) >= 1:
             hidden = layer.output_shapes[0][-1]
             return 8 * hidden * hidden
+        return output_elements  # Fallback
 
     elif formula == "rnn":
         if layer.output_shapes and len(layer.output_shapes[0]) >= 1:
             hidden = layer.output_shapes[0][-1]
             return 4 * hidden * hidden
+        return output_elements  # Fallback
 
     elif formula == "softmax":
         return output_elements * 5
