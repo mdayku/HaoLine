@@ -2241,7 +2241,7 @@ class InspectionReport(BaseModel):
                         <div style="padding: 0.75rem 1rem; background: #22c55e22;
                              border: 1px solid #22c55e; border-radius: 8px; margin-bottom: 1rem;">
                             <strong style="color: #22c55e;">HW Accelerated</strong>
-                            <span style="margin-left: 1rem;">{', '.join(hw_list[:2])}</span>
+                            <span style="margin-left: 1rem;">{", ".join(hw_list[:2])}</span>
                         </div>
                         """
                     )
