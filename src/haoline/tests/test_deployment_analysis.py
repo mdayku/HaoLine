@@ -222,7 +222,7 @@ class TestPrefillDecodeAnalysis:
         graph = create_mock_graph_info(nodes)
 
         analyzer = DeploymentAnalyzer()
-        result = analyzer.analyze(graph, total_params=7_000_000_000, total_flops=1e12)
+        result = analyzer.analyze(graph, total_params=7_000_000_000, total_flops=int(1e12))
 
         pd = result.prefill_decode
         # 4K should be ~4x of 1K base
@@ -362,7 +362,7 @@ class TestContextScaling:
         )
 
         analyzer = DeploymentAnalyzer()
-        result = analyzer.analyze(graph, attention_result=attention_result, total_flops=1e12)
+        result = analyzer.analyze(graph, attention_result=attention_result, total_flops=int(1e12))
 
         cs = result.context_scaling
         # 8K should be ~4x of 4K (quadratic)

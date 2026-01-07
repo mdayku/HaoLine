@@ -561,7 +561,7 @@ class SparseAnalyzer:
                 for topk in topk_nodes:
                     for attr in topk.attributes if hasattr(topk, "attributes") else []:
                         if attr[0] == "k":
-                            info.active_experts_per_token = attr[1]
+                            info.active_experts_per_token = int(attr[1])
                             break
                     if info.active_experts_per_token:
                         break
@@ -882,7 +882,7 @@ class SparseAnalyzer:
             # Check attributes for group = channels (depthwise indicator)
             is_depthwise = False
             for attr in node.attributes if hasattr(node, "attributes") else []:
-                if attr[0] == "group" and attr[1] > 1:
+                if attr[0] == "group" and int(attr[1]) > 1:
                     is_depthwise = True
                     break
 
