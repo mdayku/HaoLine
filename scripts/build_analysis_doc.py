@@ -26,6 +26,7 @@ SKIP_DIRS = {
     ".ruff_cache",
     "node_modules",
     ".venv",
+    ".venv-dev",
     "venv",
     "env",
     ".env",
@@ -35,6 +36,9 @@ SKIP_DIRS = {
     "runs",  # YOLO training outputs
     "demo_outputs",  # Demo output files
     "integration_output",  # Integration test outputs
+    "site-packages",  # Installed packages (in case of partial match)
+    "Lib",  # Windows venv lib directory
+    "lib",  # Linux venv lib directory
 }
 
 # Files to skip
