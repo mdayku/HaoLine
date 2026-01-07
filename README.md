@@ -5,9 +5,9 @@
 [![PyPI version](https://badge.fury.io/py/haoline.svg)](https://badge.fury.io/py/haoline)
 [![Python 3.10-3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-500%2B%20passed-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-900%2B%20passed-brightgreen.svg)]()
 
-> **🎉 v1.5 Released!** New: Memory Pattern Analysis (KV cache, parallelism detection, VRAM recommendations). [See what's new →](#features)
+> **🎉 v1.7 Released!** New: LLM Deployment Analysis (prefill/decode, batching, serving frameworks) + Sparse Architecture Detection (MoE, sparsity). [See what's new →](#features)
 
 HaoLine is a universal model inspector that makes neural network internals **legible** across formats — so you can make informed decisions about what to deploy.
 
@@ -163,7 +163,7 @@ haoline-web
 This opens an interactive dashboard at `http://localhost:8501` with:
 
 - Drag-and-drop model upload (ONNX, PyTorch, TFLite, CoreML, OpenVINO, TensorRT, GGUF, SafeTensors)
-- Hardware selection with 50+ GPU profiles (searchable)
+- Hardware selection with 120+ GPU profiles (searchable)
 - **NEW:** Batch size and GPU count controls
 - **NEW:** System Requirements (Steam-style min/rec/optimal)
 - **NEW:** Deployment Cost Calculator (monthly cloud cost estimates)
@@ -418,7 +418,7 @@ Or use the web UI's comparison mode for an interactive experience.
 | `--attention-analysis` | Detect attention architecture (MHA/MQA/GQA), position encoding, KV cache |
 | `--attention-analysis-json PATH` | Export attention analysis to JSON |
 
-### Memory Analysis (Epic 28)
+### Memory Analysis (LLM)
 
 | Flag | Description |
 |------|-------------|
@@ -426,14 +426,14 @@ Or use the web UI's comparison mode for an interactive experience.
 | `--memory-analysis-json PATH` | Export memory analysis to JSON |
 | `--memory-vram-gb GB` | Target VRAM in GB for recommendations (default: 24) |
 
-### Sparse Analysis (Epic 29)
+### Sparse & Efficient Architecture Analysis
 
 | Flag | Description |
 |------|-------------|
 | `--sparse-analysis` | Analyze sparse patterns (MoE, weight sparsity, efficient architectures) |
 | `--sparse-analysis-json PATH` | Export sparse analysis to JSON |
 
-### Deployment Analysis (Epic 30)
+### LLM Deployment Analysis
 
 | Flag | Description |
 |------|-------------|
@@ -625,7 +625,7 @@ See [.github/examples/model-check.yml](.github/examples/model-check.yml) for a f
 | **FLOP Estimates** | Identify compute hotspots in your model |
 | **Memory Analysis** | Peak activation memory and VRAM requirements |
 | **Risk Signals** | Detect problematic architecture patterns |
-| **Hardware Estimates** | GPU utilization predictions for 30+ NVIDIA profiles |
+| **Hardware Estimates** | GPU utilization predictions for 120+ GPU profiles |
 | **Runtime Profiling** | Actual inference benchmarks with ONNX Runtime |
 | **Visualizations** | Operator histograms, parameter/FLOPs distribution charts |
 | **Interactive Graph** | Zoomable D3.js neural network visualization |
@@ -635,6 +635,9 @@ See [.github/examples/model-check.yml](.github/examples/model-check.yml) for a f
 | **Quantization Analysis** | QAT readiness scoring, problem layer detection, deployment recommendations; Streamlit Quant tab with readiness score, warnings, recommendations, layer sensitivity |
 | **Advanced Quant Analysis** | Detect GPTQ, AWQ, bitsandbytes, GGML quantization schemes; estimate accuracy impact; identify sensitive layers |
 | **Attention Detection** | Detect MHA/MQA/GQA attention types; RoPE/ALiBi position encodings; KV cache estimation; FlashAttention detection |
+| **LLM Memory Patterns** | KV cache quantization, PagedAttention detection, parallelism strategy (TP/PP/DP), VRAM recommendations |
+| **Sparse Architectures** | Mixture of Experts (MoE), speculative decoding, weight sparsity (N:M, unstructured), efficient patterns |
+| **Deployment Analysis** | Prefill vs Decode analysis, batching strategies, context length scaling, serving framework compatibility |
 | **Layer Details** | In-app per-layer table (search/filter, CSV/JSON download) |
 
 ---
