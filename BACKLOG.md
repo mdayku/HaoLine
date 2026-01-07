@@ -27,7 +27,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epics 28-30: LLM-Scale Analysis | Not Started | 12 | 0/52 | P1 |
+| Epics 28-30: LLM-Scale Analysis | Not Started | 10 | 2/43 | P1 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
 | Epic 19: SafeTensors | ✅ COMPLETE | 2 | 10/10 | P3 |
@@ -37,7 +37,7 @@
 | **OPTIMIZATION & ANALYSIS** |||||
 | Epic 31: Quantization Service | Not Started | 6 | 0/32 | P3 |
 | Epic 35: TRT-Aware Graph UX | Not Started | 3 | 0/16 | P3 |
-| Epic 36: Layer Visualization | In Progress | 5 | 4/25 | P3 |
+| Epic 36: Layer Visualization | In Progress | 5 | 4/27 | P3 |
 | **FUTURE** |||||
 | Epic 10: SaaS Web App | Not Started | 5 | 0/27 | P4 |
 | Epic 47: Model Card Standards | Not Started | 2 | 0/10 | P4 |
@@ -322,39 +322,28 @@
 
 ---
 
----
-
 ## Epic 28: Memory Pattern Analysis (P3)
 
 *LLM deployment is memory-bound. Understand where memory goes.*
 
-### Story 28.1: Activation Checkpointing Detection
-- [ ] **Task 28.1.1**: Detect activation checkpointing patterns (recompute on backward)
-- [ ] **Task 28.1.2**: Identify checkpoint boundaries
-- [ ] **Task 28.1.3**: Calculate memory savings vs compute overhead
-- [ ] **Task 28.1.4**: Recommend optimal checkpoint granularity
+### Story 28.1: KV Cache Analysis
+- [x] **Task 28.1.1**: Calculate KV cache size per layer per token *(done in Epic 27)*
+- [x] **Task 28.1.2**: Project KV cache for variable context lengths (1k, 4k, 8k, 32k, 128k) *(done in Epic 27)*
+- [ ] **Task 28.1.3**: Detect KV cache quantization (INT8 KV cache)
+- [ ] **Task 28.1.4**: Calculate max context length for given VRAM
+- [ ] **Task 28.1.5**: Detect PagedAttention patterns (vLLM-style)
+- [ ] **Task 28.1.6**: Report KV cache as % of total memory
 
-### Story 28.2: KV Cache Analysis
-- [ ] **Task 28.2.1**: Calculate KV cache size per layer per token
-- [ ] **Task 28.2.2**: Project KV cache for variable context lengths (1k, 4k, 8k, 32k, 128k)
-- [ ] **Task 28.2.3**: Detect KV cache quantization (INT8 KV cache)
-- [ ] **Task 28.2.4**: Calculate max context length for given VRAM
-- [ ] **Task 28.2.5**: Detect PagedAttention patterns (vLLM-style)
-- [ ] **Task 28.2.6**: Report KV cache as % of total memory
+### Story 28.2: Parallelism Strategy Detection
+- [ ] **Task 28.2.1**: Detect tensor parallelism patterns (column/row split)
+- [ ] **Task 28.2.2**: Detect pipeline parallelism patterns (layer sharding)
+- [ ] **Task 28.2.3**: Detect data parallelism patterns
+- [ ] **Task 28.2.4**: Identify all-reduce / all-gather communication ops
+- [ ] **Task 28.2.5**: Report memory per GPU for N-way parallelism
+- [ ] **Task 28.2.6**: Recommend parallelism strategy for target hardware
 
-### Story 28.3: Parallelism Strategy Detection
-- [ ] **Task 28.3.1**: Detect tensor parallelism patterns (column/row split)
-- [ ] **Task 28.3.2**: Detect pipeline parallelism patterns (layer sharding)
-- [ ] **Task 28.3.3**: Detect data parallelism patterns
-- [ ] **Task 28.3.4**: Identify all-reduce / all-gather communication ops
-- [ ] **Task 28.3.5**: Report memory per GPU for N-way parallelism
-- [ ] **Task 28.3.6**: Recommend parallelism strategy for target hardware
-
-### Story 28.4: Memory Waterfall Analysis
-- [ ] **Task 28.4.1**: Calculate peak memory at each point in forward pass
-- [ ] **Task 28.4.2**: Generate memory waterfall chart (memory over time)
-- [ ] **Task 28.4.3**: Identify memory spike locations
-- [ ] **Task 28.4.4**: Recommend batch size for given VRAM constraint
+### Story 28.3: VRAM-Based Recommendations
+- [ ] **Task 28.3.1**: Recommend batch size for given VRAM constraint
 
 ---
 
@@ -647,11 +636,13 @@
 
 ### Story 36.2: Memory Timeline Chart
 *Show activation memory building through network layers.*
-- [ ] **Task 36.2.1**: Plot activation memory vs layer index
-- [ ] **Task 36.2.2**: Mark peak memory location with annotation
-- [ ] **Task 36.2.3**: Show memory "released" after each layer (stacked area)
-- [ ] **Task 36.2.4**: Color-code by op type
-- [ ] **Task 36.2.5**: Add VRAM limit line for target hardware
+- [ ] **Task 36.2.1**: Calculate peak memory at each point in forward pass *(moved from Epic 28)*
+- [ ] **Task 36.2.2**: Plot activation memory vs layer index
+- [ ] **Task 36.2.3**: Mark peak memory location with annotation
+- [ ] **Task 36.2.4**: Identify memory spike locations *(moved from Epic 28)*
+- [ ] **Task 36.2.5**: Show memory "released" after each layer (stacked area)
+- [ ] **Task 36.2.6**: Color-code by op type
+- [ ] **Task 36.2.7**: Add VRAM limit line for target hardware
 
 ### Story 36.3: Layer Efficiency Analysis
 *Scatter plots and heatmaps for layer-level efficiency.*
@@ -858,6 +849,14 @@ JAX        | ✅   | →   | →      | →      | →        | ⛔
 - [ ] **Task 43.3.3**: Calculate memory "watermark" at each execution point
 - [ ] **Task 43.3.4**: Report true peak activation memory (not worst-case sum)
 - [ ] **Task 43.3.5**: Visualize memory timeline in HTML report *(groundwork in Epic 22 TRT: per-layer workspace tracking)*
+
+### Story 43.4: Activation Checkpointing Detection *(moved from Epic 28)*
+*Detect training-time memory optimizations.*
+
+- [ ] **Task 43.4.1**: Detect activation checkpointing patterns (recompute on backward)
+- [ ] **Task 43.4.2**: Identify checkpoint boundaries
+- [ ] **Task 43.4.3**: Calculate memory savings vs compute overhead
+- [ ] **Task 43.4.4**: Recommend optimal checkpoint granularity
 
 ---
 
