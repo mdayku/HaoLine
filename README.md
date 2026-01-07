@@ -718,6 +718,10 @@ Not all formats support all features. Here's what you get with each:
 | **Layer-by-Layer Table** | ✅ | ✅ | 🔜 | 🔜 | 🔜 | ✅ | ❌ | ❌ |
 | **Op Type Breakdown** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **Quantization Analysis** | ✅ | ✅ | ✅ | ❓ | ✅ | ✅ | ✅ | ❌ |
+| **Attention Analysis** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Memory Patterns (LLM)** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Sparse Architecture** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Deployment Analysis** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | **Runtime Benchmarking** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **ONNX Comparison** | N/A | N/A | 🔜 | 🔜 | 🔜 | ✅ | ❌ | ❌ |
 
@@ -728,7 +732,7 @@ Not all formats support all features. Here's what you get with each:
 - **ONNX/PyTorch**: Full graph structure with UniversalGraph adapters → all features work
 - **TensorRT**: Optimized fused graph with layer info, precision breakdown, and ONNX comparison (requires NVIDIA GPU)
 - **TFLite/CoreML/OpenVINO**: Graph structure with native FLOPs estimation; interactive graph requires ONNX conversion
-- **GGUF**: LLM architecture metadata (layers, heads, quantization) but no computational graph - weights only
+- **GGUF**: LLM architecture metadata (layers, heads, quantization) enables attention/memory/deployment analysis despite no computational graph
 - **SafeTensors**: Weights only - tensor shapes and dtypes, no graph structure
 
 ### Format Fidelity & Universal IR
@@ -741,7 +745,7 @@ Not all formats support all features. Here's what you get with each:
 | CoreML | Medium (CLI) | Graph/params via CLI; convert to ONNX for UI |
 | OpenVINO | Medium (CLI) | Graph/params via CLI; convert to ONNX for UI |
 | TensorRT | Metadata | Engine metadata only; graph not available |
-| GGUF | Metadata | LLM arch/quant metadata; no graph |
+| GGUF | Metadata | LLM arch/quant/attention metadata; supports LLM-scale analysis |
 | SafeTensors | Weights | Weights only; no graph |
 
 Streamlit renders graph-based views only when the format includes a graph; otherwise, convert to ONNX for full visualization and Universal IR features.
