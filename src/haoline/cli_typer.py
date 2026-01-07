@@ -630,6 +630,24 @@ def inspect(
         Path | None,
         typer.Option("--sparse-analysis-json", help="Output sparse analysis JSON"),
     ] = None,
+    # Deployment analysis (Epic 30)
+    deployment_analysis: Annotated[
+        bool,
+        typer.Option(
+            "--deployment-analysis",
+            help="Analyze LLM deployment characteristics (prefill/decode, batching, frameworks)",
+        ),
+    ] = False,
+    deployment_analysis_json: Annotated[
+        Path | None,
+        typer.Option("--deployment-analysis-json", help="Output deployment analysis JSON"),
+    ] = None,
+    deployment_gpu: Annotated[
+        str,
+        typer.Option(
+            "--deployment-gpu", help="Target GPU for deployment analysis (e.g., a100, h100)"
+        ),
+    ] = "a100",
     # TensorRT comparison
     compare_trt: Annotated[
         Path | None,
@@ -825,6 +843,9 @@ def inspect(
             memory_vram_gb=memory_vram_gb,
             sparse_analysis=sparse_analysis,
             sparse_analysis_json=sparse_analysis_json,
+            deployment_analysis=deployment_analysis,
+            deployment_analysis_json=deployment_analysis_json,
+            deployment_gpu=deployment_gpu,
             compare_trt=compare_trt,
             redact_names=redact_names,
             summary_only=summary_only,
@@ -962,6 +983,9 @@ def _run_inspect(
     memory_vram_gb: float,
     sparse_analysis: bool,
     sparse_analysis_json: Path | None,
+    deployment_analysis: bool,
+    deployment_analysis_json: Path | None,
+    deployment_gpu: str,
     compare_trt: Path | None,
     redact_names: bool,
     summary_only: bool,
@@ -1704,6 +1728,103 @@ def _run_inspect(
                 json.dumps(sparse_result.to_dict(), indent=2), encoding="utf-8"
             )
             console.print(f"\n[green]Wrote:[/green] {sparse_analysis_json}")
+
+    # Deployment analysis (Epic 30)
+    if deployment_analysis or deployment_analysis_json:
+        from haoline.analyzer import ONNXGraphLoader
+        from haoline.deployment_analysis import DeploymentAnalyzer
+        from haoline.patterns import PatternAnalyzer
+
+        with console.status("[bold blue]Running deployment analysis...[/bold blue]"):
+            loader = ONNXGraphLoader()
+            _, graph_info = loader.load(analysis_path)
+
+            # Get architectural blocks
+            pattern_analyzer = PatternAnalyzer()
+            blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+            # Get attention and memory results if already computed
+            attn_result_for_deploy = None
+            mem_result_for_deploy = None
+
+            if hasattr(report, "attention_analysis") and report.attention_analysis:
+                from haoline.attention_analysis import AttentionAnalyzer
+
+                attn_analyzer = AttentionAnalyzer()
+                attn_result_for_deploy = attn_analyzer.analyze(graph_info, blocks)
+
+            if hasattr(report, "memory_analysis") and report.memory_analysis:
+                from haoline.memory_analysis import MemoryAnalyzer
+
+                mem_analyzer = MemoryAnalyzer()
+                mem_result_for_deploy = mem_analyzer.analyze(graph_info, blocks)
+
+            # Get total params and FLOPs from report
+            total_params = report.graph_summary.total_params if report.graph_summary else 0
+            total_flops = report.graph_summary.total_flops if report.graph_summary else 0
+
+            # Run deployment analysis
+            deploy_analyzer = DeploymentAnalyzer(
+                target_gpu=deployment_gpu,
+                vram_gb=memory_vram_gb,
+            )
+            deploy_result = deploy_analyzer.analyze(
+                graph_info,
+                blocks,
+                attention_result=attn_result_for_deploy,
+                memory_result=mem_result_for_deploy,
+                total_params=total_params,
+                total_flops=total_flops,
+            )
+
+            # Store in report
+            report.deployment_analysis = deploy_result.to_dict()
+
+        # Print summary
+        console.print("\n[bold cyan]LLM Deployment Analysis[/bold cyan]")
+        console.print(
+            f"  Target: [bold]{deployment_gpu.upper()}[/bold] ({memory_vram_gb:.0f}GB VRAM)"
+        )
+
+        pd = deploy_result.prefill_decode
+        console.print("\n  [bold]Prefill vs Decode:[/bold]")
+        console.print(f"    TTFT (1K context): {pd.estimated_ttft_ms:.1f} ms")
+        console.print(f"    Decode: {pd.estimated_tokens_per_second:.1f} tokens/sec")
+        console.print(
+            f"    Phases: Prefill={'compute' if pd.prefill_is_compute_bound else 'memory'}-bound, "
+            f"Decode={'memory' if pd.decode_is_memory_bound else 'compute'}-bound"
+        )
+
+        b = deploy_result.batching
+        console.print("\n  [bold]Batching:[/bold]")
+        console.print(f"    Strategy: {b.recommended_strategy} (batch={b.recommended_batch_size})")
+        console.print(f"    Max Concurrent: {b.max_concurrent_requests} requests")
+        if b.has_paged_attention:
+            console.print("    PagedAttention: [green]Supported[/green]")
+
+        cs = deploy_result.context_scaling
+        console.print("\n  [bold]Context Scaling:[/bold]")
+        console.print(f"    OOM at: {cs.oom_context_length:,} tokens")
+        console.print(f"    Recommended max: {cs.recommended_max_context:,} tokens")
+
+        if deploy_result.recommended_framework:
+            console.print(
+                f"\n  [bold]Recommended Framework:[/bold] [green]{deploy_result.recommended_framework}[/green]"
+            )
+
+        if deploy_result.recommendations:
+            console.print("\n  [bold yellow]Recommendations:[/bold yellow]")
+            for rec in deploy_result.recommendations:
+                console.print(f"    - {rec}")
+
+        # Write JSON if requested
+        if deployment_analysis_json:
+            import json
+
+            deployment_analysis_json.write_text(
+                json.dumps(deploy_result.to_dict(), indent=2), encoding="utf-8"
+            )
+            console.print(f"\n[green]Wrote:[/green] {deployment_analysis_json}")
 
     # LLM summary
     if llm_summary and not offline:

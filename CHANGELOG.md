@@ -5,6 +5,47 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-01-06
+
+### Epic 30: LLM Deployment Analysis
+
+**Story 30.1: Prefill vs Decode Analysis**
+- Identify prefill phase (compute-bound) and decode phase (memory-bound)
+- Calculate TTFT (time-to-first-token) estimates at 1K/4K/8K/32K context
+- Calculate tokens-per-second decode rate based on memory bandwidth
+- Report optimal batch sizes for prefill and decode phases
+
+**Story 30.2: Batching Strategy Analysis**
+- Analyze static vs dynamic vs continuous batching compatibility
+- Detect PagedAttention for continuous batching support
+- Calculate throughput at batch sizes 1/4/8/16/32
+- Report max concurrent requests based on VRAM and KV cache
+
+**Story 30.3: Context Length Scaling**
+- Calculate O(n^2) attention FLOPs scaling at 4K/8K/32K/128K
+- Calculate O(n) KV cache memory scaling
+- Identify OOM context length breakpoints
+- Recommend max context length for target hardware
+
+**Story 30.4: Serving Framework Compatibility**
+- Analyze compatibility with vLLM, TensorRT-LLM, llama.cpp, Triton, TGI, ONNX Runtime
+- Score frameworks based on model characteristics
+- Recommend best framework for deployment
+
+**CLI Flags:**
+- `--deployment-analysis`: Enable deployment analysis
+- `--deployment-analysis-json PATH`: Export to JSON
+- `--deployment-gpu GPU`: Target GPU (a100, h100, rtx4090, etc.)
+
+**UI Integration:** Deployment Analysis expander in Streamlit with:
+- GPU selector dropdown and VRAM slider
+- Prefill/Decode metrics and batch strategy recommendations
+- Context scaling limits and framework compatibility table
+
+**Test Coverage:** 31 unit tests in `test_deployment_analysis.py`
+
+---
+
 ## [1.6.0] - 2026-01-06
 
 ### Epic 29: Sparse and Efficient Architecture Analysis

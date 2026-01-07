@@ -670,8 +670,9 @@ HaoLine/
 |   +-- attention_analysis.py     # Attention variant detection (Epic 27)
 |   +-- memory_analysis.py        # Memory pattern analysis (Epic 28)
 |   +-- sparse_analysis.py        # Sparse and efficient architecture analysis (Epic 29)
+|   +-- deployment_analysis.py    # LLM deployment analysis (Epic 30)
 |   |
-|   +-- tests/               # 360+ unit tests (31 new for Epic 29)
+|   +-- tests/               # 390+ unit tests (31 new for Epic 30)
 |   |   +-- conftest.py
 |   |   +-- test_*.py
 |   |
@@ -1007,6 +1008,7 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | `attention_analysis.py` | Attention variant detection (MHA/MQA/GQA), position encoding (RoPE/ALiBi), KV cache estimation (Epic 27) |
 | `memory_analysis.py` | Memory pattern analysis - KV cache quantization, PagedAttention detection, parallelism strategy detection, VRAM recommendations (Epic 28) |
 | `sparse_analysis.py` | Sparse and efficient architecture analysis - MoE detection (routing, expert count, parallelism), weight sparsity (structured N:M, unstructured), efficient patterns (depthwise separable, inverted residual, SE, NAS), speculative decoding detection (Epic 29) |
+| `deployment_analysis.py` | LLM deployment analysis - prefill vs decode phases, TTFT estimation, batching strategies (static/dynamic/continuous), context scaling (O(n^2) attention, O(n) KV cache), serving framework compatibility (vLLM, TensorRT-LLM, llama.cpp, Triton) (Epic 30) |
 | `formats/tensorrt.py` | TRTEngineReader, TRTEngineInfo, TRTPerformanceMetadata, TRTLayerInfo, quantization bottleneck analysis, timing charts |
 | `formats/trt_comparison.py` | TRTONNXComparator, LayerRewrite detection, side-by-side HTML comparison, ONNX↔TRT diff view |
 
@@ -1372,3 +1374,4 @@ class MyFormatAdapter:
 | 2.1 | Jan 6, 2026 | Marcus | **v1.4.0** - Epic 26 (Advanced Quantization Analysis) and Epic 27 (Attention Variant Detection) complete. New modules: `quantization_analysis.py`, `attention_analysis.py`. 51 new tests. |
 | 2.2 | Jan 6, 2026 | Marcus | **v1.5.0** - Epic 28 (Memory Pattern Analysis) complete. New module: `memory_analysis.py`. KV cache quantization, PagedAttention, parallelism detection, VRAM recommendations. 24 new tests. |
 | 2.3 | Jan 6, 2026 | Marcus | **v1.6.0** - Epic 29 (Sparse and Efficient Architecture Analysis) complete. New module: `sparse_analysis.py`. MoE detection, weight sparsity, efficient patterns. 31 new tests. |
+| 2.4 | Jan 6, 2026 | Marcus | **v1.7.0** - Epic 30 (LLM Deployment Analysis) complete. New module: `deployment_analysis.py`. Prefill/decode phases, batching strategies, context scaling, serving framework compatibility. 31 new tests. |

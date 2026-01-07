@@ -433,6 +433,14 @@ Or use the web UI's comparison mode for an interactive experience.
 | `--sparse-analysis` | Analyze sparse patterns (MoE, weight sparsity, efficient architectures) |
 | `--sparse-analysis-json PATH` | Export sparse analysis to JSON |
 
+### Deployment Analysis (Epic 30)
+
+| Flag | Description |
+|------|-------------|
+| `--deployment-analysis` | Analyze LLM deployment characteristics (prefill/decode, batching, frameworks) |
+| `--deployment-analysis-json PATH` | Export deployment analysis to JSON |
+| `--deployment-gpu GPU` | Target GPU for deployment analysis (e.g., a100, h100) |
+
 ### TensorRT Options
 
 | Flag | Description |

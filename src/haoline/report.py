@@ -266,6 +266,9 @@ class InspectionReport(BaseModel):
     # Sparse analysis (Epic 29, set by --sparse-analysis)
     sparse_analysis: dict[str, Any] | None = None
 
+    # Deployment analysis (Epic 30, set by --deployment-analysis)
+    deployment_analysis: dict[str, Any] | None = None
+
     # GGUF info (optional, set when analyzing GGUF files)
     # Contains LLM-specific metadata: architecture, context length, quantization breakdown
     gguf_info: Any | None = None  # GGUFInfo from haoline.formats.gguf
@@ -964,6 +967,66 @@ class InspectionReport(BaseModel):
 
             # Recommendations
             recs = sa.get("recommendations", [])
+            if recs:
+                lines.append("### Recommendations")
+                for rec in recs:
+                    lines.append(f"- {rec}")
+                lines.append("")
+
+        # Deployment Analysis (Epic 30)
+        if self.deployment_analysis:
+            da = self.deployment_analysis
+            lines.append("## LLM Deployment Analysis")
+            lines.append("")
+            lines.append(
+                f"**Target:** {da.get('target_gpu', 'unknown').upper()} ({da.get('target_vram_gb', 0):.0f}GB)"
+            )
+            lines.append("")
+
+            # Prefill vs Decode
+            pd = da.get("prefill_decode", {})
+            if pd:
+                lines.append("### Prefill vs Decode")
+                lines.append(f"- TTFT (1K context): {pd.get('estimated_ttft_ms', 0):.1f} ms")
+                lines.append(
+                    f"- Decode Speed: {pd.get('estimated_tokens_per_second', 0):.1f} tokens/sec"
+                )
+                prefill_type = (
+                    "compute-bound" if pd.get("prefill_is_compute_bound") else "memory-bound"
+                )
+                decode_type = (
+                    "memory-bound" if pd.get("decode_is_memory_bound") else "compute-bound"
+                )
+                lines.append(f"- Prefill: {prefill_type}, Decode: {decode_type}")
+                lines.append("")
+
+            # Batching
+            bat = da.get("batching", {})
+            if bat:
+                lines.append("### Batching Strategy")
+                lines.append(
+                    f"- Recommended: {bat.get('recommended_strategy', 'static')} (batch={bat.get('recommended_batch_size', 1)})"
+                )
+                lines.append(f"- Max Concurrent Requests: {bat.get('max_concurrent_requests', 1)}")
+                if bat.get("has_paged_attention"):
+                    lines.append("- PagedAttention: Supported")
+                lines.append("")
+
+            # Context Scaling
+            cs = da.get("context_scaling", {})
+            if cs:
+                lines.append("### Context Scaling")
+                lines.append(f"- OOM at: {cs.get('oom_context_length', 0):,} tokens")
+                lines.append(f"- Recommended Max: {cs.get('recommended_max_context', 0):,} tokens")
+                lines.append("")
+
+            # Framework
+            if da.get("recommended_framework"):
+                lines.append(f"### Recommended Framework: {da['recommended_framework']}")
+                lines.append("")
+
+            # Recommendations
+            recs = da.get("recommendations", [])
             if recs:
                 lines.append("### Recommendations")
                 for rec in recs:
@@ -2215,6 +2278,140 @@ class InspectionReport(BaseModel):
 
             # Recommendations
             recs = sa.get("recommendations", [])
+            if recs:
+                html_parts.append("<h3>Recommendations</h3>")
+                html_parts.append("<ul>")
+                for rec in recs:
+                    html_parts.append(f"<li>{rec}</li>")
+                html_parts.append("</ul>")
+
+            html_parts.append("</section>")
+
+        # Deployment Analysis (Epic 30)
+        if self.deployment_analysis:
+            da = self.deployment_analysis
+            target_gpu = da.get("target_gpu", "unknown").upper()
+            target_vram = da.get("target_vram_gb", 0)
+
+            html_parts.append('<section class="deployment-analysis">')
+            html_parts.append("<h2>LLM Deployment Analysis</h2>")
+
+            # Target badge
+            html_parts.append(
+                f"""
+                <div style="display: inline-block; padding: 0.5rem 1rem; margin-bottom: 1rem;
+                    background: var(--bg-card); border: 1px solid var(--accent-green); border-radius: 8px;">
+                    <span style="color: var(--accent-green); font-weight: bold;">{target_gpu}</span>
+                    <span style="color: var(--text-secondary); margin-left: 0.5rem;">{target_vram:.0f}GB VRAM</span>
+                </div>
+                """
+            )
+
+            # Prefill vs Decode
+            pd = da.get("prefill_decode", {})
+            if pd:
+                ttft = pd.get("estimated_ttft_ms", 0)
+                tps = pd.get("estimated_tokens_per_second", 0)
+                ttft_color = "#22c55e" if ttft < 100 else ("#f59e0b" if ttft < 500 else "#ef4444")
+
+                html_parts.append("<h3>Prefill vs Decode</h3>")
+                html_parts.append(
+                    f"""
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <div style="padding: 1rem; background: {ttft_color}22;
+                             border: 1px solid {ttft_color}; border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: {ttft_color};">
+                                {ttft:.1f} ms
+                            </div>
+                            <div style="color: var(--text-secondary);">TTFT (1K)</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent-cyan);">
+                                {tps:.1f}
+                            </div>
+                            <div style="color: var(--text-secondary);">Tokens/sec</div>
+                        </div>
+                    </div>
+                    """
+                )
+
+            # Batching
+            bat = da.get("batching", {})
+            if bat:
+                strategy = bat.get("recommended_strategy", "static").title()
+                batch_size = bat.get("recommended_batch_size", 1)
+                max_concurrent = bat.get("max_concurrent_requests", 1)
+                has_paged = bat.get("has_paged_attention", False)
+
+                html_parts.append("<h3>Batching Strategy</h3>")
+                html_parts.append(
+                    f"""
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold;">{strategy}</div>
+                            <div style="color: var(--text-secondary);">Strategy (batch={batch_size})</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent-green);">
+                                {max_concurrent}
+                            </div>
+                            <div style="color: var(--text-secondary);">Max Concurrent</div>
+                        </div>
+                    </div>
+                    """
+                )
+                if has_paged:
+                    html_parts.append(
+                        """
+                        <div style="padding: 0.5rem 1rem; background: #22c55e22;
+                             border: 1px solid #22c55e; border-radius: 8px; display: inline-block;">
+                            <span style="color: #22c55e;">PagedAttention Supported</span>
+                        </div>
+                        """
+                    )
+
+            # Context Scaling
+            cs = da.get("context_scaling", {})
+            if cs:
+                oom = cs.get("oom_context_length", 0)
+                rec_max = cs.get("recommended_max_context", 0)
+
+                html_parts.append("<h3>Context Scaling</h3>")
+                html_parts.append(
+                    f"""
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <div style="padding: 1rem; background: #f59e0b22;
+                             border: 1px solid #f59e0b; border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #f59e0b;">
+                                {oom:,}
+                            </div>
+                            <div style="color: var(--text-secondary);">OOM at</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent-cyan);">
+                                {rec_max:,}
+                            </div>
+                            <div style="color: var(--text-secondary);">Recommended Max</div>
+                        </div>
+                    </div>
+                    """
+                )
+
+            # Recommended Framework
+            rec_framework = da.get("recommended_framework", "")
+            if rec_framework:
+                html_parts.append(
+                    f"""
+                    <div style="padding: 1rem; background: var(--accent-green)22;
+                         border: 1px solid var(--accent-green); border-radius: 8px; margin: 1rem 0;">
+                        <strong style="color: var(--accent-green);">Recommended Framework:</strong>
+                        <span style="margin-left: 0.5rem; font-weight: bold;">{rec_framework}</span>
+                    </div>
+                    """
+                )
+
+            # Recommendations
+            recs = da.get("recommendations", [])
             if recs:
                 html_parts.append("<h3>Recommendations</h3>")
                 html_parts.append("<ul>")

@@ -2077,6 +2077,7 @@ haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
 
 | Date | Change |
 |------|--------|
+| Jan 6, 2026 | **v1.7.0** - Epic 30 COMPLETE (LLM Deployment Analysis): Prefill vs decode phases, TTFT/tokens-per-sec estimation, batching strategies, context scaling (O(n²) attention, O(n) KV cache), serving framework compatibility (vLLM, TensorRT-LLM, llama.cpp, Triton). 31 new tests. |
 | Jan 6, 2026 | **v1.6.0** - Epic 29 COMPLETE (Sparse and Efficient Architecture Analysis): MoE detection (routing, experts, parallelism), weight sparsity (N:M structured, unstructured), efficient patterns (depthwise separable, inverted residual, SE, NAS), speculative decoding. 31 new tests. |
 | Jan 6, 2026 | **v1.5.0** - Epic 28 COMPLETE (Memory Pattern Analysis): KV cache quantization detection, PagedAttention patterns, parallelism strategy detection (TP/PP/DP), VRAM recommendations. 24 new tests. |
 | Jan 6, 2026 | **v1.4.0** - Epic 26 COMPLETE (Advanced Quantization Analysis): GPTQ/AWQ/GGML detection, accuracy impact estimation, mixed precision analysis, sensitive layer identification. Epic 27 COMPLETE (Attention Variant Detection): MHA/MQA/GQA detection, RoPE/ALiBi position encoding, KV cache estimation, FlashAttention detection. 51 new tests. |

@@ -6,7 +6,7 @@
 
 ---
 
-**Current Release:** v1.5.0 (Jan 6, 2026)
+**Current Release:** v1.7.0 (Jan 6, 2026)
 
 **Quality Gate:** `python scripts/check.py` (fast) or `python scripts/check.py --all` (full)
 
@@ -16,7 +16,7 @@
 
 | Priority | Focus Area | Key Work |
 |----------|------------|----------|
-| **P1** | LLM-Scale Analysis | Epics 28-30 (70B+ param models, MoE, KV cache) |
+| **P1** | LLM-Scale Analysis | ✅ COMPLETE (Epics 26-30) |
 | **P2** | AWS GPU Deployment | Epic 51 (TensorRT, runtime benchmarking) |
 | **P3** | Model Optimization Service | Epics 31-32 (automated quantization) |
 
@@ -27,7 +27,7 @@
 | Epic | Status | Stories | Tasks | Priority |
 |------|--------|---------|-------|----------|
 | **ACTIVE** |||||
-| Epic 30: LLM Deployment Analysis | Not Started | 4 | 0/20 | P1 |
+| Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | Epic 51: AWS GPU Deployment | Not Started | 5 | 0/27 | P2 |
 | **FORMAT READERS (Partial)** |||||
 | Epic 19: SafeTensors | ✅ COMPLETE | 2 | 10/10 | P3 |
@@ -43,7 +43,7 @@
 | Epic 47: Model Card Standards | Not Started | 2 | 0/10 | P4 |
 | Epics 13-17: MLOps Platform | Future | 5 | 0/? | P5 |
 
-**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 24, 25, 26, 27, 28, 29, 33, 39, 40, 41, 42, 49, 50, 52, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
+**Completed Epics:** 1-9, 4B, 4C, 10B, 11, 12, 18, 22, 24, 25, 26, 27, 28, 29, 30, 33, 39, 40, 41, 42, 49, 50, 52, 53, 54, 55, 56 *(archived in PRDBacklogArchive.md)*
 
 ---
 
@@ -389,37 +389,41 @@
 
 ---
 
-## Epic 30: LLM Deployment Analysis (P3)
+## Epic 30: LLM Deployment Analysis (P3) - COMPLETE
 
 *Inference patterns differ from training. Understand production characteristics.*
 
-### Story 30.1: Prefill vs Decode Analysis
-- [ ] **Task 30.1.1**: Identify prefill phase (process prompt, compute-bound)
-- [ ] **Task 30.1.2**: Identify decode phase (generate tokens, memory-bound)
-- [ ] **Task 30.1.3**: Calculate time-to-first-token (TTFT) estimate
-- [ ] **Task 30.1.4**: Calculate tokens-per-second decode rate
-- [ ] **Task 30.1.5**: Report optimal batch size for each phase
+**Module:** `src/haoline/deployment_analysis.py`
+**CLI Flags:** `--deployment-analysis`, `--deployment-analysis-json`, `--deployment-gpu`
+**Tests:** `src/haoline/tests/test_deployment_analysis.py` (31 tests)
 
-### Story 30.2: Batching Strategy Analysis
-- [ ] **Task 30.2.1**: Analyze static batching characteristics
-- [ ] **Task 30.2.2**: Detect continuous batching compatibility
-- [ ] **Task 30.2.3**: Calculate throughput vs latency tradeoffs
-- [ ] **Task 30.2.4**: Report max concurrent requests for given VRAM
-- [ ] **Task 30.2.5**: Model request queuing and scheduling impact
+### Story 30.1: Prefill vs Decode Analysis - COMPLETE (5/5)
+- [x] **Task 30.1.1**: Identify prefill phase (process prompt, compute-bound) ✅
+- [x] **Task 30.1.2**: Identify decode phase (generate tokens, memory-bound) ✅
+- [x] **Task 30.1.3**: Calculate time-to-first-token (TTFT) estimate ✅
+- [x] **Task 30.1.4**: Calculate tokens-per-second decode rate ✅
+- [x] **Task 30.1.5**: Report optimal batch size for each phase ✅
 
-### Story 30.3: Context Length Scaling
-- [ ] **Task 30.3.1**: Calculate O(n²) attention scaling impact
-- [ ] **Task 30.3.2**: Calculate O(n) KV cache scaling impact
-- [ ] **Task 30.3.3**: Generate context length vs memory/latency curves
-- [ ] **Task 30.3.4**: Identify context length breakpoints (where OOM occurs)
-- [ ] **Task 30.3.5**: Recommend context length for target hardware
+### Story 30.2: Batching Strategy Analysis - COMPLETE (5/5)
+- [x] **Task 30.2.1**: Analyze static batching characteristics ✅
+- [x] **Task 30.2.2**: Detect continuous batching compatibility ✅
+- [x] **Task 30.2.3**: Calculate throughput vs latency tradeoffs ✅
+- [x] **Task 30.2.4**: Report max concurrent requests for given VRAM ✅
+- [x] **Task 30.2.5**: Model request queuing and scheduling impact ✅
 
-### Story 30.4: Serving Framework Compatibility
-- [ ] **Task 30.4.1**: Check vLLM compatibility (PagedAttention, continuous batching)
-- [ ] **Task 30.4.2**: Check TensorRT-LLM compatibility
-- [ ] **Task 30.4.3**: Check llama.cpp compatibility
-- [ ] **Task 30.4.4**: Check Triton Inference Server compatibility
-- [ ] **Task 30.4.5**: Report recommended serving framework for model characteristics
+### Story 30.3: Context Length Scaling - COMPLETE (5/5)
+- [x] **Task 30.3.1**: Calculate O(n²) attention scaling impact ✅
+- [x] **Task 30.3.2**: Calculate O(n) KV cache scaling impact ✅
+- [x] **Task 30.3.3**: Generate context length vs memory/latency curves ✅
+- [x] **Task 30.3.4**: Identify context length breakpoints (where OOM occurs) ✅
+- [x] **Task 30.3.5**: Recommend context length for target hardware ✅
+
+### Story 30.4: Serving Framework Compatibility - COMPLETE (5/5)
+- [x] **Task 30.4.1**: Check vLLM compatibility (PagedAttention, continuous batching) ✅
+- [x] **Task 30.4.2**: Check TensorRT-LLM compatibility ✅
+- [x] **Task 30.4.3**: Check llama.cpp compatibility ✅
+- [x] **Task 30.4.4**: Check Triton Inference Server compatibility ✅
+- [x] **Task 30.4.5**: Report recommended serving framework for model characteristics ✅
 
 ---
 

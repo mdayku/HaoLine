@@ -3199,6 +3199,148 @@ def main():
                             except Exception as e:
                                 st.warning(f"Could not run sparse analysis: {e}")
 
+                        # Deployment Analysis (Epic 30)
+                        with st.expander("LLM Deployment Analysis", expanded=False):
+                            try:
+                                from haoline.analyzer import ONNXGraphLoader
+                                from haoline.deployment_analysis import DeploymentAnalyzer
+                                from haoline.patterns import PatternAnalyzer
+
+                                # Load graph if not already loaded
+                                if "graph_info" not in dir():
+                                    loader = ONNXGraphLoader()
+                                    _, graph_info = loader.load(tmp_path)
+
+                                # Get blocks for analysis
+                                pattern_analyzer = PatternAnalyzer()
+                                blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+                                # Get total params and FLOPs from report
+                                total_params = (
+                                    report.graph_summary.total_params if report.graph_summary else 0
+                                )
+                                total_flops = (
+                                    report.graph_summary.total_flops if report.graph_summary else 0
+                                )
+
+                                # GPU selector
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    target_gpu = st.selectbox(
+                                        "Target GPU",
+                                        ["a100", "h100", "rtx4090", "rtx3090", "l4", "t4", "v100"],
+                                        index=0,
+                                    )
+                                with col2:
+                                    deploy_vram = st.slider(
+                                        "VRAM (GB)",
+                                        min_value=8,
+                                        max_value=80,
+                                        value=80 if target_gpu in ["a100", "h100"] else 24,
+                                        step=8,
+                                    )
+
+                                # Run deployment analysis
+                                deploy_analyzer = DeploymentAnalyzer(
+                                    target_gpu=str(target_gpu),
+                                    vram_gb=float(deploy_vram),
+                                )
+                                deploy_result = deploy_analyzer.analyze(
+                                    graph_info,
+                                    blocks,
+                                    total_params=total_params,
+                                    total_flops=total_flops,
+                                )
+
+                                # Prefill vs Decode
+                                st.markdown("#### Prefill vs Decode")
+                                pd = deploy_result.prefill_decode
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric("TTFT (1K)", f"{pd.estimated_ttft_ms:.1f} ms")
+                                with col2:
+                                    st.metric("Tokens/sec", f"{pd.estimated_tokens_per_second:.1f}")
+                                with col3:
+                                    phase_info = (
+                                        "Prefill: compute, Decode: memory"
+                                        if pd.prefill_is_compute_bound and pd.decode_is_memory_bound
+                                        else "Mixed"
+                                    )
+                                    st.metric("Bound Type", phase_info)
+
+                                # Batching
+                                st.markdown("#### Batching Strategy")
+                                b = deploy_result.batching
+                                col1, col2, col3 = st.columns(3)
+                                with col1:
+                                    st.metric(
+                                        "Strategy",
+                                        f"{b.recommended_strategy.title()} (batch={b.recommended_batch_size})",
+                                    )
+                                with col2:
+                                    st.metric("Max Concurrent", b.max_concurrent_requests)
+                                with col3:
+                                    if b.has_paged_attention:
+                                        st.success("PagedAttention")
+                                    else:
+                                        st.info("Static Attention")
+
+                                # Context Scaling
+                                st.markdown("#### Context Scaling")
+                                cs = deploy_result.context_scaling
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("OOM at", f"{cs.oom_context_length:,} tokens")
+                                with col2:
+                                    st.metric(
+                                        "Recommended Max", f"{cs.recommended_max_context:,} tokens"
+                                    )
+
+                                # Framework Recommendation
+                                if deploy_result.recommended_framework:
+                                    st.success(
+                                        f"Recommended Framework: **{deploy_result.recommended_framework}**"
+                                    )
+
+                                # Framework compatibility table
+                                st.markdown("#### Framework Compatibility")
+                                fw_data = []
+                                for fw in deploy_result.serving_frameworks:
+                                    fw_data.append(
+                                        {
+                                            "Framework": fw.framework,
+                                            "Compatible": "Yes" if fw.compatible else "No",
+                                            "Score": f"{fw.compatibility_score:.0%}",
+                                        }
+                                    )
+                                if fw_data:
+                                    import pandas as pd_fw
+
+                                    st.dataframe(
+                                        pd_fw.DataFrame(fw_data),
+                                        hide_index=True,
+                                        use_container_width=True,
+                                    )
+
+                                # Recommendations
+                                if deploy_result.recommendations:
+                                    st.markdown("#### Recommendations")
+                                    for rec in deploy_result.recommendations:
+                                        st.info(rec)
+
+                                # Download button
+                                import json
+
+                                st.download_button(
+                                    "Download Deployment Analysis JSON",
+                                    data=json.dumps(deploy_result.to_dict(), indent=2),
+                                    file_name=f"{uploaded_file.name.replace('.onnx', '')}_deployment_analysis.json",
+                                    mime="application/json",
+                                )
+
+                            except Exception as e:
+                                st.warning(f"Could not run deployment analysis: {e}")
+
                     # Memory breakdown by op type
                     if (
                         report.memory_estimates
