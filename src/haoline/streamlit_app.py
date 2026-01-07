@@ -3066,6 +3066,139 @@ def main():
                             except Exception as e:
                                 st.warning(f"Could not run memory analysis: {e}")
 
+                        # Sparse Analysis (Epic 29)
+                        with st.expander(
+                            "Sparse & Efficient Architecture Analysis", expanded=False
+                        ):
+                            try:
+                                from haoline.analyzer import ONNXGraphLoader
+                                from haoline.patterns import PatternAnalyzer
+                                from haoline.sparse_analysis import SparseAnalyzer
+
+                                # Load graph if not already loaded
+                                if "graph_info" not in dir():
+                                    loader = ONNXGraphLoader()
+                                    _, graph_info = loader.load(tmp_path)
+
+                                # Get blocks for analysis
+                                pattern_analyzer = PatternAnalyzer()
+                                blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+                                # Get total params and FLOPs from report
+                                total_params = (
+                                    report.graph_summary.total_params if report.graph_summary else 0
+                                )
+                                total_flops = (
+                                    report.graph_summary.total_flops if report.graph_summary else 0
+                                )
+
+                                # Run sparse analysis
+                                sparse_analyzer = SparseAnalyzer()
+                                sparse_result = sparse_analyzer.analyze(
+                                    graph_info, blocks, total_params, total_flops
+                                )
+
+                                # MoE Section
+                                if sparse_result.moe_info.detected:
+                                    st.markdown("#### Mixture of Experts (MoE)")
+                                    moe = sparse_result.moe_info
+
+                                    col1, col2, col3 = st.columns(3)
+                                    with col1:
+                                        st.metric(
+                                            "Routing",
+                                            moe.routing_type.replace("_", " ").title(),
+                                        )
+                                    with col2:
+                                        st.metric(
+                                            "Experts",
+                                            f"{moe.num_experts} / {moe.active_experts_per_token}",
+                                        )
+                                    with col3:
+                                        st.metric(
+                                            "Param Efficiency", f"{moe.parameter_efficiency:.1%}"
+                                        )
+
+                                    if moe.memory_all_experts_gb > 0:
+                                        st.markdown(
+                                            f"**Memory:** {moe.memory_all_experts_gb:.2f} GB (all), "
+                                            f"{moe.memory_active_subset_gb:.2f} GB (active)"
+                                        )
+
+                                # Sparsity Section
+                                if sparse_result.sparsity_info.detected:
+                                    st.markdown("#### Weight Sparsity")
+                                    sp = sparse_result.sparsity_info
+
+                                    col1, col2, col3 = st.columns(3)
+                                    with col1:
+                                        st.metric(
+                                            "Type",
+                                            sp.primary_sparsity_type.replace("_", " ").title(),
+                                        )
+                                    with col2:
+                                        st.metric(
+                                            "Sparsity Ratio", f"{sp.overall_sparsity_ratio:.1%}"
+                                        )
+                                    with col3:
+                                        st.metric(
+                                            "FLOPs Reduction", f"{sp.flops_reduction_ratio:.1%}"
+                                        )
+
+                                    if sp.hardware_accelerated:
+                                        st.success(
+                                            f"HW Accelerated: {', '.join(sp.compatible_hardware[:2])}"
+                                        )
+
+                                # Efficient Patterns Section
+                                if sparse_result.efficient_arch_info.patterns_detected:
+                                    st.markdown("#### Efficient Architecture Patterns")
+                                    eff = sparse_result.efficient_arch_info
+
+                                    st.markdown(
+                                        f"**Architecture Type:** {eff.architecture_type.title()}"
+                                    )
+
+                                    for pattern in eff.patterns_detected:
+                                        st.markdown(
+                                            f"- **{pattern.pattern_type.replace('_', ' ').title()}:** "
+                                            f"{pattern.count} instances"
+                                        )
+
+                                    if eff.flops_efficiency_ratio > 1.0:
+                                        st.markdown(
+                                            f"**Efficiency vs Baseline:** {eff.flops_efficiency_ratio:.1f}x"
+                                        )
+
+                                # No patterns detected
+                                if not (
+                                    sparse_result.moe_info.detected
+                                    or sparse_result.sparsity_info.detected
+                                    or sparse_result.efficient_arch_info.patterns_detected
+                                ):
+                                    st.info(
+                                        "No sparse/efficient patterns detected (standard dense model)"
+                                    )
+
+                                # Recommendations
+                                if sparse_result.recommendations:
+                                    st.markdown("#### Recommendations")
+                                    for rec in sparse_result.recommendations:
+                                        st.info(rec)
+
+                                # Download button
+                                import json
+
+                                st.download_button(
+                                    "Download Sparse Analysis JSON",
+                                    data=json.dumps(sparse_result.to_dict(), indent=2),
+                                    file_name=f"{uploaded_file.name.replace('.onnx', '')}_sparse_analysis.json",
+                                    mime="application/json",
+                                )
+
+                            except Exception as e:
+                                st.warning(f"Could not run sparse analysis: {e}")
+
                     # Memory breakdown by op type
                     if (
                         report.memory_estimates

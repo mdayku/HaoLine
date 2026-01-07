@@ -263,6 +263,9 @@ class InspectionReport(BaseModel):
     # Memory analysis (Epic 28, set by --memory-analysis)
     memory_analysis: dict[str, Any] | None = None
 
+    # Sparse analysis (Epic 29, set by --sparse-analysis)
+    sparse_analysis: dict[str, Any] | None = None
+
     # GGUF info (optional, set when analyzing GGUF files)
     # Contains LLM-specific metadata: architecture, context length, quantization breakdown
     gguf_info: Any | None = None  # GGUFInfo from haoline.formats.gguf
@@ -906,6 +909,61 @@ class InspectionReport(BaseModel):
 
             # Recommendations
             recs = ma.get("recommendations", [])
+            if recs:
+                lines.append("### Recommendations")
+                for rec in recs:
+                    lines.append(f"- {rec}")
+                lines.append("")
+
+        # Sparse Analysis (Epic 29)
+        if self.sparse_analysis:
+            sa = self.sparse_analysis
+            lines.append("## Sparse & Efficient Architecture Analysis")
+            lines.append("")
+
+            # MoE section
+            moe = sa.get("moe_info", {})
+            if moe.get("detected"):
+                lines.append("### Mixture of Experts (MoE)")
+                lines.append(f"- Routing Type: {moe.get('routing_type', 'unknown')}")
+                lines.append(
+                    f"- Experts: {moe.get('num_experts', 0)} total, "
+                    f"{moe.get('active_experts_per_token', 0)} active/token"
+                )
+                lines.append(f"- Parameter Efficiency: {moe.get('parameter_efficiency', 0):.1%}")
+                if moe.get("memory_all_experts_gb", 0) > 0:
+                    lines.append(
+                        f"- Memory: {moe['memory_all_experts_gb']:.2f} GB (all), "
+                        f"{moe.get('memory_active_subset_gb', 0):.2f} GB (active)"
+                    )
+                lines.append("")
+
+            # Sparsity section
+            sp = sa.get("sparsity_info", {})
+            if sp.get("detected"):
+                lines.append("### Weight Sparsity")
+                lines.append(f"- Type: {sp.get('primary_sparsity_type', 'unknown')}")
+                lines.append(f"- Overall Ratio: {sp.get('overall_sparsity_ratio', 0):.1%}")
+                lines.append(f"- FLOPs Reduction: {sp.get('flops_reduction_ratio', 0):.1%}")
+                if sp.get("hardware_accelerated"):
+                    hw = sp.get("compatible_hardware", [])
+                    lines.append(f"- HW Accelerated: {', '.join(hw[:2])}")
+                lines.append("")
+
+            # Efficient patterns
+            eff = sa.get("efficient_arch_info", {})
+            patterns = eff.get("patterns_detected", [])
+            if patterns:
+                lines.append("### Efficient Architecture Patterns")
+                lines.append(f"- Architecture Type: {eff.get('architecture_type', 'standard')}")
+                for p in patterns:
+                    lines.append(f"- {p.get('pattern_type', '')}: {p.get('count', 0)} instances")
+                if eff.get("flops_efficiency_ratio", 1.0) > 1.0:
+                    lines.append(f"- Efficiency vs Baseline: {eff['flops_efficiency_ratio']:.1f}x")
+                lines.append("")
+
+            # Recommendations
+            recs = sa.get("recommendations", [])
             if recs:
                 lines.append("### Recommendations")
                 for rec in recs:
@@ -2023,6 +2081,140 @@ class InspectionReport(BaseModel):
 
             # Recommendations
             recs = ma.get("recommendations", [])
+            if recs:
+                html_parts.append("<h3>Recommendations</h3>")
+                html_parts.append("<ul>")
+                for rec in recs:
+                    html_parts.append(f"<li>{rec}</li>")
+                html_parts.append("</ul>")
+
+            html_parts.append("</section>")
+
+        # Sparse Analysis (Epic 29)
+        if self.sparse_analysis:
+            sa = self.sparse_analysis
+            html_parts.append('<section class="sparse-analysis">')
+            html_parts.append("<h2>Sparse & Efficient Architecture Analysis</h2>")
+
+            # MoE section
+            moe = sa.get("moe_info", {})
+            if moe.get("detected"):
+                routing = moe.get("routing_type", "unknown").replace("_", " ").title()
+                num_experts = moe.get("num_experts", 0)
+                active = moe.get("active_experts_per_token", 0)
+                efficiency = moe.get("parameter_efficiency", 0) * 100
+
+                html_parts.append("<h3>Mixture of Experts (MoE)</h3>")
+                html_parts.append(
+                    f"""
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #a78bfa;">
+                                {routing}
+                            </div>
+                            <div style="color: var(--text-secondary);">Routing Type</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold;">
+                                {num_experts} / {active}
+                            </div>
+                            <div style="color: var(--text-secondary);">Total / Active Experts</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent-green);">
+                                {efficiency:.1f}%
+                            </div>
+                            <div style="color: var(--text-secondary);">Param Efficiency</div>
+                        </div>
+                    </div>
+                    """
+                )
+
+                if moe.get("memory_all_experts_gb", 0) > 0:
+                    mem_all = moe.get("memory_all_experts_gb", 0)
+                    mem_active = moe.get("memory_active_subset_gb", 0)
+                    html_parts.append(
+                        f"<p>Memory: <strong>{mem_all:.2f} GB</strong> (all), "
+                        f"<strong>{mem_active:.2f} GB</strong> (active)</p>"
+                    )
+
+            # Sparsity section
+            sp = sa.get("sparsity_info", {})
+            if sp.get("detected"):
+                sp_type = sp.get("primary_sparsity_type", "unknown").replace("_", " ").title()
+                sp_ratio = sp.get("overall_sparsity_ratio", 0) * 100
+                flops_red = sp.get("flops_reduction_ratio", 0) * 100
+                hw_accel = sp.get("hardware_accelerated", False)
+
+                html_parts.append("<h3>Weight Sparsity</h3>")
+                sp_color = "#22c55e" if hw_accel else "#f59e0b"
+                html_parts.append(
+                    f"""
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold;">{sp_type}</div>
+                            <div style="color: var(--text-secondary);">Sparsity Type</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: {sp_color};">
+                                {sp_ratio:.1f}%
+                            </div>
+                            <div style="color: var(--text-secondary);">Sparsity Ratio</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent-cyan);">
+                                {flops_red:.1f}%
+                            </div>
+                            <div style="color: var(--text-secondary);">FLOPs Reduction</div>
+                        </div>
+                    </div>
+                    """
+                )
+
+                if hw_accel:
+                    hw_list = sp.get("compatible_hardware", [])
+                    html_parts.append(
+                        f"""
+                        <div style="padding: 0.75rem 1rem; background: #22c55e22;
+                             border: 1px solid #22c55e; border-radius: 8px; margin-bottom: 1rem;">
+                            <strong style="color: #22c55e;">HW Accelerated</strong>
+                            <span style="margin-left: 1rem;">{', '.join(hw_list[:2])}</span>
+                        </div>
+                        """
+                    )
+
+            # Efficient architecture patterns
+            eff = sa.get("efficient_arch_info", {})
+            patterns = eff.get("patterns_detected", [])
+            if patterns:
+                arch_type = eff.get("architecture_type", "standard").title()
+                flops_eff = eff.get("flops_efficiency_ratio", 1.0)
+
+                html_parts.append("<h3>Efficient Architecture Patterns</h3>")
+                html_parts.append(
+                    f"""
+                    <div style="display: inline-block; padding: 0.5rem 1rem; margin-bottom: 1rem;
+                        background: var(--bg-card); border: 1px solid #a78bfa; border-radius: 8px;">
+                        <span style="color: #a78bfa; font-weight: bold;">{arch_type}</span>
+                        <span style="color: var(--text-secondary); margin-left: 0.5rem;">Architecture</span>
+                    </div>
+                    """
+                )
+
+                html_parts.append("<ul>")
+                for p in patterns:
+                    ptype = p.get("pattern_type", "").replace("_", " ").title()
+                    pcount = p.get("count", 0)
+                    html_parts.append(f"<li>{ptype}: <strong>{pcount}</strong> instances</li>")
+                html_parts.append("</ul>")
+
+                if flops_eff > 1.0:
+                    html_parts.append(
+                        f"<p>Efficiency vs Baseline: <strong>{flops_eff:.1f}x</strong></p>"
+                    )
+
+            # Recommendations
+            recs = sa.get("recommendations", [])
             if recs:
                 html_parts.append("<h3>Recommendations</h3>")
                 html_parts.append("<ul>")

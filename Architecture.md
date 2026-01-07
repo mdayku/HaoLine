@@ -669,8 +669,9 @@ HaoLine/
 |   +-- quantization_analysis.py  # Advanced quantization scheme detection (Epic 26)
 |   +-- attention_analysis.py     # Attention variant detection (Epic 27)
 |   +-- memory_analysis.py        # Memory pattern analysis (Epic 28)
+|   +-- sparse_analysis.py        # Sparse and efficient architecture analysis (Epic 29)
 |   |
-|   +-- tests/               # 330+ unit tests (24 new for Epic 28)
+|   +-- tests/               # 360+ unit tests (31 new for Epic 29)
 |   |   +-- conftest.py
 |   |   +-- test_*.py
 |   |
@@ -1005,6 +1006,7 @@ from .myformat import MyFormatReader, MyFormatInfo, is_myformat_file, is_availab
 | `quantization_analysis.py` | Advanced quantization scheme detection (GPTQ/AWQ/GGML), accuracy impact estimation, sensitive layer identification (Epic 26) |
 | `attention_analysis.py` | Attention variant detection (MHA/MQA/GQA), position encoding (RoPE/ALiBi), KV cache estimation (Epic 27) |
 | `memory_analysis.py` | Memory pattern analysis - KV cache quantization, PagedAttention detection, parallelism strategy detection, VRAM recommendations (Epic 28) |
+| `sparse_analysis.py` | Sparse and efficient architecture analysis - MoE detection (routing, expert count, parallelism), weight sparsity (structured N:M, unstructured), efficient patterns (depthwise separable, inverted residual, SE, NAS), speculative decoding detection (Epic 29) |
 | `formats/tensorrt.py` | TRTEngineReader, TRTEngineInfo, TRTPerformanceMetadata, TRTLayerInfo, quantization bottleneck analysis, timing charts |
 | `formats/trt_comparison.py` | TRTONNXComparator, LayerRewrite detection, side-by-side HTML comparison, ONNX↔TRT diff view |
 
@@ -1369,3 +1371,4 @@ class MyFormatAdapter:
 | 2.0 | Dec 29, 2025 | Marcus | **v1.0.0 Released** - Universal model inspector supporting 10 formats. CI/CD integration with `--fail-on` thresholds. Typer CLI. Slimmed extras (`[full]` = practical defaults). |
 | 2.1 | Jan 6, 2026 | Marcus | **v1.4.0** - Epic 26 (Advanced Quantization Analysis) and Epic 27 (Attention Variant Detection) complete. New modules: `quantization_analysis.py`, `attention_analysis.py`. 51 new tests. |
 | 2.2 | Jan 6, 2026 | Marcus | **v1.5.0** - Epic 28 (Memory Pattern Analysis) complete. New module: `memory_analysis.py`. KV cache quantization, PagedAttention, parallelism detection, VRAM recommendations. 24 new tests. |
+| 2.3 | Jan 6, 2026 | Marcus | **v1.6.0** - Epic 29 (Sparse and Efficient Architecture Analysis) complete. New module: `sparse_analysis.py`. MoE detection, weight sparsity, efficient patterns. 31 new tests. |

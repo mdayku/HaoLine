@@ -167,9 +167,9 @@ class TestOnnxToTensorRT:
         with open(simple_conv_onnx, "rb") as f:
             success = parser.parse(f.read())
 
-        assert success, (
-            f"Failed to parse ONNX: {[parser.get_error(i) for i in range(parser.num_errors)]}"
-        )
+        assert (
+            success
+        ), f"Failed to parse ONNX: {[parser.get_error(i) for i in range(parser.num_errors)]}"
 
         # Build engine
         config = builder.create_builder_config()
@@ -1717,9 +1717,7 @@ class TestOnnxTfliteRoundTrip:
                 abs(original_graph.total_parameters - roundtrip_graph.total_parameters)
                 / max(original_graph.total_parameters, 1)
                 < 0.01
-            ), (
-                f"Parameter mismatch: {original_graph.total_parameters} vs {roundtrip_graph.total_parameters}"
-            )
+            ), f"Parameter mismatch: {original_graph.total_parameters} vs {roundtrip_graph.total_parameters}"
 
             # I/O counts must match
             assert len(original_graph.metadata.input_names) == len(
@@ -2163,17 +2161,17 @@ class TestIRInvariant:
             graph2 = adapter.read(onnx_path2)
 
             # Core metrics MUST be identical
-            assert graph1.total_parameters == graph2.total_parameters, (
-                f"Parameter mismatch: {graph1.total_parameters} vs {graph2.total_parameters}"
-            )
-            assert graph1.num_nodes == graph2.num_nodes, (
-                f"Node count mismatch: {graph1.num_nodes} vs {graph2.num_nodes}"
-            )
+            assert (
+                graph1.total_parameters == graph2.total_parameters
+            ), f"Parameter mismatch: {graph1.total_parameters} vs {graph2.total_parameters}"
+            assert (
+                graph1.num_nodes == graph2.num_nodes
+            ), f"Node count mismatch: {graph1.num_nodes} vs {graph2.num_nodes}"
 
             # Op type distribution MUST match
-            assert graph1.op_type_counts == graph2.op_type_counts, (
-                f"Op type mismatch:\n{graph1.op_type_counts}\nvs\n{graph2.op_type_counts}"
-            )
+            assert (
+                graph1.op_type_counts == graph2.op_type_counts
+            ), f"Op type mismatch:\n{graph1.op_type_counts}\nvs\n{graph2.op_type_counts}"
 
     def test_same_onnx_file_identical_reads(self) -> None:
         """Reading the same ONNX file twice should produce identical metrics."""

@@ -426,6 +426,13 @@ Or use the web UI's comparison mode for an interactive experience.
 | `--memory-analysis-json PATH` | Export memory analysis to JSON |
 | `--memory-vram-gb GB` | Target VRAM in GB for recommendations (default: 24) |
 
+### Sparse Analysis (Epic 29)
+
+| Flag | Description |
+|------|-------------|
+| `--sparse-analysis` | Analyze sparse patterns (MoE, weight sparsity, efficient architectures) |
+| `--sparse-analysis-json PATH` | Export sparse analysis to JSON |
+
 ### TensorRT Options
 
 | Flag | Description |

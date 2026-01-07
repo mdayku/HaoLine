@@ -5,6 +5,52 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-01-06
+
+### Epic 29: Sparse and Efficient Architecture Analysis
+
+**Story 29.1: Mixture of Experts (MoE) Analysis**
+- Detect MoE routing patterns (top-k, switch, soft MoE)
+- Count total experts and active experts per token
+- Calculate effective vs total parameters (parameter efficiency)
+- Detect expert parallelism patterns (AllToAll ops)
+- Detect load balancing auxiliary loss
+- Report memory for all experts vs active subset
+
+**Story 29.2: Speculative Decoding Detection**
+- Detect draft + verify model patterns
+- Identify draft model architecture characteristics
+- Calculate speculative decoding speedup potential
+- Report recommended gamma and acceptance rate requirements
+
+**Story 29.3: Weight Sparsity Analysis**
+- Detect structured sparsity (2:4 N:M patterns)
+- Detect unstructured sparsity (pruned weights, mask tensors)
+- Calculate actual vs theoretical FLOPs with sparsity
+- Identify sparse-compatible hardware (Ampere/Hopper for 2:4)
+- Report sparsity ratio per layer
+
+**Story 29.4: Efficient Architecture Patterns**
+- Detect depthwise separable convolutions (MobileNet-style)
+- Detect inverted residual blocks (MobileNetV2)
+- Detect squeeze-and-excitation patterns
+- Detect NAS architecture patterns
+- Compare efficiency vs baseline architectures
+
+**CLI Flags:**
+- `--sparse-analysis`: Enable sparse pattern analysis
+- `--sparse-analysis-json PATH`: Export sparse analysis to JSON
+
+**UI Integration:** Sparse Analysis expander in Streamlit with:
+- MoE routing details and parameter efficiency
+- Weight sparsity type and HW acceleration status
+- Efficient architecture pattern detection
+- Recommendations for optimization
+
+**Test Coverage:** 31 unit tests in `test_sparse_analysis.py`
+
+---
+
 ## [1.5.0] - 2026-01-06
 
 ### Epic 28: Memory Pattern Analysis

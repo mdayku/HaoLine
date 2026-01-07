@@ -618,6 +618,18 @@ def inspect(
         float,
         typer.Option("--memory-vram-gb", help="Target VRAM in GB for memory recommendations"),
     ] = 24.0,
+    # Sparse analysis (Epic 29)
+    sparse_analysis: Annotated[
+        bool,
+        typer.Option(
+            "--sparse-analysis",
+            help="Analyze sparse patterns (MoE, sparsity, efficient architectures)",
+        ),
+    ] = False,
+    sparse_analysis_json: Annotated[
+        Path | None,
+        typer.Option("--sparse-analysis-json", help="Output sparse analysis JSON"),
+    ] = None,
     # TensorRT comparison
     compare_trt: Annotated[
         Path | None,
@@ -811,6 +823,8 @@ def inspect(
             memory_analysis=memory_analysis,
             memory_analysis_json=memory_analysis_json,
             memory_vram_gb=memory_vram_gb,
+            sparse_analysis=sparse_analysis,
+            sparse_analysis_json=sparse_analysis_json,
             compare_trt=compare_trt,
             redact_names=redact_names,
             summary_only=summary_only,
@@ -946,6 +960,8 @@ def _run_inspect(
     memory_analysis: bool,
     memory_analysis_json: Path | None,
     memory_vram_gb: float,
+    sparse_analysis: bool,
+    sparse_analysis_json: Path | None,
     compare_trt: Path | None,
     redact_names: bool,
     summary_only: bool,
@@ -1603,6 +1619,91 @@ def _run_inspect(
                 json.dumps(mem_result.to_dict(), indent=2), encoding="utf-8"
             )
             console.print(f"\n[green]Wrote:[/green] {memory_analysis_json}")
+
+    # Sparse analysis (Epic 29)
+    if sparse_analysis or sparse_analysis_json:
+        from haoline.analyzer import ONNXGraphLoader
+        from haoline.patterns import PatternAnalyzer
+        from haoline.sparse_analysis import SparseAnalyzer
+
+        with console.status("[bold blue]Running sparse analysis...[/bold blue]"):
+            loader = ONNXGraphLoader()
+            _, graph_info = loader.load(analysis_path)
+
+            # Get architectural blocks
+            pattern_analyzer = PatternAnalyzer()
+            blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+            # Get total params and FLOPs from report
+            total_params = report.graph_summary.total_params if report.graph_summary else 0
+            total_flops = report.graph_summary.total_flops if report.graph_summary else 0
+
+            # Run sparse analysis
+            sparse_analyzer = SparseAnalyzer()
+            sparse_result = sparse_analyzer.analyze(
+                graph_info,
+                blocks,
+                total_params=total_params,
+                total_flops=total_flops,
+            )
+
+            # Store in report
+            report.sparse_analysis = sparse_result.to_dict()
+
+        # Print summary
+        console.print("\n[bold cyan]Sparse & Efficient Architecture Analysis[/bold cyan]")
+
+        if sparse_result.moe_info.detected:
+            moe = sparse_result.moe_info
+            console.print("\n  [bold]Mixture of Experts (MoE):[/bold]")
+            console.print(f"    Routing: {moe.routing_type}")
+            console.print(
+                f"    Experts: {moe.num_experts} total, {moe.active_experts_per_token} active/token"
+            )
+            console.print(f"    Param Efficiency: {moe.parameter_efficiency:.1%}")
+            if moe.memory_all_experts_gb > 0:
+                console.print(
+                    f"    Memory: {moe.memory_all_experts_gb:.2f} GB (all), "
+                    f"{moe.memory_active_subset_gb:.2f} GB (active)"
+                )
+
+        if sparse_result.sparsity_info.detected:
+            sp = sparse_result.sparsity_info
+            console.print("\n  [bold]Weight Sparsity:[/bold]")
+            console.print(f"    Type: {sp.primary_sparsity_type}")
+            console.print(f"    Overall Ratio: {sp.overall_sparsity_ratio:.1%}")
+            console.print(f"    FLOPs Reduction: {sp.flops_reduction_ratio:.1%}")
+            if sp.hardware_accelerated:
+                console.print(f"    HW Accelerated: {', '.join(sp.compatible_hardware[:2])}")
+
+        if sparse_result.efficient_arch_info.patterns_detected:
+            console.print("\n  [bold]Efficient Patterns:[/bold]")
+            for pattern in sparse_result.efficient_arch_info.patterns_detected:
+                console.print(f"    {pattern.pattern_type}: {pattern.count} instances")
+            eff = sparse_result.efficient_arch_info
+            if eff.flops_efficiency_ratio > 1.0:
+                console.print(f"    Efficiency vs Baseline: {eff.flops_efficiency_ratio:.1f}x")
+
+        if not (
+            sparse_result.moe_info.detected
+            or sparse_result.sparsity_info.detected
+            or sparse_result.efficient_arch_info.patterns_detected
+        ):
+            console.print("  No sparse/efficient patterns detected (standard dense model)")
+
+        if sparse_result.recommendations:
+            console.print("\n  [bold yellow]Recommendations:[/bold yellow]")
+            for rec in sparse_result.recommendations:
+                console.print(f"    - {rec}")
+
+        # Write JSON if requested
+        if sparse_analysis_json:
+            import json
+
+            sparse_analysis_json.write_text(
+                json.dumps(sparse_result.to_dict(), indent=2), encoding="utf-8"
+            )
+            console.print(f"\n[green]Wrote:[/green] {sparse_analysis_json}")
 
     # LLM summary
     if llm_summary and not offline:
