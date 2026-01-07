@@ -1251,6 +1251,37 @@ Deep analysis of NVIDIA TensorRT compiled engines. Inspired by TRT Engine Explor
 
 ---
 
+## Epic 28: Memory Pattern Analysis (COMPLETE - 13/13 tasks)
+
+*Completed: January 6, 2026 (v1.5.0)*
+
+Memory pattern analysis for LLM deployment.
+
+**Module:** `src/haoline/memory_analysis.py` (700+ lines)
+**CLI Flags:** `--memory-analysis`, `--memory-analysis-json`, `--memory-vram-gb`
+**Tests:** `src/haoline/tests/test_memory_analysis.py` (24 tests)
+
+### Story 28.1: KV Cache Analysis - COMPLETE (6/6)
+- [x] Calculate KV cache size per layer per token (done in Epic 27)
+- [x] Project KV cache for variable context lengths (done in Epic 27)
+- [x] Detect KV cache quantization (INT8 KV cache)
+- [x] Calculate max context length for given VRAM
+- [x] Detect PagedAttention patterns (vLLM-style)
+- [x] Report KV cache as % of total memory
+
+### Story 28.2: Parallelism Strategy Detection - COMPLETE (6/6)
+- [x] Detect tensor parallelism patterns (column/row split)
+- [x] Detect pipeline parallelism patterns (layer sharding)
+- [x] Detect data parallelism patterns
+- [x] Identify all-reduce / all-gather communication ops
+- [x] Report memory per GPU for N-way parallelism
+- [x] Recommend parallelism strategy for target hardware
+
+### Story 28.3: VRAM-Based Recommendations - COMPLETE (1/1)
+- [x] Recommend batch size for given VRAM constraint
+
+---
+
 ## Epic 26: Advanced Quantization Analysis (COMPLETE - 12/15 tasks)
 
 *Completed: January 6, 2026 (v1.4.0)*

@@ -6,7 +6,7 @@
 
 ---
 
-**Current Release:** v1.4.0 (Jan 6, 2026)
+**Current Release:** v1.5.0 (Jan 6, 2026)
 
 **Quality Gate:** `python scripts/check.py` (fast) or `python scripts/check.py --all` (full)
 

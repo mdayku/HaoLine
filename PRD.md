@@ -1699,7 +1699,9 @@ LLMs have evolved beyond vanilla multi-head attention:
 
 **CLI:** `--attention-analysis`, `--attention-analysis-json PATH`
 
-### 17.4 Epic 28: Memory Pattern Analysis
+### 17.4 Epic 28: Memory Pattern Analysis - **COMPLETE** ✅
+
+*Completed: January 6, 2026 (v1.5.0)*
 
 LLM deployment is memory-bound. Understanding memory patterns is critical:
 
@@ -1709,11 +1711,25 @@ LLM deployment is memory-bound. Understanding memory patterns is critical:
 | KV Cache (8k ctx) | 16 GB/batch | GQA, INT8 KV |
 | Activations | 4 GB/batch | Checkpointing |
 
-**Key Capabilities:**
-- Calculate KV cache for variable context lengths
-- Detect activation checkpointing patterns
-- Identify tensor/pipeline parallelism
-- Generate memory waterfall charts
+**Implemented Capabilities (13 tasks):**
+- Calculate KV cache size per token and project for 4k/8k/32k/128k context
+- Detect INT8 KV cache quantization patterns
+- Calculate max context length for given VRAM
+- Detect PagedAttention patterns (vLLM-style)
+- Report KV cache as % of total memory
+- Detect tensor parallelism (column/row split), pipeline parallelism, data parallelism
+- Identify AllReduce/AllGather/ReduceScatter/Broadcast communication ops
+- Report memory per GPU for N-way parallelism (1/2/4/8 GPUs)
+- Recommend parallelism strategy for target hardware
+- Recommend batch size for given VRAM constraint
+
+**Module:** `src/haoline/memory_analysis.py` (700+ lines)
+**Tests:** `src/haoline/tests/test_memory_analysis.py` (24 tests)
+**CLI:** `--memory-analysis`, `--memory-analysis-json PATH`, `--memory-vram-gb GB`
+
+**Deferred to Epic 36/43:**
+- Activation checkpointing detection (training-focused)
+- Memory waterfall charts (visualization)
 
 ### 17.5 Epic 29: Sparse and Efficient Architectures
 
@@ -2061,6 +2077,7 @@ haoline model.engine --quant-bottlenecks --out-html bottlenecks.html
 
 | Date | Change |
 |------|--------|
+| Jan 6, 2026 | **v1.5.0** - Epic 28 COMPLETE (Memory Pattern Analysis): KV cache quantization detection, PagedAttention patterns, parallelism strategy detection (TP/PP/DP), VRAM recommendations. 24 new tests. |
 | Jan 6, 2026 | **v1.4.0** - Epic 26 COMPLETE (Advanced Quantization Analysis): GPTQ/AWQ/GGML detection, accuracy impact estimation, mixed precision analysis, sensitive layer identification. Epic 27 COMPLETE (Attention Variant Detection): MHA/MQA/GQA detection, RoPE/ALiBi position encoding, KV cache estimation, FlashAttention detection. 51 new tests. |
 | Jan 6, 2026 | **v1.3.0** - Epic 49 COMPLETE (HuggingFace Integration): Native FLOPs for TFLite/CoreML/OpenVINO, format-aware UI with tier badges, SafeTensors config detection, `--from-huggingface` CLI flag. |
 | Jan 6, 2026 | **v1.2.0** - GGUF LLM Details UI: architecture card, quantization breakdown, VRAM calculator, tensor explorer. Export enhancements: GGUF details in MD/HTML/JSON. Dynamic version in reports. |

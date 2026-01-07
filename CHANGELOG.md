@@ -5,6 +5,37 @@ All notable changes to HaoLine will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-01-06
+
+### Epic 28: Memory Pattern Analysis
+
+**Story 28.1: KV Cache Analysis**
+- Detect INT8 KV cache quantization patterns
+- Calculate max context length for given VRAM
+- Detect PagedAttention patterns (vLLM-style)
+- Report KV cache as percentage of total memory at 4k/8k/32k context
+
+**Story 28.2: Parallelism Strategy Detection**
+- Detect tensor parallelism (column/row split) from communication ops
+- Detect pipeline parallelism patterns (layer sharding)
+- Identify AllReduce, AllGather, ReduceScatter, Broadcast ops
+- Report memory per GPU for N-way parallelism (1/2/4/8 GPUs)
+- Recommend parallelism strategy based on model size and target hardware
+
+**Story 28.3: VRAM-Based Recommendations**
+- Recommend max batch size for given VRAM constraint
+- Calculate memory breakdown for different batch sizes
+- Multi-GPU requirements and strategy recommendations
+
+**CLI Flags:**
+- `--memory-analysis`: Enable memory pattern analysis
+- `--memory-analysis-json PATH`: Export memory analysis to JSON
+- `--memory-vram-gb GB`: Target VRAM for recommendations (default: 24)
+
+**Test Coverage:** 24 unit tests in `test_memory_analysis.py`
+
+---
+
 ## [1.4.0] - 2026-01-06
 
 ### Epic 26: Advanced Quantization Analysis

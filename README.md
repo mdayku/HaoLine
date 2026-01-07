@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/tests-500%2B%20passed-brightgreen.svg)]()
 
-> **🎉 v1.4 Released!** New: Advanced Quantization Analysis (GPTQ/AWQ/GGML detection) + Attention Variant Detection (MHA/MQA/GQA). [See what's new →](#features)
+> **🎉 v1.5 Released!** New: Memory Pattern Analysis (KV cache, parallelism detection, VRAM recommendations). [See what's new →](#features)
 
 HaoLine is a universal model inspector that makes neural network internals **legible** across formats — so you can make informed decisions about what to deploy.
 
@@ -417,6 +417,14 @@ Or use the web UI's comparison mode for an interactive experience.
 |------|-------------|
 | `--attention-analysis` | Detect attention architecture (MHA/MQA/GQA), position encoding, KV cache |
 | `--attention-analysis-json PATH` | Export attention analysis to JSON |
+
+### Memory Analysis (Epic 28)
+
+| Flag | Description |
+|------|-------------|
+| `--memory-analysis` | Analyze memory patterns (KV cache, parallelism, VRAM recommendations) |
+| `--memory-analysis-json PATH` | Export memory analysis to JSON |
+| `--memory-vram-gb GB` | Target VRAM in GB for recommendations (default: 24) |
 
 ### TensorRT Options
 
