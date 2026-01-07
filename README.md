@@ -700,7 +700,7 @@ The Universal IR includes:
 | Keras (.h5, .keras) | ✅ Full | Requires tf2onnx |
 | GGUF (.gguf) | ✅ Read | llama.cpp LLMs (`pip install haoline`) |
 | SafeTensors (.safetensors) | ⚠️ Weights Only | HuggingFace weights (`pip install haoline[safetensors]`) |
-| TFLite (.tflite) | ✅ Full | Mobile/edge, ONNX↔TFLite conversion (`pip install haoline[tflite]`) |
+| TFLite (.tflite) | ✅ Full | Mobile/edge, TFLite→ONNX conversion (`pip install haoline[tflite]`) |
 | CoreML (.mlmodel, .mlpackage) | ✅ Read | Apple devices (`pip install haoline[coreml]`) |
 | OpenVINO (.xml) | ✅ Read | Intel inference (`pip install haoline[openvino]`) |
 | TensorRT (.engine, .plan) | ✅ Read | NVIDIA optimized engines (`pip install haoline[tensorrt]`) |
