@@ -260,6 +260,9 @@ class InspectionReport(BaseModel):
     # Attention analysis (Epic 27, set by --attention-analysis)
     attention_analysis: dict[str, Any] | None = None
 
+    # Memory analysis (Epic 28, set by --memory-analysis)
+    memory_analysis: dict[str, Any] | None = None
+
     # GGUF info (optional, set when analyzing GGUF files)
     # Contains LLM-specific metadata: architecture, context length, quantization breakdown
     gguf_info: Any | None = None  # GGUFInfo from haoline.formats.gguf
@@ -851,6 +854,63 @@ class InspectionReport(BaseModel):
                     lines.append(f"- Savings vs MHA: {kv['savings_factor']:.1f}x")
 
             lines.append("")
+
+        # Memory Analysis (Epic 28)
+        if self.memory_analysis:
+            ma = self.memory_analysis
+            lines.append("## Memory Analysis")
+            lines.append("")
+            lines.append(f"**Model Size:** {ma.get('model_size_gb', 0):.2f} GB")
+            lines.append("")
+
+            # KV Cache extended analysis
+            kv = ma.get("kv_cache", {})
+            if kv.get("bytes_per_token", 0) > 0:
+                lines.append("### KV Cache Analysis")
+                lines.append(f"- Per Token: {kv['bytes_per_token']:,} bytes")
+                lines.append(
+                    f"- At 32K context: {kv.get('kv_cache_percent_at_32k', 0):.1f}% of memory"
+                )
+                if kv.get("max_context_for_vram", 0) > 0:
+                    lines.append(
+                        f"- Max Context for {kv.get('vram_gb_used', 24)}GB VRAM: {kv['max_context_for_vram']:,}"
+                    )
+                lines.append(f"- KV Quantization: {kv.get('kv_quantization', 'fp16').upper()}")
+                if kv.get("paged_attention_detected"):
+                    lines.append("- PagedAttention: Detected")
+                lines.append("")
+
+            # Parallelism
+            par = ma.get("parallelism", {})
+            if par.get("detected_type", "none") != "none":
+                lines.append("### Parallelism Strategy")
+                lines.append(f"- Type: {par['detected_type']}")
+                lines.append(f"- Confidence: {par.get('confidence', 0):.0%}")
+                if par.get("communication_ops"):
+                    lines.append(f"- Communication Ops: {len(par['communication_ops'])}")
+                lines.append("")
+
+            # VRAM Recommendations
+            vram = ma.get("vram_recommendation", {})
+            if vram:
+                lines.append("### VRAM Recommendations")
+                lines.append(f"- Target VRAM: {vram.get('target_vram_gb', 24)} GB")
+                lines.append(f"- Max Batch Size: {vram.get('max_batch_size', 1)}")
+                lines.append(f"- Max Context Length: {vram.get('max_context_length', 0):,}")
+                if vram.get("min_gpus_required", 1) > 1:
+                    lines.append(f"- Min GPUs Required: {vram['min_gpus_required']}")
+                    lines.append(
+                        f"- Recommended Strategy: {vram.get('recommended_parallelism', 'N/A')}"
+                    )
+                lines.append("")
+
+            # Recommendations
+            recs = ma.get("recommendations", [])
+            if recs:
+                lines.append("### Recommendations")
+                for rec in recs:
+                    lines.append(f"- {rec}")
+                lines.append("")
 
         return "\n".join(lines)
 
@@ -1811,13 +1871,13 @@ class InspectionReport(BaseModel):
                     <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
                         <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
                             <div style="font-size: 1.2rem; font-weight: bold;">
-                                {kv['bytes_per_token']:,} bytes
+                                {kv["bytes_per_token"]:,} bytes
                             </div>
                             <div style="color: var(--text-secondary);">Per Token</div>
                         </div>
                         <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
                             <div style="font-size: 1.2rem; font-weight: bold;">
-                                {kv['total_bytes_at_8k'] / 1e9:.2f} GB
+                                {kv["total_bytes_at_8k"] / 1e9:.2f} GB
                             </div>
                             <div style="color: var(--text-secondary);">At 8K Context</div>
                         </div>
@@ -1831,6 +1891,144 @@ class InspectionReport(BaseModel):
                     </div>
                     """
                 )
+
+            html_parts.append("</section>")
+
+        # Memory Analysis (Epic 28)
+        if self.memory_analysis:
+            ma = self.memory_analysis
+            model_size_gb = ma.get("model_size_gb", 0)
+
+            html_parts.append('<section class="memory-analysis">')
+            html_parts.append("<h2>Memory Analysis</h2>")
+
+            # Model size badge
+            html_parts.append(
+                f"""
+                <div style="display: inline-block; padding: 0.5rem 1rem; margin-bottom: 1rem;
+                    background: var(--bg-card); border: 1px solid var(--accent-cyan); border-radius: 8px;">
+                    <span style="color: var(--accent-cyan); font-weight: bold;">{model_size_gb:.2f} GB</span>
+                    <span style="color: var(--text-secondary); margin-left: 0.5rem;">Model Size</span>
+                </div>
+                """
+            )
+
+            # KV Cache Analysis
+            kv = ma.get("kv_cache", {})
+            if kv.get("bytes_per_token", 0) > 0:
+                html_parts.append("<h3>KV Cache Analysis</h3>")
+                max_ctx = kv.get("max_context_for_vram", 0)
+                pct_32k = kv.get("kv_cache_percent_at_32k", 0)
+                pct_color = "#f59e0b" if pct_32k > 50 else "#22c55e"
+
+                html_parts.append(
+                    f"""
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold;">
+                                {kv["bytes_per_token"]:,} bytes
+                            </div>
+                            <div style="color: var(--text-secondary);">Per Token</div>
+                        </div>
+                        <div style="padding: 1rem; background: {pct_color}22;
+                             border: 1px solid {pct_color}; border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: {pct_color};">
+                                {pct_32k:.1f}%
+                            </div>
+                            <div style="color: var(--text-secondary);">At 32K Context</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: var(--accent-cyan);">
+                                {max_ctx:,}
+                            </div>
+                            <div style="color: var(--text-secondary);">Max Context</div>
+                        </div>
+                    </div>
+                    """
+                )
+
+                # Additional KV info
+                kv_quant = kv.get("kv_quantization", "fp16").upper()
+                paged = kv.get("paged_attention_detected", False)
+                html_parts.append("<ul>")
+                html_parts.append(f"<li>KV Quantization: <strong>{kv_quant}</strong></li>")
+                if paged:
+                    html_parts.append(
+                        "<li>PagedAttention: <span style='color: #22c55e;'>Detected</span></li>"
+                    )
+                html_parts.append("</ul>")
+
+            # Parallelism Strategy
+            par = ma.get("parallelism", {})
+            if par.get("detected_type", "none") != "none":
+                par_type = par.get("detected_type", "unknown").replace("_", " ").title()
+                confidence = par.get("confidence", 0) * 100
+
+                html_parts.append("<h3>Parallelism Strategy</h3>")
+                html_parts.append(
+                    f"""
+                    <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;
+                         margin-bottom: 1rem; display: inline-block;">
+                        <div style="font-size: 1.2rem; font-weight: bold;">{par_type}</div>
+                        <div style="color: var(--text-secondary);">Confidence: {confidence:.0f}%</div>
+                    </div>
+                    """
+                )
+                if par.get("communication_ops"):
+                    html_parts.append(
+                        f"<p>Communication Ops Detected: {len(par['communication_ops'])}</p>"
+                    )
+
+            # VRAM Recommendations
+            vram = ma.get("vram_recommendation", {})
+            if vram:
+                target_vram = vram.get("target_vram_gb", 24)
+                max_batch = vram.get("max_batch_size", 1)
+                max_ctx = vram.get("max_context_length", 0)
+                min_gpus = vram.get("min_gpus_required", 1)
+
+                html_parts.append(f"<h3>VRAM Recommendations ({target_vram} GB)</h3>")
+                html_parts.append(
+                    f"""
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-green);">
+                                {max_batch}
+                            </div>
+                            <div style="color: var(--text-secondary);">Max Batch</div>
+                        </div>
+                        <div style="padding: 1rem; background: var(--bg-card); border-radius: 8px;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent-green);">
+                                {max_ctx:,}
+                            </div>
+                            <div style="color: var(--text-secondary);">Max Context</div>
+                        </div>
+                    </div>
+                    """
+                )
+
+                if min_gpus > 1:
+                    strategy = vram.get("recommended_parallelism", "N/A").replace("_", " ").title()
+                    html_parts.append(
+                        f"""
+                        <div style="padding: 1rem; background: #f59e0b22; border: 1px solid #f59e0b;
+                             border-radius: 8px; margin-bottom: 1rem;">
+                            <strong style="color: #f59e0b;">Multi-GPU Required</strong>
+                            <p style="margin: 0.5rem 0 0 0;">
+                                Min GPUs: {min_gpus} | Strategy: {strategy}
+                            </p>
+                        </div>
+                        """
+                    )
+
+            # Recommendations
+            recs = ma.get("recommendations", [])
+            if recs:
+                html_parts.append("<h3>Recommendations</h3>")
+                html_parts.append("<ul>")
+                for rec in recs:
+                    html_parts.append(f"<li>{rec}</li>")
+                html_parts.append("</ul>")
 
             html_parts.append("</section>")
 

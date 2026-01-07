@@ -602,6 +602,22 @@ def inspect(
         Path | None,
         typer.Option("--attention-analysis-json", help="Output attention analysis JSON"),
     ] = None,
+    # Memory analysis (Epic 28)
+    memory_analysis: Annotated[
+        bool,
+        typer.Option(
+            "--memory-analysis",
+            help="Analyze memory patterns (KV cache, parallelism, VRAM recommendations)",
+        ),
+    ] = False,
+    memory_analysis_json: Annotated[
+        Path | None,
+        typer.Option("--memory-analysis-json", help="Output memory analysis JSON"),
+    ] = None,
+    memory_vram_gb: Annotated[
+        float,
+        typer.Option("--memory-vram-gb", help="Target VRAM in GB for memory recommendations"),
+    ] = 24.0,
     # TensorRT comparison
     compare_trt: Annotated[
         Path | None,
@@ -924,6 +940,9 @@ def _run_inspect(
     quant_analysis_json: Path | None,
     attention_analysis: bool,
     attention_analysis_json: Path | None,
+    memory_analysis: bool,
+    memory_analysis_json: Path | None,
+    memory_vram_gb: float,
     compare_trt: Path | None,
     redact_names: bool,
     summary_only: bool,
@@ -1466,7 +1485,7 @@ def _run_inspect(
         console.print(f"  Attention Layers: {attn_result.num_attention_layers}")
         if attn_result.num_q_heads > 0:
             console.print(
-                f"  Q Heads: {attn_result.num_q_heads}, " f"KV Heads: {attn_result.num_kv_heads}"
+                f"  Q Heads: {attn_result.num_q_heads}, KV Heads: {attn_result.num_kv_heads}"
             )
 
         if attn_result.position_encoding:
@@ -1493,6 +1512,94 @@ def _run_inspect(
                 json.dumps(attn_result.to_dict(), indent=2), encoding="utf-8"
             )
             console.print(f"\n[green]Wrote:[/green] {attention_analysis_json}")
+
+    # Memory analysis (Epic 28)
+    if memory_analysis or memory_analysis_json:
+        from haoline.analyzer import ONNXGraphLoader
+        from haoline.memory_analysis import MemoryAnalyzer
+        from haoline.patterns import PatternAnalyzer
+
+        with console.status("[bold blue]Running memory analysis...[/bold blue]"):
+            loader = ONNXGraphLoader()
+            _, graph_info = loader.load(analysis_path)
+
+            # Get architectural blocks
+            pattern_analyzer = PatternAnalyzer()
+            blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+            # Get attention analysis if available (for KV cache info)
+            attn_result_for_memory = None
+            if hasattr(report, "attention_analysis") and report.attention_analysis:
+                # Already ran attention analysis
+                from haoline.attention_analysis import AttentionAnalyzer
+
+                attn_analyzer = AttentionAnalyzer()
+                attn_result_for_memory = attn_analyzer.analyze(graph_info, blocks)
+            elif not attention_analysis:
+                # Run attention analysis for memory calculations
+                from haoline.attention_analysis import AttentionAnalyzer
+
+                attn_analyzer = AttentionAnalyzer()
+                attn_result_for_memory = attn_analyzer.analyze(graph_info, blocks)
+
+            # Run memory analysis
+            mem_analyzer = MemoryAnalyzer()
+            mem_result = mem_analyzer.analyze(
+                graph_info,
+                blocks,
+                attention_result=attn_result_for_memory,
+                vram_gb=memory_vram_gb,
+                batch_size=batch_size,
+            )
+
+            # Store in report
+            report.memory_analysis = mem_result.to_dict()
+
+        # Print summary
+        console.print("\n[bold cyan]Memory Analysis[/bold cyan]")
+        console.print(f"  Model Size: [bold]{mem_result.model_size_gb:.2f} GB[/bold]")
+
+        if mem_result.kv_cache.bytes_per_token > 0:
+            kv = mem_result.kv_cache
+            console.print("\n  [bold]KV Cache:[/bold]")
+            console.print(f"    Per Token: {kv.bytes_per_token:,} bytes")
+            console.print(f"    At 32K context: {kv.kv_cache_percent_at_32k:.1f}% of memory")
+            if kv.max_context_for_vram > 0:
+                console.print(
+                    f"    Max Context for {memory_vram_gb}GB VRAM: {kv.max_context_for_vram:,}"
+                )
+            if kv.paged_attention_detected:
+                console.print("    PagedAttention: [green]Detected[/green]")
+            console.print(f"    Quantization: {kv.kv_quantization.upper()}")
+
+        if mem_result.parallelism.detected_type != "none":
+            par = mem_result.parallelism
+            console.print("\n  [bold]Parallelism:[/bold]")
+            console.print(f"    Type: {par.detected_type} (confidence: {par.confidence:.0%})")
+            if par.communication_ops:
+                console.print(f"    Comm Ops: {len(par.communication_ops)}")
+
+        vram = mem_result.vram_recommendation
+        console.print(f"\n  [bold]VRAM Recommendations ({memory_vram_gb}GB):[/bold]")
+        console.print(f"    Max Batch Size: {vram.max_batch_size}")
+        console.print(f"    Max Context: {vram.max_context_length:,}")
+        if vram.min_gpus_required > 1:
+            console.print(f"    Min GPUs: {vram.min_gpus_required}")
+            console.print(f"    Strategy: {vram.recommended_parallelism}")
+
+        if mem_result.recommendations:
+            console.print("\n  [bold yellow]Recommendations:[/bold yellow]")
+            for rec in mem_result.recommendations:
+                console.print(f"    - {rec}")
+
+        # Write JSON if requested
+        if memory_analysis_json:
+            import json
+
+            memory_analysis_json.write_text(
+                json.dumps(mem_result.to_dict(), indent=2), encoding="utf-8"
+            )
+            console.print(f"\n[green]Wrote:[/green] {memory_analysis_json}")
 
     # LLM summary
     if llm_summary and not offline:

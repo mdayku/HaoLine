@@ -2954,6 +2954,118 @@ def main():
                             except Exception as e:
                                 st.warning(f"Could not run attention analysis: {e}")
 
+                        # Memory Analysis (Epic 28)
+                        with st.expander("Memory Analysis (LLM Deployment)", expanded=False):
+                            try:
+                                from haoline.analyzer import ONNXGraphLoader
+                                from haoline.memory_analysis import MemoryAnalyzer
+                                from haoline.patterns import PatternAnalyzer
+
+                                # Load graph if not already loaded
+                                if "graph_info" not in dir():
+                                    loader = ONNXGraphLoader()
+                                    _, graph_info = loader.load(tmp_path)
+
+                                # Get blocks for analysis
+                                pattern_analyzer = PatternAnalyzer()
+                                blocks = pattern_analyzer.group_into_blocks(graph_info)
+
+                                # Run attention analysis for KV cache info
+                                from haoline.attention_analysis import AttentionAnalyzer
+
+                                attn_analyzer = AttentionAnalyzer()
+                                attn_result_for_mem = attn_analyzer.analyze(graph_info, blocks)
+
+                                # VRAM selector
+                                vram_gb = st.slider(
+                                    "Target VRAM (GB)",
+                                    min_value=8,
+                                    max_value=80,
+                                    value=24,
+                                    step=8,
+                                    help="Select target GPU VRAM for recommendations",
+                                )
+
+                                # Run memory analysis
+                                mem_analyzer = MemoryAnalyzer()
+                                mem_result = mem_analyzer.analyze(
+                                    graph_info,
+                                    blocks,
+                                    attention_result=attn_result_for_mem,
+                                    vram_gb=float(vram_gb),
+                                )
+
+                                # Model size
+                                st.markdown(f"**Model Size:** {mem_result.model_size_gb:.2f} GB")
+
+                                # KV Cache section
+                                kv = mem_result.kv_cache
+                                if kv.bytes_per_token > 0:
+                                    st.markdown("#### KV Cache")
+                                    col1, col2, col3 = st.columns(3)
+                                    with col1:
+                                        st.metric("Per Token", f"{kv.bytes_per_token:,} bytes")
+                                    with col2:
+                                        st.metric(
+                                            "At 32K Context", f"{kv.kv_cache_percent_at_32k:.1f}%"
+                                        )
+                                    with col3:
+                                        st.metric("Max Context", f"{kv.max_context_for_vram:,}")
+
+                                    st.markdown(
+                                        f"- **KV Quantization:** {kv.kv_quantization.upper()}"
+                                    )
+                                    if kv.paged_attention_detected:
+                                        st.success("PagedAttention detected")
+
+                                # Parallelism section
+                                par = mem_result.parallelism
+                                if par.detected_type != "none":
+                                    st.markdown("#### Parallelism Strategy")
+                                    st.markdown(
+                                        f"**Type:** {par.detected_type.replace('_', ' ').title()} "
+                                        f"(Confidence: {par.confidence:.0%})"
+                                    )
+                                    if par.communication_ops:
+                                        st.markdown(
+                                            f"Communication Ops: {len(par.communication_ops)}"
+                                        )
+
+                                # VRAM Recommendations section
+                                vram_rec = mem_result.vram_recommendation
+                                st.markdown(f"#### VRAM Recommendations ({vram_gb} GB)")
+
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("Max Batch Size", vram_rec.max_batch_size)
+                                with col2:
+                                    st.metric("Max Context", f"{vram_rec.max_context_length:,}")
+
+                                if vram_rec.min_gpus_required > 1:
+                                    st.warning(
+                                        f"Multi-GPU Required: {vram_rec.min_gpus_required}+ GPUs | "
+                                        f"Strategy: {vram_rec.recommended_parallelism.replace('_', ' ').title()}"
+                                    )
+
+                                # Recommendations
+                                if mem_result.recommendations:
+                                    st.markdown("#### Recommendations")
+                                    for rec in mem_result.recommendations:
+                                        st.info(rec)
+
+                                # Download button
+                                import json
+
+                                st.download_button(
+                                    "Download Memory Analysis JSON",
+                                    data=json.dumps(mem_result.to_dict(), indent=2),
+                                    file_name=f"{uploaded_file.name.replace('.onnx', '')}_memory_analysis.json",
+                                    mime="application/json",
+                                )
+
+                            except Exception as e:
+                                st.warning(f"Could not run memory analysis: {e}")
+
                     # Memory breakdown by op type
                     if (
                         report.memory_estimates
